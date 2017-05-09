@@ -30,7 +30,7 @@ import (
 func GenBody(t interface{}) io.Reader {
 	tjson, err := json.Marshal(&t)
 	if err != nil {
-		log.Panic("Error to marshal : ", err.Error())
+		log.Panic("Error marshalling : ", err.Error())
 	}
 	fmt.Println("Allocate IP Request Body : ", string(tjson))
 	return bytes.NewReader(tjson)
@@ -41,23 +41,23 @@ func PostRequest(url string, body io.Reader) ([]byte, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		log.Println("Error to create http request : ", err.Error())
+		log.Println("Error creating http request : ", err.Error())
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("Error to post http request : ", err.Error())
+		log.Println("Error posting http request : ", err.Error())
 		return nil, err
 	}
 	resp_body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("Error to read http response : ", err.Error())
+		log.Println("Error reading http response : ", err.Error())
 		return nil, err
 	}
 	err = resp.Body.Close()
 	if err != nil {
-		log.Errorf("Failed to close response body :%v", err)
+		log.Errorf("Failure to close response body :%v", err)
 		return nil, err
 	}
 	return resp_body, nil
@@ -68,18 +68,18 @@ func GetRequest(url string) ([]byte, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Println("Error to create http request : ", err.Error())
+		log.Println("Error creating http request : ", err.Error())
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("Error to get http request : ", err.Error())
+		log.Println("Error getting http request : ", err.Error())
 		return nil, err
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("Error to read http response : ", err.Error())
+		log.Println("Error reading http response : ", err.Error())
 		return nil, err
 	}
 	err = resp.Body.Close()
