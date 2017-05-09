@@ -1,0 +1,8 @@
+launchtask:
+   podmonitorinterval: 10000
+   pullretry: 3
+   maxretry: 10
+   timeout: 500000
+plugins:
+   pluginorder: general
+foldername: poddata

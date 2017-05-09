@@ -1,0 +1,10 @@
+version: "2.1"
+services:
+  web:
+    healthcheck:
+      test: curl -f http://localhost:8081/index.html
+      interval: 10s
+      timeout: 10s
+      retries: 3
+
+

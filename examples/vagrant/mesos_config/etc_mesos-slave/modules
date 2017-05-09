@@ -1,0 +1,12 @@
+{
+  "libraries": [
+    {
+      "file": "/output/usr/local/lib/mesos/libmesos_dce_hook.so",
+      "modules": [
+        {
+          "name": "org_apache_mesos_ComposePodCleanupHook"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+package: github.paypal.com/jiamzhu/dce-go
+import:
+- package: github.com/mesos/mesos-go
+  subpackages:
+  - executor
+  - mesosproto
+- package: github.com/pkg/errors
+- package: github.com/sirupsen/logrus
+- package: github.com/spf13/viper
+- package: golang.org/x/net
+  subpackages:
+  - context
+- package: gopkg.in/yaml.v2
+- package: github.com/rdelval/gorealis
+  version: v1.0.5

@@ -1,0 +1,7 @@
+infracontainer:
+  image: dcego/networkproxy:1.2
+  container_name: networkproxy_0.1
+  networks:
+    pre_existing: true
+    name : net
+    driver: bridge

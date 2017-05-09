@@ -1,0 +1,13 @@
+{
+  "id": "docker-compose-demo",
+  "cmd": " ",
+  "cpus": 0.5,
+  "mem": 64.0,
+  "ports":[0,0,0],
+  "instances": 1,
+  "executor":"./executor",
+  "labels": {
+    "fileName": "sample-app/docker-compose.yml"
+  },
+  "uris":["https://github.com/mesos/docker-compose-executor/releases/download/0.1.0/sample-app.tar.gz","http://192.168.33.7:8080/config.yaml","http://192.168.33.7:8080/general.yaml","http://192.168.33.7:8080/executor"]
+}
