@@ -55,7 +55,7 @@ var HealthCheckList = make(map[string]bool)
 func CheckPodExitCode(files []string) (int, error) {
 	containerIds, err := GetPodContainerIds(files)
 	if err != nil {
-		log.Errorln("Error to get container ids")
+		log.Errorln("Error retrieving container ids")
 		return 1, err
 	}
 
@@ -80,13 +80,13 @@ func checkContainerExitCode(containerId string) (int, error) {
 	_out := strings.Trim(strings.Trim(string(out[:]), "\n"), "'")
 	log.Printf("Check Pod Exit Code : Container %s ExitCode : %v\n", containerId, _out)
 	if err != nil {
-		log.Errorf("Error to get exit code of container : %s, %s\n", containerId, err.Error())
+		log.Errorf("Error retrieving container exit code : %s, %s\n", containerId, err.Error())
 		return 1, err
 	}
 
 	exitCode, err := strconv.Atoi(_out)
 	if err != nil {
-		log.Fatalf("Error to convert string to int : %s\n", err.Error())
+		log.Fatalf("Error converting string to int : %s\n", err.Error())
 	}
 	return exitCode, nil
 }
@@ -115,13 +115,13 @@ func GetPodContainerIds(files []string) ([]string, error) {
 
 	parts, err := GenerateCmdParts(files, " ps -q")
 	if err != nil {
-		log.Errorln("Error to generate cmd parts")
+		log.Errorln("Error generating compose cmd parts")
 		return nil, err
 	}
 
 	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("docker-compose", parts...))
 	if err != nil {
-		log.Errorf("GetContainerIds : Error to execute cmd docker-compose ps %#v", err)
+		log.Errorf("GetContainerIds : Error executing cmd docker-compose ps %#v", err)
 		return nil, err
 	}
 
@@ -149,7 +149,7 @@ func GetPodContainers(files []string) ([]string, error) {
 
 	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("/bin/bash", "-c", args))
 	if err != nil {
-		log.Errorf("GetContainerIds : Error to execute cmd docker-compose ps %#v", err)
+		log.Errorf("GetContainerIds : Error executing cmd docker-compose ps %#v", err)
 		return nil, err
 	}
 
@@ -176,7 +176,7 @@ func GetRunningPodContainers(files []string) ([]string, error) {
 
 	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("/bin/bash", "-c", args))
 	if err != nil {
-		log.Errorf("GetContainerIds : Error to execute cmd docker-compose ps %#v", err)
+		log.Errorf("GetContainerIds : Error executing cmd docker-compose ps %#v", err)
 		return nil, err
 	}
 
@@ -195,12 +195,12 @@ func GetRunningPodContainers(files []string) ([]string, error) {
 func GetPodDetail(files []string, primaryContainerId string, healthcheck bool) {
 	parts, err := GenerateCmdParts(files, " ps")
 	if err != nil {
-		log.Errorln("Error to generate cmd parts")
+		log.Errorln("Error generating cmd parts")
 	}
 
 	out, err := exec.Command("docker-compose", parts...).Output()
 	if err != nil {
-		log.Errorf("GetPodDetail : Error to execute cmd docker-compose ps %#v", err)
+		log.Errorf("GetPodDetail : Error executing cmd docker-compose ps %#v", err)
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(string(out[:])))
@@ -214,7 +214,7 @@ func GetPodDetail(files []string, primaryContainerId string, healthcheck bool) {
 	if primaryContainerId != "" {
 		primaryContainerDetail, err := InspectContainerDetails(primaryContainerId, healthcheck)
 		if err != nil {
-			log.Errorln("Error to get primary container detail : ", err.Error())
+			log.Errorln("Error retrieving primary container detail : ", err.Error())
 		}
 		log.Printf("Inspect primary container : %s , Name: %s, health status: %s, exit code : %v, is running : %v",
 			primaryContainerId, primaryContainerDetail.Name, primaryContainerDetail.HealthStatus,
@@ -250,7 +250,7 @@ func LaunchPod(files []string) string {
 
 	parts, err := GenerateCmdParts(files, " up")
 	if err != nil {
-		log.Errorf("Error to generate cmd parts : %s\n", err.Error())
+		log.Errorf("Error generating compose cmd parts : %s\n", err.Error())
 		return types.POD_FAILED
 	}
 
@@ -262,7 +262,7 @@ func LaunchPod(files []string) string {
 
 	err = cmd.Start()
 	if err != nil {
-		log.Errorln("Error to run launch task command : ", err.Error())
+		log.Errorln("Error running launch task command : ", err.Error())
 		return types.POD_FAILED
 	}
 
@@ -290,7 +290,7 @@ func StopPod(files []string) error {
 	log.Println("====================Stop Pod====================")
 	parts, err := GenerateCmdParts(files, " stop")
 	if err != nil {
-		log.Errorln("Error to generate cmd parts : ", err.Error())
+		log.Errorln("Error generating compose cmd parts : ", err.Error())
 		return err
 	}
 
@@ -299,10 +299,10 @@ func StopPod(files []string) error {
 
 	err = cmd.Run()
 	if err != nil {
-		log.Errorln("Error during stop services :", err.Error())
+		log.Errorln("Error stopping services :", err.Error())
 		err = ForceKill(files)
 		if err != nil {
-			log.Errorf("Error to force kill pod : %v\n", err)
+			log.Errorf("Error in force pod kill : %v\n", err)
 			return err
 		}
 	}
@@ -336,7 +336,7 @@ func GetContainerNetwork(name string) (string, error) {
 
 	out, err := exec.Command("docker", "inspect", "--format='{{.HostConfig.NetworkMode}}'", name).Output()
 	if err != nil {
-		log.Errorf("Error to get network of container : %s , %s\n", name, err.Error())
+		log.Errorf("Error retrieving container network mode : %s , %s\n", name, err.Error())
 		return "", err
 	}
 
@@ -351,7 +351,7 @@ func RemoveNetwork(name string) error {
 	//_, err := utils.RetryCmd(config.GetMaxRetry(), cmd)
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf("Error to rm network : %s , %s\n", name, err.Error())
+		log.Errorf("Error in rm network : %s , %s\n", name, err.Error())
 	}
 	return err
 }
@@ -362,7 +362,7 @@ func RemovePod(files []string) error {
 	log.Println("====================Remove Pod====================")
 	parts, err := GenerateCmdParts(files, " down")
 	if err != nil {
-		log.Errorln("Error to generate cmd parts : ", err.Error())
+		log.Errorln("Error generating compose cmd parts : ", err.Error())
 		return err
 	}
 
@@ -371,7 +371,7 @@ func RemovePod(files []string) error {
 
 	err = cmd.Run()
 	if err != nil {
-		log.Errorln("Error during remove services :", err.Error())
+		log.Errorln("Error in remove services :", err.Error())
 		return err
 	}
 	return nil
@@ -394,7 +394,7 @@ func ForceKill(files []string) error {
 	}*/
 	parts, err := GenerateCmdParts(files, " kill")
 	if err != nil {
-		log.Errorln("Error to generate cmd parts : ", err.Error())
+		log.Errorln("Error generating cmd parts : ", err.Error())
 		return err
 	}
 
@@ -403,7 +403,7 @@ func ForceKill(files []string) error {
 
 	err = cmd.Run()
 	if err != nil {
-		log.Errorln("Error during kill services :", err.Error())
+		log.Errorln("Error in kill services :", err.Error())
 		return err
 	}
 	return nil
@@ -414,7 +414,7 @@ func dockerKill(containerName string) error {
 	cmd := exec.Command("docker", "kill", containerName)
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf("Error to kill container : %s , %s\n", containerName, err.Error())
+		log.Errorf("Error killing container : %s , %s\n", containerName, err.Error())
 	}
 	return err
 }
@@ -425,7 +425,7 @@ func PullImage(files []string) error {
 	log.Println("====================Pull Image====================")
 	parts, err := GenerateCmdParts(files, " pull")
 	if err != nil {
-		log.Fatalf("Error to generate cmd parts %s\n", err.Error())
+		log.Fatalf("Error generating cmd parts %s\n", err.Error())
 		return err
 	}
 
@@ -436,7 +436,7 @@ func PullImage(files []string) error {
 
 	err = cmd.Start()
 	if err != nil {
-		log.Errorln("Error to run pull images cmd: ", err.Error())
+		log.Errorln("Error in pull images cmd: ", err.Error())
 		return err
 	}
 
@@ -454,7 +454,7 @@ func PullImage(files []string) error {
 func CheckContainer(containerId string, healthcheck bool) (string, bool, error) {
 	containerDetail, err := InspectContainerDetails(containerId, healthcheck)
 	if err != nil {
-		log.Errorf("CheckContainer : Error to inspect container with id : %s, %v", containerId, err.Error())
+		log.Errorf("CheckContainer : Error inspecting container with id : %s, %v", containerId, err.Error())
 		return types.UNHEALTHY, true, err
 	}
 
@@ -476,7 +476,7 @@ func CheckContainer(containerId string, healthcheck bool) (string, bool, error) 
 	}
 
 	if containerDetail.ExitCode != 0 {
-		log.Printf("CheckContainer : Container %s is finished with exit code %v\n", containerId, containerDetail.ExitCode)
+		log.Printf("CheckContainer : Container %s finished with exit code %v\n", containerId, containerDetail.ExitCode)
 		return types.UNHEALTHY, false, nil
 	}
 	return types.HEALTHY, false, nil
@@ -497,13 +497,13 @@ func InspectContainerDetails(containerId string, healthcheck bool) (types.Contai
 			containerId))
 	}
 	if err != nil {
-		log.Errorf("Error to inspect container details : %v \n", err)
+		log.Errorf("Error inspecting container details : %v \n", err)
 		return containerStatusDetails, err
 	}
 
 	containerStatusDetails, err = ParseToContainerDetail(string(out[:]), healthcheck)
 	if err != nil {
-		log.Errorf("Error to parse output to container details : %v \n", err)
+		log.Errorf("Error parsing output to container details : %v \n", err)
 		return containerStatusDetails, err
 	}
 
@@ -618,7 +618,7 @@ func SendPodStatus(status string) {
 	case types.POD_FAILED:
 		err := StopPod(ComposeFiles)
 		if err != nil {
-			log.Errorf("Error to clean up pod : %v\n", err.Error())
+			log.Errorf("Error cleaning up pod : %v\n", err.Error())
 		}
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	case types.POD_PULL_FAILED:
@@ -634,7 +634,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 	}
 	_, err := driver.SendStatusUpdate(runStatus)
 	if err != nil {
-		log.Errorf("Error to update mesos task status : %v", err.Error())
+		log.Errorf("Error updating mesos task status : %v", err.Error())
 		return err
 	}
 
@@ -654,7 +654,7 @@ func WaitOnPod(ctx *context.Context) {
 	select {
 	case <-(*ctx).Done():
 		if (*ctx).Err() == context.DeadlineExceeded {
-			log.Println("Timeout to launch pod")
+			log.Println("Timeout launching pod")
 			SendPodStatus(types.POD_FAILED)
 		} else if (*ctx).Err() == context.Canceled {
 			log.Println("Stop wait on pod, since pod is running/finished/failed")
@@ -667,7 +667,7 @@ func printStdout(cmd *exec.Cmd) {
 	log.Println("====================print stdout====================")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Errorln("Error to get stdoutPipe : ", err.Error())
+		log.Errorln("Error in stdoutPipe : ", err.Error())
 	}
 
 	scanner := bufio.NewScanner(stdout)
@@ -683,7 +683,7 @@ func printStderr(cmd *exec.Cmd) {
 	log.Println("====================print stderr====================")
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		log.Errorln("Error to get stderrPipe : ", err.Error())
+		log.Errorln("Error in stderrPipe : ", err.Error())
 	}
 
 	scanner := bufio.NewScanner(stderr)

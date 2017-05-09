@@ -50,11 +50,11 @@ type EditorFunc func(serviceName string, taskInfo *mesos.TaskInfo, executorId st
 
 // Get required file list from label of fileName in taskInfo
 func GetFiles(taskInfo *mesos.TaskInfo) ([]string, error) {
-	log.Println("====================Get required compose file from fileName====================")
+	log.Println("====================Retrieve  compose file list from fileName label====================")
 
 	filelist := pod.GetLabel("fileName", taskInfo)
 	if filelist == "" {
-		err := errors.New("Unable to find expected labels")
+		err := errors.New("missing label fileName")
 		log.Errorln(err)
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func GetFiles(taskInfo *mesos.TaskInfo) ([]string, error) {
 		files = append(files, file)
 	}
 
-	log.Println("Requried file list : ", files)
+	log.Println("Required file list : ", files)
 	return files, nil
 }
 
@@ -77,7 +77,7 @@ func GetPluginOrder(taskInfo *mesos.TaskInfo) ([]string, error) {
 
 	pluginList := pod.GetLabel(types.PLUGIN_ORDER, taskInfo)
 	if pluginList == "" {
-		err := errors.New("Unable to find expected labels")
+		err := errors.New("Missing label pluginorder")
 		return nil, err
 	}
 
@@ -192,13 +192,13 @@ func WriteToFile(file string, data []byte) (string, error) {
 
 	f, err := os.Create(file)
 	if err != nil {
-		log.Errorf("Error to create file %v", err)
+		log.Errorf("Error creating file %v", err)
 		return "", err
 	}
 
 	_, err = f.Write(data)
 	if err != nil {
-		log.Errorln("Error to write into file : ", err.Error())
+		log.Errorln("Error writing into file : ", err.Error())
 		return "", err
 	}
 	return f.Name(), nil
@@ -221,12 +221,12 @@ func OverwriteFile(file string, data []byte) {
 
 	f, err := os.Create(file)
 	if err != nil {
-		log.Errorln("Error to create file")
+		log.Errorln("Error creating file")
 	}
 
 	_, err = f.Write(data)
 	if err != nil {
-		log.Errorln("Error to write into file : ", err.Error())
+		log.Errorln("Error writing into file : ", err.Error())
 	}
 }
 
@@ -335,7 +335,7 @@ func IndexArray(array []interface{}, element string) (int, error) {
 			return i, nil
 		}
 	}
-	return -1, errors.New("Element not exist")
+	return -1, errors.New("Element missing in list")
 }
 
 func SearchInArray(array []interface{}, key string) string {
@@ -401,13 +401,13 @@ func ParseYamls(files []string) (map[interface{}](map[interface{}]interface{}), 
 	for _, file := range files {
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
-			log.Errorf("Error to read file %s : %v", file, err)
+			log.Errorf("Error reading file %s : %v", file, err)
 			return nil, err
 		}
 		m := make(map[interface{}]interface{})
 		err = yaml.Unmarshal(data, &m)
 		if err != nil {
-			log.Errorf("Error to unmarshal %v", err)
+			log.Errorf("Error unmarshalling %v", err)
 		}
 		res[FolderPath(strings.Fields(file))[0]] = m
 	}
@@ -434,7 +434,7 @@ func GenerateAppFolder() error {
 	_folder := []string{strings.TrimSpace(folder)}
 	err := GenerateFileDirs(_folder)
 	if err != nil {
-		log.Println("Error to generate file dirs: ", err.Error())
+		log.Println("Error generating file dirs: ", err.Error())
 		return err
 	}
 

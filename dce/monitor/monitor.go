@@ -35,7 +35,7 @@ import (
 func podMonitor(files []string) string {
 	containers, err := pod.GetPodContainers(files)
 	if err != nil {
-		log.Errorln("Error to get container id list : ", err.Error())
+		log.Errorln("Error retrieving container id list : ", err.Error())
 		return types.POD_FAILED
 	}
 
@@ -52,7 +52,7 @@ func podMonitor(files []string) string {
 		healthy, run, err = pod.CheckContainer(containers[i], false)
 
 		if err != nil {
-			log.Println(fmt.Sprintf("Error to inspect container with id : %s, %v", containers[i], err.Error()))
+			log.Println(fmt.Sprintf("Error inspecting container with id : %s, %v", containers[i], err.Error()))
 			log.Println("Pod Monitor : Send Failed")
 			return types.POD_FAILED
 		}
@@ -76,7 +76,7 @@ func MonitorPoller() {
 
 	gap, err := strconv.Atoi(config.GetConfigSection(config.LAUNCH_TASK)[config.POD_MONITOR_INTERVAL])
 	if err != nil {
-		log.Fatalf("Error to convert gap from string to int : %s|\n", err.Error())
+		log.Fatalf("Error converting podmonitorinterval from string to int : %s|\n", err.Error())
 	}
 
 	res, _ := wait.PollForever(time.Duration(gap)*time.Millisecond, nil, wait.ConditionFunc(func() (string, error) {
