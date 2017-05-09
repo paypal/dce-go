@@ -1,9 +1,9 @@
-##How to run dce-go with Mesos Frameworks
+## How to run dce-go with Mesos Frameworks
 
 In this document, we will cover using dce-go with mesos frameworks such as aurora and marathon. [Vagrantbox setup](https://github.com/paypal/dce-go/blob/master/docs/how-to-use.md) installs and configures  mesos, marathon, apache aurora, dce-go etc.
 
-###Running dce-go on Aurora
-####Configuring Aurora Scheduler
+### Running dce-go on Aurora
+#### Configuring Aurora Scheduler
 In order to use dce-go with Aurora, we must provide the scheduler a configuration file that contains information on how to run the executor. 
 A sample config file for the docker-compose executor is shown below:
 ```
@@ -92,7 +92,7 @@ job = realis.NewJob().
 			AddURIs(true, true, "http://192.168.33.8/app.tar.gz")
 ```
 
-#####Creating a Job
+##### Creating a Job
 ```
 $ cd $GOPATH/src/github.com/paypal/dce-go/examples 
 $ go run client.go -executor=compose -url=http://192.168.33.8:8081 -cmd=create
@@ -123,14 +123,14 @@ services:
 version: "2.1"
 ```
 
-#####Kill a Job
+##### Kill a Job
 ```
 $ cd $GOPATH/src/github.com/paypal/dce-go/examples 
 $ go run client.go -executor=compose -url=http://192.168.33.8:8081 -cmd=kill
 ```
 
 
-###Running dce-go on Marathon
+### Running dce-go on Marathon
 
 Marathon provides both REST APIs and UI to manage Jobs. 
 An example of payload to create applications is provided as follows:
