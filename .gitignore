@@ -5,3 +5,4 @@ dce-go.iml
 .vagrant/
 .DS_Store
 dce/executor
+executor
