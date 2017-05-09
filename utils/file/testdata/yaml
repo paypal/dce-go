@@ -1,0 +1,213 @@
+#---#
+#docker-compose-base.yml
+
+version: '2'
+services:
+
+  ##Application pm2/node container
+  paastestkrak13nodeweb:
+    image: dockerhub.paypalcorp.com/altus-ci/paastestkrak13nodeweb:1.0.3_2017020216315929
+    container_name: paastestkrak13nodeweb_1.0.3_2017020216315929
+    stdin_open: true
+    network_mode: "host"
+    depends_on:
+      - keymakeragent
+      - appidentityfetcher
+    user: cronusapp
+    volumes:
+     - /etc/nginx
+     - /dependencies/paastestkrak13nodeweb/cronus/scripts
+     - ./appdata:/appdata
+     - ./log/applogs:/dependencies/paastestkrak13nodeweb/cronus/scripts/logs
+     - ./log/deploylogs:/dependencies/paastestkrak13nodeweb/cronus/scripts/deploylogs
+     - ./log/nginxlogs:/var/log/nginx
+     - /etc/syshiera.yaml:/etc/syshiera.yaml
+     - keymakeragent-identities:/x/web/keymaker/identities/
+     - paastestkrak13nodeweb:/data
+
+     - keystore:/dependencies/paastestkrak13nodeweb_keystore
+
+    environment:
+     - CRONUSAPP_HOME=/dependencies
+     - TERM=xterm
+     - DISABLE_NGINX_AUTO_START=true
+     - AUTHCODE
+     - AUTHCODE2
+     - METADATA_ENV_FILE
+     - METADATA_JSON_FILE
+     - APP_USER=altusapp
+
+  ##App Nginx container
+  nginx:
+    image: dockerhub.paypalcorp.com/altus-ci/paastestkrak13nodeweb:1.0.3_2017020216315929
+    container_name: nginx_1.0.3_2017020216315929
+    network_mode: "host"
+    entrypoint: /bin/bash -c "until [ -f /dependencies/paastestkrak13nodeweb/cronus/scripts/nginx.conf ]; do sleep 5; done; if ! grep -q 'daemon off' /dependencies/paastestkrak13nodeweb/cronus/scripts/nginx.conf ; then sed -i -e '1idaemon off;\' /dependencies/paastestkrak13nodeweb/cronus/scripts/nginx.conf; fi; /usr/sbin/nginx -c /dependencies/paastestkrak13nodeweb/cronus/scripts/nginx.conf || exit 1;"
+    volumes_from:
+     - paastestkrak13nodeweb
+    environment:
+     - TERM=xterm
+    labels:
+      primary.container: "true"
+      healthcheck.container: "true"
+      health.check.url: '/bin/bash -c "curl -kf https://\$HOSTNAME:443/ecv"'
+      health.check.output: "in"
+
+  #Keymaker Agent Container
+  keymakeragent:
+    image: dockerhub.paypalcorp.com/paas/keymakeragent:207.0-24264011
+    container_name: keymakeragent_1.0.3_2017020216315929
+    network_mode: "host"
+    stdin_open: true
+    restart: "on-failure:3"
+    depends_on:
+      - keymakeragentprotected
+    volumes:
+     - /etc/syshiera.yaml:/etc/syshiera.yaml
+     - keymakeragent-protected:/x/web/LIVE/keymakeragent/protected
+     - keymakeragent-identities:/x/web/keymaker/identities
+    environment:
+     - AUTHCODE
+     - AUTHCODE2
+
+  #Keymaker Protected Packages Container
+  keymakeragentprotected:
+    image: dockerhub.paypalcorp.com/paas/keymakeragent-protected
+    container_name: keymakeragentprotected_1.0.3_2017020216315929
+    volumes:
+     - /etc/syshiera.yaml:/etc/syshiera.yaml
+     - keymakeragent-protected:/x/web/LIVE/keymakeragent/protected
+
+  #Keymaker Identity file Download Container
+  appidentityfetcher:
+    container_name: appidentityfetcher_1.0.3_2017020216315929
+    image: dockerhub.paypalcorp.com/paas/appidentity-fetcher:1.1
+    volumes:
+     - /etc/syshiera.yaml:/etc/syshiera.yaml
+     - keymakeragent-identities:/x/web/identities/
+    environment:
+     - APPNAME
+
+
+  #Application Protected Packages Container
+  keystorecontainer:
+    image: dockerhub.paypalcorp.com/keystore/paastestkrak13nodeweb_keystore:qa_1.0.50010
+    container_name: keystorecontainer_1.0.3_2017020216315929
+    volumes:
+     - keystore:/keystorevolume
+
+
+volumes:
+  #Application presistent data volume
+  paastestkrak13nodeweb:
+    driver: local
+  #Keymaker Named Data Volumes
+  keymakeragent-protected:
+    driver: local
+  keymakeragent-identities:
+    driver: local
+
+  keystore:
+    driver: local
+
+
+#---#
+#docker-compose-qa.yml
+
+version: '2'
+services:
+
+  ##Application container
+  paastestkrak13nodeweb:
+    environment:
+     - SERVICE_HOST_FQDN=live.qa.paypal.com
+     - SHARE_PWD=aardvark
+     - HAPROXY_JSON
+
+#---#
+#docker-compose-production.yml
+
+version: '2'
+services:
+
+  #Trace Logging Daemon
+  svctracedaemon:
+    image: dockerhub.paypalcorp.com/paas/svctracedaemon:201.0-18010465
+    container_name: svctracedaemon_1.0.3_2017020216315929
+    network_mode: "host"
+    stdin_open: true
+    restart: "on-failure:3"
+    volumes:
+      - /etc/syshiera.yaml:/etc/syshiera.yaml
+    environment:
+     - AUTHCODE
+     - AUTHCODE2
+
+
+  #Application Protected Packages Container Overrides
+  keystorecontainer:
+    image: dockerhub.paypalcorp.com/keystore/paastestkrak13nodeweb_keystore:production_1.0.50010
+
+
+#---#
+#docker-compose-sandbox.yml
+
+version: '2'
+services:
+
+  #Trace Logging Daemon
+  svctracedaemon:
+    image: dockerhub.paypalcorp.com/paas/svctracedaemon:201.0-18010465
+    container_name: svctracedaemon_1.0.3_2017020216315929
+    network_mode: "host"
+    stdin_open: true
+    restart: "on-failure:3"
+    volumes:
+      - /etc/syshiera.yaml:/etc/syshiera.yaml
+    environment:
+     - AUTHCODE
+     - AUTHCODE2
+
+
+  #Application Protected Packages Container Overrides
+  keystorecontainer:
+    image: dockerhub.paypalcorp.com/keystore/paastestkrak13nodeweb_keystore:sandbox_1.0.50010
+
+
+#---#
+#docker-compose-debug.yml
+
+version: '2'
+services:
+
+  paastestkrak13nodeweb:
+    entrypoint: /bin/bash -c "sleep infinity"
+
+#---#
+#docker-compose-healthcheck.yml
+
+version: '2'
+services:
+
+  ##Application pm2/node container
+  paastestkrak13nodeweb:
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 100
+      test: TEST_ECV=`grep '"ecvURL"' /dependencies/paastestkrak13nodeweb/cronus/scripts/manifest.json | awk 'match($$0, /".*"(.*)"/, a) {print a[1]}'` ; curl -kf $$TEST_ECV | grep -i 'in' || exit 1
+    labels:
+      healthcheck.container: "true"
+
+  ##App Nginx container
+  nginx:
+    depends_on:
+      paastestkrak13nodeweb:
+        condition: service_healthy
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 100
+      test: curl -kf https://`hostname -f`:443/ecv | grep -i 'in' || exit 1
+    labels:
+      healthcheck.container: "true"

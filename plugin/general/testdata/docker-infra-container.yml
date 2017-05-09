@@ -1,0 +1,9 @@
+networks:
+  default:
+    external:
+      name: net
+services:
+  networkproxy:
+    container_name: networkproxy_0.1
+    image: dcego/networkproxy:1.2
+version: "2.1"

@@ -1,0 +1,387 @@
+<html>
+<head>
+	<title>DCE-GO</title>
+	<style type="text/css">
+#ballMenuContainer {
+			position: fixed;
+  top: 50%;
+  left: 50%;
+  margin-top: 200px;
+  margin-left: -100px;
+}
+
+
+@-webkit-keyframes pulse {
+    0% {
+      -webkit-transform: scale(1) rotate(0deg);
+    }
+    50% {
+      -webkit-transform: scale(1.1) rotate(-5deg);
+    }
+    100% {
+      -webkit-transform: scale(1) rotate(0deg);
+    }
+}
+@-o-keyframes pulse {
+    0% {
+      -o-transform: scale(1) rotate(0deg);
+    }
+    50% {
+      -o-transform: scale(1.1) rotate(-5deg);
+    }
+    100% {
+      -o-transform: scale(1) rotate(0deg);
+    }
+}
+@-moz-keyframes pulse {
+    0% {
+      -moz-transform: scale(1) rotate(0deg);
+    }
+    50% {
+      -moz-transform: scale(1.1) rotate(-5deg);
+    }
+    100% {
+      -moz-transform: scale(1) rotate(0deg);
+    }
+}
+@keyframes pulse {
+    0% {
+      transform: scale(1) rotate(0deg);
+    }
+    50% {
+      transform: scale(1.1) rotate(-5deg);
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
+}
+
+@-webkit-keyframes bump {
+  0% {
+      top: 0;
+  }
+  5% {
+      top: 3px;
+  }
+  10% {
+      top:0;
+  }
+  100% {
+      top:0;
+  }
+}
+@-o-keyframes bump {
+  0% {
+      top: 0;
+  }
+  5% {
+      top: 3px;
+  }
+  10% {
+      top:0;
+  }
+  100% {
+      top:0;
+  }
+}
+@-moz-keyframes bump {
+  0% {
+      top: 0;
+  }
+  5% {
+      top: 3px;
+  }
+  10% {
+      top:0;
+  }
+  100% {
+      top:0;
+  }
+}
+@keyframes bump {
+  0% {
+      top: 0;
+  }
+  5% {
+      top: 3px;
+  }
+  10% {
+      top:0;
+  }
+  100% {
+      top:0;
+  }
+}
+
+.menuBall {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 5px;
+    display: inline-block;
+}
+
+.ball {
+    position:absolute;
+    width:100%;
+    height:100%;
+    -moz-border-radius: 50%;
+    -webkit-border-radius: 50%;
+    -o-border-radius: 50%;
+    border-radius: 50%;
+    border: 2px dashed #fff;
+    margin: 10px;
+    text-decoration: none;
+}
+
+.ball:hover {
+    -webkit-animation: pulse 1s ease 0s infinite normal;
+    -o-animation: pulse 1s ease 0s infinite normal;
+    -moz-animation: pulse 1s ease 0s infinite normal;
+    animation: pulse 1s ease 0s infinite normal;
+}
+
+.redball {
+    background-color: #d90e23;
+    -moz-box-shadow: 0 0 0 3px #d90e23, 2px 1px 4px 4px rgba(10,10,0,.5);
+    -webkit-box-shadow: 0 0 0 3px #d90e23, 2px 1px 4px 4px rgba(10,10,0,.5);
+    -o-box-shadow: 0 0 0 3px #d90e23, 2px 1px 4px 4px rgba(10,10,0,.5);
+    box-shadow: 0 0 0 3px #d90e23, 2px 1px 6px 4px rgba(10,10,0,.5);
+
+    background-image: -moz-linear-gradient(0deg, rgba(0,0,0,.25) 50%, transparent 10%),-moz-linear-gradient(rgba(0,0,0,.25) 50%, transparent 50%);
+    background-image: -webkit-linear-gradient(0deg, rgba(0,0,0,.25) 50%, transparent 10%),-webkit-linear-gradient(rgba(0,0,0,.25) 50%, transparent 50%);
+    background-image: -o-linear-gradient(0deg, rgba(0,0,0,.25) 50%, transparent 10%),-o-linear-gradient(rgba(0,0,0,.25) 50%, transparent 50%);
+    background-size:10px 10px;
+}
+
+.blueball {
+    -moz-box-shadow: 0 0 0 3px #d6385b, 2px 1px 4px 4px rgba(10,10,0,.5);
+    -webkit-box-shadow: 0 0 0 3px #d6385b, 2px 1px 4px 4px rgba(10,10,0,.5);
+    -o-box-shadow: 0 0 0 3px #d6385b, 2px 1px 4px 4px rgba(10,10,0,.5);
+    box-shadow: 0 0 0 3px #d6385b, 2px 1px 6px 4px rgba(10,10,0,.5);
+
+    background-image: -webkit-linear-gradient(35deg, #9f2e86 25%, transparent 25%, transparent 75%, #9f2e86 75%, #9f2e86),
+    -webkit-linear-gradient(-35deg, #9f2e86 25%, transparent 25%, transparent 75%, #9f2e86 75%, #9f2e86);
+    background-image: -moz-linear-gradient(35deg, #9f2e86 25%, transparent 25%, transparent 75%, #9f2e86 75%, #9f2e86),
+    -moz-linear-gradient(-35deg, #9f2e86 25%, transparent 25%, transparent 75%, #9f2e86 75%, #9f2e86);
+    background-size:20px 20px;
+    background-color: #d6385b;
+}
+
+.yellowball {
+    background-color: #7968a8;
+    -moz-box-shadow: 0 0 0 3px #7968a8, 2px 1px 4px 4px rgba(10,10,0,.5);
+    -webkit-box-shadow: 0 0 0 3px #7968a8, 2px 1px 4px 4px rgba(10,10,0,.5);
+    box-shadow: 0 0 0 3px #7968a8, 2px 1px 6px 4px rgba(10,10,0,.5);
+
+    background-image: -webkit-linear-gradient(90deg, transparent 50%, rgba(99,138,190,1) 50%);
+    background-image: -moz-linear-gradient(90deg, transparent 50%, rgba(99,138,190,1) 50%);
+    background-size: 8px 8px;
+}
+
+.greenball {
+    -moz-box-shadow: 0 0 0 3px #65b37a, 2px 1px 4px 4px rgba(10,10,0,.5);
+    -webkit-box-shadow: 0 0 0 3px #65b37a, 2px 1px 4px 4px rgba(10,10,0,.5);
+    box-shadow: 0 0 0 3px #65b37a, 2px 1px 6px 4px rgba(10,10,0,.5);
+
+    background:
+        -webkit-radial-gradient(#e8b15e 4px, transparent 6px);
+    background:
+        -moz-radial-gradient(#e8b15e 4px, transparent 6px);
+    background-size: 20px 20px;
+
+    background-image: -webkit-radial-gradient(#e8b15e 15%, transparent 16%),
+        -webkit-radial-gradient(#e8b15e 15%, transparent 16%);
+    background-image: -moz-radial-gradient(#e8b15e 15%, transparent 16%),
+        -moz-radial-gradient(#e8b15e 15%, transparent 16%);
+    background-color: #65b37a;
+    background-size:30px 30px;
+    background-position: 0 0, 20px 20px;
+}
+
+.menuText {
+    font-family: 'IdolwildRegular' , Verdana, Helvetica, Sans-Serif;
+    font-size: larger;
+    color: #ffffff;
+    position: relative;
+    vertical-align: middle;
+    text-align: center;
+    top: 40%;
+}
+
+#menuBall1 {
+  -webkit-animation: bump 6s linear 0s infinite normal;
+}
+#menuBall2 {
+  -webkit-animation: bump 6s linear .5s infinite normal;
+}
+#menuBall3 {
+  -webkit-animation: bump 6s linear 1s infinite normal;
+}
+#menuBall4 {
+  -webkit-animation: bump 6s linear 1.5s infinite normal;
+}
+
+#menuBall1 {
+  -moz-animation: bump 6s linear 0s infinite normal;
+}
+#menuBall2 {
+  -moz-animation: bump 6s linear .5s infinite normal;
+}
+#menuBall3 {
+  -moz-animation: bump 6s linear 1s infinite normal;
+}
+#menuBall4 {
+  -moz-animation: bump 6s linear 1.5s infinite normal;
+}
+
+#menuBall1 {
+  -o-animation: bump 6s linear 0s infinite normal;
+}
+#menuBall2 {
+  -o-animation: bump 6s linear .5s infinite normal;
+}
+#menuBall3 {
+  -o-animation: bump 6s linear 1s infinite normal;
+}
+#menuBall4 {
+  -o-animation: bump 6s linear 1.5s infinite normal;
+}
+
+#menuBall1 {
+  animation: bump 6s linear 0s infinite normal;
+}
+#menuBall2 {
+  animation: bump 6s linear .5s infinite normal;
+}
+#menuBall3 {
+  animation: bump 6s linear 1s infinite normal;
+}
+#menuBall4 {
+  animation: bump 6s linear 1.5s infinite normal;
+}
+
+
+div#partyInfo {
+    position: absolute;
+    bottom: 30%;
+    top: 30%;
+    left: 20%;
+    right: 20%;
+    margin: 5px;
+    padding: 8px;
+    z-index: 2000;
+    text-shadow: -1px -1px #65b37a;
+    font-family: 'IdolwildRegular' , Verdana, Helvetica, Sans-Serif;
+    font-size: 2.5em;
+    color: #FFFFFF;
+    border-radius: 10px;
+    border: 2px dashed #fff;
+    background-color: #d90e23;
+    -moz-box-shadow: 0 0 0 3px #d90e23, 2px 1px 4px 4px rgba(10,10,0,.5);
+    -webkit-box-shadow: 0 0 0 3px #d90e23, 2px 1px 4px 4px rgba(10,10,0,.5);
+    -o-box-shadow: 0 0 0 3px #d90e23, 2px 1px 4px 4px rgba(10,10,0,.5);
+    box-shadow: 0 0 0 3px #d90e23, 2px 1px 6px 4px rgba(10,10,0,.5);
+}
+
+#darkMe {
+    position:absolute;
+    top:0;
+    left:0;
+    height:100%;
+    width: 100%;
+    background: rgba(0,0,0,0.65);
+    z-index: 1000;
+    -webkit-filter: blur(3px);
+}
+
+#darkMe.hideMe, #partyInfo.hideMe {
+    visibility: hidden;
+}
+
+#darkMe.showMe, #partyInfo.showMe{
+    visibility:visible;
+}
+
+		.logo {
+			position: absolute;
+      top: 30px;
+      left: 30px;
+		}
+    h1 {
+     position: absolute;
+     top: 15px;
+     left: 140px;
+	   font-family: "Comic Sans MS";
+		 color: white;
+	   font-size: 50px;
+    }
+		h2 {
+     position: absolute;
+     top: 250px;
+     left: 100px;
+     width: 100%;
+	   font-family: "Comic Sans MS";
+	   font-size: 35px;
+		 color: white;
+		 font-size: 2vw;
+    }
+    p {
+     position: absolute;
+     top: 350px;
+     left: 100px;
+     width: 100%;
+	   font-family: "Comic Sans MS";
+	   font-size: 20px;
+		 color: white;
+		 font-size: 1.5vw;
+    }
+		div.centre {
+     width: 2000px;
+     display: block;
+     margin-left: auto;
+     margin-right: auto;
+    }
+		html {
+     background: url(./back.png) no-repeat center center fixed;
+     -webkit-background-size: cover;
+     -moz-background-size: cover;
+     -o-background-size: cover;
+    background-size: cover;
+    }
+     </style>
+</head>
+<body>
+<div class="logo"><img src="./logo.png" alt="" /></div>
+<h1>DCE-GO</h1>
+<div class="centre" style="text-align: center;">
+	<h2>Getting Started with DCE-GO</h2>
+	<p>This project enables Mesos frameworks <br>to launch a pod of docker containers.</p>
+	<div id="ballMenuContainer">
+		<div id="menuBall1" class="menuBall">
+			<a href="https://github.com/paypal/dce-go" class="ball blueball">
+				<div class="menuText">
+					Start
+				</div>
+			</a>
+		</div>
+		<div id="menuBall2" class="menuBall">
+			<a href="#" class="ball redball">
+				<div class="menuText">
+					Email
+				</div>
+			</a>
+		</div>
+		<div id="menuBall3" class="menuBall">
+			<a href="#" class="ball greenball">
+				<div class="menuText">
+					Demo
+				</div>
+			</a>
+		</div>
+	</div>
+</div>
+
+</body>
+
+</html>

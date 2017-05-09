@@ -1,0 +1,21 @@
+version: '2.1'
+services:
+ mysql:  
+  image: mysql
+  container_name: mysql
+  ports:
+   - "81:3306"
+  environment:
+   - MYSQL_ROOT_PASSWORD=root
+   - MYSQL_DATABASE=ghost
+   - MYSQL_USER=ghost
+   - MYSQL_PASSWORD=password
+ ghost:  
+  image: dockerhub.paypalcorp.com/kkrishna/ghostlocal:1.0
+  container_name: ghostlocal
+  depends_on:
+    - mysql
+  ports:
+    - "80:2368"
+  labels:
+    - "primary.container=true"
