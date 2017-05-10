@@ -13,7 +13,7 @@ Composite containers representing an application is a common requirement for mod
 
 The project goal is to model a pod of containers with docker-compose and launch it with your favorite Mesos frameworks like Marathon, Apache Aurora, etc. One does not need to switch to Kubernetes on Mesos if all that they are looking to do is launch pods (model pod like workloads). With network and storage plugins supported directly in Docker, one can model advanced pods supported through compose. Furthermore, instead of using some different spec to define pods, we wanted to build around the compose spec that is well accepted in the docker community. A developer can now write the pod spec once, run it locally in their laptop using compose and later seamlessly move into Mesos without having to modify the pod spec.
 
-Running multiple pods on the same host may create many conflicts (containerId's , ports etc.). Executor takes care of resolving these conflicts.  A new docker-compose file resolving all the conflicts is generated. Each container is tagged with specific taskId and executorId and this is used to clean up containers via mesos hooks if executor is terminated. Cgroup is intruduced to limit, account for, and isolate the resource usage (CPU, memory, disk I/O, network, etc.) of a Pod.
+Running multiple pods on the same host may create many conflicts (containerId's , ports etc.). Executor takes care of resolving these conflicts.  A new docker-compose file resolving all the conflicts is generated. Each container is tagged with specific taskId and executorId and this is used to clean up containers via mesos hooks if executor is terminated. Cgroup is introduced to limit, account for, and isolate the resource usage (cpu, memory at this point) of a Pod.
  
 dce-go is implemented in golang and provides a pluggable mechanism which gives developers more flexibilities to inject their custom logic. 
  
@@ -23,6 +23,7 @@ dce-go is implemented in golang and provides a pluggable mechanism which gives d
 Pod is launched according to docker compose files provided by users. Docker compose files can be modified before pod is launched by dce-go. To allow developers implementing their own logic for customizing docker compose files based on specific requirements, pluggable structure is provided in dce-go. Please look into [How to develop](docs/how-to-develop.md) doc to understand how to implement plugins.
 
 ### Pod Modelling
+Pod containers essentially has to share namespace and containers in a pod need to share a common cgroup.
 
 ##### cgroup hierarchy
 dce-go mounts by default all the containers representing the pod under the parent mesos task cgroup. The memory subsystem use_hierarchy should be enabled for mesos cgroup. With this even if individual containers are not controlled, resources will be enforced as per the parent task limits. 
