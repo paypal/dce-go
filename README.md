@@ -31,14 +31,14 @@ dce-go mounts by default all the containers representing the pod under the paren
 This container is automatically added by the general plugin. Infrastructure container is the secret of how containers in a Pod can share the network namespace with it and the infra container gets the pod IP assigned to. We are not collapsing other namespaces like pid at this point in general plugin.
 
 ### Features
-Implements mesos executor callbacks to maintain the lifecycle of a pod.
-Massages compose file to add cgroup parent, mesos labels and edit certain sections to resolve any naming conflict etc.
-Collapses network namespace by default.
-Provides pod monitor to not only kill entire pod on unexpected container exit but also when a container becomes unhealthy as per docker healthchecks.
-Supports running multiple compose files.
-Mesos Module provided to prevent pod leaks in rare case of executor crashes.
-Provides plugins. 
-Last but not the least any existing Mesos Frameworks like Aurora, Marathon etc can use DCE directly without making ANY framework changes.
+- Implements mesos executor callbacks to maintain the lifecycle of a pod.
+- Massages compose file to add cgroup parent, mesos labels and edit certain sections to resolve any naming conflict etc.
+- Collapses network namespace by default.
+- Provides pod monitor to not only kill entire pod on unexpected container exit but also when a container becomes unhealthy as per docker healthchecks.
+- Supports running multiple compose files.
+- Mesos Module provided to prevent pod leaks in rare case of executor crashes.
+- Provides plugins. 
+- Last but not the least any existing Mesos Frameworks like Aurora, Marathon etc can use DCE directly without making ANY framework changes.
 
 
 ### To start using dce-go
