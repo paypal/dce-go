@@ -28,11 +28,11 @@ Pod is launched according to docker compose files provided by users. Docker comp
 dce-go mounts by default all the containers representing the pod under the parent mesos task cgroup. The memory subsystem use_hierarchy should be enabled for mesos cgroup. With this even if individual containers are not controlled, resources will be enforced as per the parent task limits. 
 
 ##### Infrastructure Container
-Infrastructure container is the secret of how containers in a Pod can share the network namespace, including the IP address and network ports. We are not collapsing other namespaces like pid at this point in general plugin.
+This container is automatically added by the general plugin. Infrastructure container is the secret of how containers in a Pod can share the network namespace with it and the infra container gets the pod IP assigned to. We are not collapsing other namespaces like pid at this point in general plugin.
 
 ### Features
 Implements mesos executor callbacks to maintain the lifecycle of a pod.
-Massages compose file to add cgroup parent, mesos labels and edit certain sections to resolve any naming conflict etc
+Massages compose file to add cgroup parent, mesos labels and edit certain sections to resolve any naming conflict etc.
 Collapses network namespace by default.
 Provides pod monitor to not only kill entire pod on unexpected container exit but also when a container becomes unhealthy as per docker healthchecks.
 Supports running multiple compose files.
