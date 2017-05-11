@@ -49,7 +49,7 @@ var ComposeTaskInfo *mesos.TaskInfo
 var HealthCheckListId = make(map[string]bool)
 
 var ServiceNameMap = make(map[string]string)
-var PodServices []string
+var PodServices = make(map[string]bool)
 var PodContainers []string
 
 // Check exit code of all the containers in the pod.
@@ -461,6 +461,11 @@ func CheckContainer(containerId string, healthcheck bool) (string, int, error) {
 		return types.UNHEALTHY, 1, err
 	}
 
+	if containerDetail.ExitCode != 0 {
+		log.Printf("CheckContainer : Container %s is finished with exit code %v\n", containerId, containerDetail.ExitCode)
+		return types.UNHEALTHY, containerDetail.ExitCode, nil
+	}
+
 	if healthcheck {
 		if containerDetail.IsRunning {
 			//log.Printf("CheckContainer : Primary container %s is running , %s\n", containerId, containerDetail.HealthStatus)
@@ -474,10 +479,6 @@ func CheckContainer(containerId string, healthcheck bool) (string, int, error) {
 		return types.HEALTHY, -1, nil
 	}
 
-	if containerDetail.ExitCode != 0 {
-		log.Printf("CheckContainer : Container %s is finished with exit code %v\n", containerId, containerDetail.ExitCode)
-		return types.UNHEALTHY, containerDetail.ExitCode, nil
-	}
 	return types.HEALTHY, 0, nil
 }
 
@@ -706,7 +707,7 @@ func HealthCheck(files []string, out chan<- string) {
 	}
 	interval := time.Duration(t)
 
-	for len(containers) < len(PodServices) || !areServices(containers) {
+	for len(containers) < len(PodServices) || !allServicesUp(containers) {
 		containers, err = GetPodContainers(files)
 		if err != nil {
 			log.Errorln("Error to get container id list : ", err.Error())
@@ -779,10 +780,14 @@ func HealthCheckConfigured(containerId string) bool {
 	}
 }
 
-func areServices(containers []string) bool {
+func allServicesUp(containers []string) bool {
+	if len(containers) == 0 {
+		return false
+	}
+
 	for _, container := range containers {
 		var isService bool
-		for _, service := range PodServices {
+		for service := range PodServices {
 			if strings.Contains(container, ServiceNameMap[service]) {
 				isService = true
 			}

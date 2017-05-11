@@ -71,10 +71,11 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	})
 
 	// Count service
-	if _, ok := containerDetails[types.IMAGE].(string); ok {
+	/*if _, ok := containerDetails[types.IMAGE].(string); ok {
 		pod.PodServices = append(pod.PodServices, serviceName)
 		serviceCount++
-	}
+	}*/
+	pod.PodServices[serviceName] = true
 
 	// Remove restart session
 	if _, ok := containerDetails[types.RESTART].(string); ok {
