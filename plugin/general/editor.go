@@ -72,6 +72,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 
 	// Count service
 	if _, ok := containerDetails[types.IMAGE].(string); ok {
+		pod.PodServices = append(pod.PodServices, serviceName)
 		serviceCount++
 	}
 
@@ -116,12 +117,6 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 				strings.Replace(strings.Replace(config.GetConfig().GetString(config.FOLDER_NAME), "_", "", -1),
 					"-", "", -1), serviceName)
 		}
-	}
-
-	// Check if healthcheck is defined
-	if _, ok := containerDetails[types.HEALTHCHECK].(interface{}); ok {
-		pod.HealthCheckList[pod.ServiceNameMap[serviceName]] = true
-		log.Printf("Container %s enable healthcheck", pod.ServiceNameMap[serviceName])
 	}
 
 	// Update value of LINKS

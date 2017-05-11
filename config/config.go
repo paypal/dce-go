@@ -49,6 +49,7 @@ const (
 	PRE_EXIST            = "pre_existing"
 	NETWORK_NAME         = "name"
 	NETWORK_DRIVER       = "driver"
+	CLEANPOD             = "cleanpod"
 )
 
 // Read from default configuration file and set config as key/values

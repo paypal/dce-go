@@ -46,8 +46,11 @@ var PodStatus = &types.PodStatus{
 var ComposeFiles []string
 var ComposeTaskInfo *mesos.TaskInfo
 
+var HealthCheckListId = make(map[string]bool)
+
 var ServiceNameMap = make(map[string]string)
-var HealthCheckList = make(map[string]bool)
+var PodServices []string
+var PodContainers []string
 
 // Check exit code of all the containers in the pod.
 // If all the exit codes are zero, then assign zero as pod's exit code,
@@ -451,35 +454,31 @@ func PullImage(files []string) error {
 
 //Check container
 //return healthy,run,err
-func CheckContainer(containerId string, healthcheck bool) (string, bool, error) {
+func CheckContainer(containerId string, healthcheck bool) (string, int, error) {
 	containerDetail, err := InspectContainerDetails(containerId, healthcheck)
 	if err != nil {
 		log.Errorf("CheckContainer : Error to inspect container with id : %s, %v", containerId, err.Error())
-		return types.UNHEALTHY, true, err
+		return types.UNHEALTHY, 1, err
 	}
 
 	if healthcheck {
 		if containerDetail.IsRunning {
 			//log.Printf("CheckContainer : Primary container %s is running , %s\n", containerId, containerDetail.HealthStatus)
-			return containerDetail.HealthStatus, true, nil
+			return containerDetail.HealthStatus, -1, nil
 		}
-		if containerDetail.ExitCode != 0 {
-			log.Printf("CheckContainer : Primary container %s is not running , %s\n", containerId, types.UNHEALTHY)
-			return types.UNHEALTHY, false, nil
-		}
-		return containerDetail.HealthStatus, false, nil
+		return containerDetail.HealthStatus, containerDetail.ExitCode, nil
 	}
 
 	if containerDetail.IsRunning {
 		//log.Printf("CheckContainer : Regular container %s is running\n", containerId)
-		return types.HEALTHY, true, nil
+		return types.HEALTHY, -1, nil
 	}
 
 	if containerDetail.ExitCode != 0 {
 		log.Printf("CheckContainer : Container %s is finished with exit code %v\n", containerId, containerDetail.ExitCode)
-		return types.UNHEALTHY, false, nil
+		return types.UNHEALTHY, containerDetail.ExitCode, nil
 	}
-	return types.HEALTHY, false, nil
+	return types.HEALTHY, 0, nil
 }
 
 // docker inspect
@@ -692,4 +691,106 @@ func printStderr(cmd *exec.Cmd) {
 			log.Println("Container Log  |", scanner.Text())
 		}
 	}()
+}
+
+// healthCheck includes health checking for primary container and exit code checking for other containers
+func HealthCheck(files []string, out chan<- string) {
+	log.Println("====================Health Check====================", len(PodServices))
+
+	var err error
+	var containers []string
+
+	t, err := strconv.Atoi(config.GetConfigSection(config.LAUNCH_TASK)[config.POD_MONITOR_INTERVAL])
+	if err != nil {
+		log.Fatalf("Error to convert interval time from string to int : %s\n", err.Error())
+	}
+	interval := time.Duration(t)
+
+	for len(containers) < len(PodServices) || !areServices(containers) {
+		containers, err = GetPodContainers(files)
+		if err != nil {
+			log.Errorln("Error to get container id list : ", err.Error())
+			out <- types.POD_FAILED
+			return
+		}
+
+		time.Sleep(interval)
+	}
+
+	PodContainers = make([]string, len(containers))
+	copy(PodContainers, containers)
+
+	log.Println("Initial Health Check : Expected number of containers in monitoring : ", len(PodServices))
+	log.Println("Initial Health Check : Acutal number of containers in monitoring : ", len(containers))
+	log.Println("Container List : ", containers)
+
+	// Keep health check until all the containers become healthy/running
+	for len(containers) != 0 {
+
+		for i := 0; i < len(containers); i++ {
+
+			var healthy string
+
+			if hc, ok := HealthCheckListId[containers[i]]; ok && hc || HealthCheckConfigured(containers[i]) {
+				healthy, _, err = CheckContainer(containers[i], true)
+			} else {
+				healthy, _, err = CheckContainer(containers[i], false)
+			}
+
+			if err != nil || healthy == types.UNHEALTHY {
+				log.Println("Initial Health Check : send FAILED")
+				out <- types.POD_FAILED
+				log.Println("Initial Health Check : send FAILED and stopped")
+				return
+			}
+
+			if healthy == types.HEALTHY {
+				// remove healthy container from check list
+				log.Printf("Container %s is healthy, remove it from health check list", containers[i])
+				containers = append(containers[:i], containers[i+1:]...)
+				i--
+			}
+		}
+
+		if len(containers) != 0 {
+			time.Sleep(interval)
+		}
+	}
+
+	log.Println("Initial Health Check : send POD_RUNNING")
+
+	out <- types.POD_RUNNING
+
+	log.Println("====================Health check Done====================")
+
+	GetPodDetail(files, "", false)
+}
+
+// check if primary container unable health check or not
+func HealthCheckConfigured(containerId string) bool {
+	_, err := exec.Command("docker", "inspect", "--format='{{.State.Health.Status}}'", containerId).Output()
+	if err != nil {
+		//logger.Printf("Initial Health Check : Container %s Health check is configured to false", containerId)
+		return false
+	} else {
+		HealthCheckListId[containerId] = true
+		//logger.Printf("Initial Health Check : Contaienr %s Health check is configured to true", containerId)
+		return true
+	}
+}
+
+func areServices(containers []string) bool {
+	for _, container := range containers {
+		var isService bool
+		for _, service := range PodServices {
+			if strings.Contains(container, ServiceNameMap[service]) {
+				isService = true
+			}
+		}
+		if !isService {
+			return false
+		}
+	}
+
+	return true
 }

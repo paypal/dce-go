@@ -164,12 +164,21 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		pod.SendPodStatus(types.POD_PULL_FAILED)
 
 	case types.POD_STARTING:
-		// If health check is disabled, update pod as POD_RUNNING.
-		if !config.GetConfig().GetBool(config.HEALTH_CHECK) || extpoints == nil || len(extpoints) == 0 {
-			cancel()
-			pod.SendPodStatus(types.POD_RUNNING)
-			go monitor.MonitorPoller()
-		}
+		// Initial health check
+		go func() {
+			res, err := initHealthCheck()
+			if err != nil {
+				cancel()
+				pod.SendPodStatus(types.POD_FAILED)
+			}
+			if res == types.POD_RUNNING {
+				cancel()
+				if pod.GetPodStatus() != types.POD_RUNNING {
+					pod.SendPodStatus(types.POD_RUNNING)
+					go monitor.MonitorPoller()
+				}
+			}
+		}()
 
 		// Temp status keeps the pod status returned by PostLaunchTask
 		var tempStatus string
@@ -185,13 +194,6 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			if tempStatus == types.POD_FAILED {
 				cancel()
 				pod.SendPodStatus(types.POD_FAILED)
-			}
-			if tempStatus == types.POD_RUNNING {
-				cancel()
-				if pod.GetPodStatus() != types.POD_RUNNING {
-					pod.SendPodStatus(types.POD_RUNNING)
-					go monitor.MonitorPoller()
-				}
 			}
 		}
 
@@ -283,6 +285,18 @@ func pullAndLaunchPod() string {
 		return types.POD_PULL_FAILED
 	}
 	return pod.LaunchPod(pod.ComposeFiles)
+}
+
+func initHealthCheck() (string, error) {
+	res, err := wait.WaitUntil(types.MAX_DURATION, wait.ConditionCHFunc(func(healthCheckReply chan string) {
+		pod.HealthCheck(pod.ComposeFiles, healthCheckReply)
+	}))
+
+	if err != nil {
+		log.Errorf("Error to wait on healcheck %v", err)
+		return types.POD_FAILED, err
+	}
+	return res, err
 }
 
 func init() {
