@@ -1,4 +1,4 @@
-##How to develop dce-go
+## How to develop dce-go
 
 In this document, we will cover implementation details of dce-go. As mentioned before, running multiple pods on the same host may create many conflicts (containerId's , ports etc.). Executor takes care of resolving these conflicts by generating a new compose file. New compose file generation is powered via plugin mechanism. General plugin modifies compose sections so as to avoid conflict among running pods unique for a host and supports basic requirements for running a pod. Appropriate custom logic can be implemented via a plugin and injected to dce-go. The plugin mechanism will allow developers to extend and modify default behavior via set of static plugins. Main configuration file maintains plugin order. They are invoked in that order at appropriate executor callback interface.
 
@@ -6,11 +6,11 @@ dce-go implements [mesos executor callback interface](https://github.com/mesos/m
 LaunchTask, KillTask and Shutdown methods are of our interest where plugins are invoked. LaunchTask is invoked when a task is launched on executor (initiated via SchedulerDriver.LaunchTasks), while KillTask is invoked when a task running within this executor is killed via SchedulerDriver.KillTask and Shutdown is invoked via SchedulerDriver.Shutdown. This document covers these scenarios in detail below.
 
 
-#####State Diagram: Executor LaunchTask
+##### State Diagram: Executor LaunchTask
 
 LaunchTask is executor callback for launching task on this executor. PreLaunch and PostLaunch plugin methods are invoked during this callback. Below diagram describes steps involved for LaunchTask.
 
-![alt tag](https://github.com/paypal/dce-go/blob/master/docs/images/launchtask.png)
+![launchtask](images/launchtask.png)
 
 Pre Launch Task Plugin: Static plugins allow to inject custom behavior. For instance, General plugin via pre-launch modify/inject sections of compose such as labels, env, cgroups, networks etc.
 
@@ -22,9 +22,9 @@ Post Launch Task Plugin: Likewise, post-launch aims at injecting custom logic af
 
 Pod Monitor: Once task is running, executor launches pod monitor to periodically (configurable value) monitor pod status. If container(s) become unhealthy, then it brings down the pod and updates task status to mesos. It also stops on receiving KillTask.
 
-#####State Diagram: Executor KillTask
+##### State Diagram: Executor KillTask
 
-![alt tag](https://github.com/paypal/dce-go/blob/master/docs/images/deletetask.png)
+![deletetask](images/deletetask.png)
 
 Scenarios of Kill Task
 
@@ -32,14 +32,14 @@ Scenarios of Kill Task
 2. "failed" state: Pod Monitor detects unhealthy state and triggers pod cleanup and task update and at the same time KillTask is invoked by mesos while pod is in program of shutdown. Here, KillTask will be no-op.
 3. "killed" state: Pod is already in program of shutdown. Here, KillTask will be no-op.
 
-#####Sequence Diagram: Pod Monitor
+##### Sequence Diagram: Pod Monitor
 
-![](https://github.com/paypal/dce-go/blob/master/docs/images/podmonitor.png)
+![podmonitor](images/podmonitor.png)
 
 PodMonitor: Pod Monitor is launched by dce-go once task is running.  Its responsibility is to monitor the health status of pod until pod becomes unhealthy. Additionally, Pod Monitor will trigger cleanup pod and update task state as FAILED once pod is unhealthy. 
 
 
-####General plugin
+#### General plugin
 
 DCE-GO comes with default General Plugin. This Plugin updates compose files so that multiple pods are able to launch on a host. It largely covers following:
 * Decorate various compose sections  to resolve all the conflicts.
@@ -48,11 +48,11 @@ DCE-GO comes with default General Plugin. This Plugin updates compose files so t
 * Creating infrastructure container for allowing to collapse network namespace for containers in a pod.
 
 
-####Plugin Development
+#### Plugin Development
 Any additional custom logic can be supported via a plugin implementation. It requires implementing ComposePlugin interface and registering as a plugin. Details below.
 
 
-#####Implementing  ComposePlugin interface
+##### Implementing  ComposePlugin interface
 ```
 type ComposePlugin interface {
        // PreLaunchTask is invoked prior to pod launch in  context of executor LaunchTask callback.
@@ -74,7 +74,7 @@ type ComposePlugin interface {
 PreLaunchTask and PostLaunchTask have Context object as first parameter. This is used to pass around parsed compose files so as to avoid loading from files by individual plugins.
 Below sample code illustrates a sample plugin loading parsed compose file from context in an object of ServiceDetail type.
 
-#####Sample Plugin implementation
+##### Sample Plugin implementation
 Example plugin implementation can be found [here](../plugin/example/impl.go)
 ```
 func (ex *exampleExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
@@ -126,7 +126,7 @@ func (ex *exampleExt) Shutdown(executor.ExecutorDriver) error {
 	return nil
 }
 ```
-#####Registering plugins
+##### Registering plugins
 1. dce-go keeps a plugin registry map to keep track of all registered plugins.  Plugin registration is supported via package init( ) function. Below sample code snippet illustrates plugin registration.  In addition, extra configuration relevant to plugin can be loaded as well. 
     ```
     func init() {
@@ -166,7 +166,7 @@ func (ex *exampleExt) Shutdown(executor.ExecutorDriver) error {
     ```
     In this case, dce will invoke general plugin followed by example plugin.
 
-#####Let's go over an example to see how plugin massage yml files.
+##### Let's go over an example to see how plugin massage yml files.
 
 docker-compose.yml.
 ```
@@ -240,7 +240,7 @@ services:
 version: "2.1"
 ```
 
-#####Infra container 
+##### Infra container 
 
 Below is the infra container section, added by General Plugin. Pod containers attach to infra container network. It also has port mapping section. In example below, application port 2368 is mapped to host port 31333. Infra container information such as image, container, network and driver is captured in General Plugin, discussed later in this document.
 
@@ -265,7 +265,7 @@ services:
 version: "2.1"
 ```
 
-####How to build DCE-GO
+#### How to build DCE-GO
 
 This project has makefile to build and upload binary for vagrant setup. Below following commands helps achieve this.
 ```
@@ -278,12 +278,12 @@ To upload binary file to nginx used in vagrant setup. Note that upload target is
    $ make upload
 ```
 
-####DCE-GO Configuration Files
+#### DCE-GO Configuration Files
 There are 2 types of configuration files: 
 * Main configuration file
 * Plugin configuration file  
 
-#####Main configuration file(config/config.yaml)
+##### Main configuration file(config/config.yaml)
 Main configuration file captures generic information relevant to compose executor. Details are outlined below.
 ```
 launchtask:
@@ -317,7 +317,7 @@ healthcheck: health check is enabled or not in your plugins. (Required)
 foldername: folder to keep temporary files generated by plugins. (Optional, default folder name is poddata)
 -->
 
-#####General Plugin configuration file(plugin/general/general.yaml)
+##### General Plugin configuration file(plugin/general/general.yaml)
 Individual Plugin (such as General Plugin) configuration file caters to plugin relevant information. See details below:
 
 ```

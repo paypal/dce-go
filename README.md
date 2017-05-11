@@ -23,13 +23,13 @@ dce-go is implemented in golang and provides a pluggable mechanism which gives d
 According to Slave Recovery feature provided by Mesos, Docker Compose Executor will keep running when the slave process is down. And a restarted slave will re-register with running DCE on the slave.  
 
 ### Features
-####Plugins
+#### Plugins
 REWORD/TBD....Pod is launched according to docker compose files provided by users. Docker compose files can be modified before pod is launched by dce-go. To allow developers implementing their own logic for customizing docker compose files based on specific requirements, pluggable structure is provided in dce-go. Please look into section of Plugin to understand how to implement plugins and plugin them into dce-go.
 
-####cgroup hierarchy
+#### cgroup hierarchy
 dce-go mounts by default all the containers representing the pod under the parent mesos task cgroup. The memory subsystem use_hierarchy should be enabled. With this even if individual containers are not controlled, resources will be enforced as per the parent task limits. 
 
-####Infrastructure Container
+#### Infrastructure Container
 Infrastructure container is the secret of how containers in a Pod can share the network namespace, including the IP address and network ports. We are not collapsing other namespaces like pid at this point in general plugin.
 
 ### To start using dce-go
