@@ -23,8 +23,6 @@ import (
 	"strconv"
 	"time"
 
-	"strings"
-
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/pod"
@@ -32,24 +30,22 @@ import (
 )
 
 // Watching pod status and notifying executor if any container in the pod goes wrong
-func podMonitor(files []string) string {
-	containers, err := pod.GetPodContainers(files)
-	if err != nil {
-		log.Errorln("Error retrieving container id list : ", err.Error())
-		return types.POD_FAILED
-	}
+func podMonitor() string {
+	var err error
+	containers := make([]string, len(pod.PodContainers))
+	copy(containers, pod.PodContainers)
 
 	for i := 0; i < len(containers); i++ {
 		var healthy string
-		var run bool
+		var exitCode int
 
-		/*if hc, ok := pod.HealthCheckList[containers[i]]; ok && hc || hasHealthCheck(containers[i]) {
-			healthy, run, err = pod.CheckContainer(containers[i], true)
+		if hc, ok := pod.HealthCheckListId[containers[i]]; ok && hc {
+			healthy, exitCode, err = pod.CheckContainer(containers[i], true)
+			//log.Printf("container %s has health check, health status: %s, exitCode: %d, err : %v", containers[i], healthy, exitCode, err)
 		} else {
-			healthy, run, err = pod.CheckContainer(containers[i], false)
-		}*/
-
-		healthy, run, err = pod.CheckContainer(containers[i], false)
+			healthy, exitCode, err = pod.CheckContainer(containers[i], false)
+			//log.Printf("container %s no health check, exitCode: %d, err : %v", containers[i], healthy, exitCode, err)
+		}
 
 		if err != nil {
 			log.Println(fmt.Sprintf("Error inspecting container with id : %s, %v", containers[i], err.Error()))
@@ -57,15 +53,25 @@ func podMonitor(files []string) string {
 			return types.POD_FAILED
 		}
 
-		if healthy == types.UNHEALTHY {
+		if exitCode != 0 && exitCode != -1 {
 			log.Println("Pod Monitor : Stopped and send Failed")
 			return types.POD_FAILED
 		}
 
-		if !run {
+		if healthy == types.UNHEALTHY {
+			if config.GetConfigSection(config.CLEANPOD) == nil ||
+				config.GetConfigSection(config.CLEANPOD)[types.UNHEALTHY] == "true" {
+				log.Println("Pod Monitor : Stopped and send Failed")
+				return types.POD_FAILED
+			}
+			log.Warnf("Container %s became unhealthy, but pod won't be killed due to cleanpod config", containers[i])
+		}
+
+		if exitCode == 0 || exitCode == -1 {
 			containers = append(containers[:i], containers[i+1:]...)
 			i--
 		}
+
 	}
 	return ""
 }
@@ -80,7 +86,7 @@ func MonitorPoller() {
 	}
 
 	res, _ := wait.PollForever(time.Duration(gap)*time.Millisecond, nil, wait.ConditionFunc(func() (string, error) {
-		return podMonitor(pod.ComposeFiles), nil
+		return podMonitor(), nil
 	}))
 
 	log.Printf("Pod Monitor Receiver : Received  message %s", res)
@@ -100,14 +106,4 @@ func MonitorPoller() {
 
 	}
 
-}
-
-func hasHealthCheck(serviceName string) bool {
-	for service := range pod.HealthCheckList {
-		if strings.Contains(serviceName, service) {
-			pod.HealthCheckList[serviceName] = true
-			return true
-		}
-	}
-	return false
 }

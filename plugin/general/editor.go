@@ -37,14 +37,12 @@ const (
 	NETWORK_PROXY  = "networkproxy"
 )
 
-var serviceCount int
-
-func EditComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element) (string, *list.Element, int, error) {
+func EditComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element) (string, *list.Element, error) {
 	var err error
 
 	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 	if filesMap[file][types.SERVICES] == nil {
-		return "", ports, serviceCount, nil
+		return "", ports, nil
 	}
 
 	servMap := filesMap[file][types.SERVICES].(map[interface{}]interface{})
@@ -60,7 +58,7 @@ func EditComposeFile(ctx *context.Context, file string, executorId string, taskI
 		file = file + utils.FILE_POSTFIX
 	}
 	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
-	return file, ports, serviceCount, err
+	return file, ports, err
 }
 
 func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMap *types.ServiceDetail, ports *list.Element) (*list.Element, error) {
@@ -71,9 +69,11 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	})
 
 	// Count service
-	if _, ok := containerDetails[types.IMAGE].(string); ok {
+	/*if _, ok := containerDetails[types.IMAGE].(string); ok {
+		pod.PodServices = append(pod.PodServices, serviceName)
 		serviceCount++
-	}
+	}*/
+	pod.PodServices[serviceName] = true
 
 	// Remove restart session
 	if _, ok := containerDetails[types.RESTART].(string); ok {
@@ -116,12 +116,6 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 				strings.Replace(strings.Replace(config.GetConfig().GetString(config.FOLDER_NAME), "_", "", -1),
 					"-", "", -1), serviceName)
 		}
-	}
-
-	// Check if healthcheck is defined
-	if _, ok := containerDetails[types.HEALTHCHECK].(interface{}); ok {
-		pod.HealthCheckList[pod.ServiceNameMap[serviceName]] = true
-		log.Printf("Container %s enable healthcheck", pod.ServiceNameMap[serviceName])
 	}
 
 	// Update value of LINKS

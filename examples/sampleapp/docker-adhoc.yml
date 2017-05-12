@@ -1,0 +1,4 @@
+version: "2.1"
+services:
+  adhoc:
+    image: dcego/adhoc:1.0
