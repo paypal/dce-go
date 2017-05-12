@@ -41,8 +41,10 @@ func podMonitor() string {
 
 		if hc, ok := pod.HealthCheckListId[containers[i]]; ok && hc {
 			healthy, exitCode, err = pod.CheckContainer(containers[i], true)
+			//log.Printf("container %s has health check, health status: %s, exitCode: %d, err : %v", containers[i], healthy, exitCode, err)
 		} else {
 			healthy, exitCode, err = pod.CheckContainer(containers[i], false)
+			//log.Printf("container %s no health check, exitCode: %d, err : %v", containers[i], healthy, exitCode, err)
 		}
 
 		if err != nil {

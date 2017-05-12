@@ -144,8 +144,8 @@ func GetPullRetryCount() int {
 func GetTimeout() time.Duration {
 	timeout := GetConfigSection(LAUNCH_TASK)[TIMEOUT]
 	if timeout == "" {
-		log.Warningln("pod timeout doesn't set in config...timeout will be set as a infinit number")
-		return types.MAX_DURATION
+		log.Warningln("pod timeout doesn't set in config...timeout will be set as 500s")
+		return time.Duration(500000)
 	}
 	t, err := strconv.Atoi(timeout)
 	if err != nil {

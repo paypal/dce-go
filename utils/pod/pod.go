@@ -443,7 +443,7 @@ func PullImage(files []string) error {
 		return err
 	}
 
-	err = utils.WaitCmd(types.MAX_DURATION, &types.CmdResult{
+	err = utils.WaitCmd(config.GetTimeout()*time.Millisecond, &types.CmdResult{
 		Command: cmd,
 	})
 	if err != nil {
@@ -715,6 +715,7 @@ func HealthCheck(files []string, out chan<- string) {
 			return
 		}
 
+		log.Printf("list of containers are launched : %v", containers)
 		time.Sleep(interval)
 	}
 
@@ -771,11 +772,11 @@ func HealthCheck(files []string, out chan<- string) {
 func HealthCheckConfigured(containerId string) bool {
 	_, err := exec.Command("docker", "inspect", "--format='{{.State.Health.Status}}'", containerId).Output()
 	if err != nil {
-		//logger.Printf("Initial Health Check : Container %s Health check is configured to false", containerId)
+		//log.Printf("Initial Health Check : Container %s Health check is configured to false", containerId)
 		return false
 	} else {
 		HealthCheckListId[containerId] = true
-		//logger.Printf("Initial Health Check : Contaienr %s Health check is configured to true", containerId)
+		//log.Printf("Initial Health Check : Contaienr %s Health check is configured to true", containerId)
 		return true
 	}
 }

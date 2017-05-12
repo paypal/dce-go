@@ -288,7 +288,7 @@ func pullAndLaunchPod() string {
 }
 
 func initHealthCheck() (string, error) {
-	res, err := wait.WaitUntil(types.MAX_DURATION, wait.ConditionCHFunc(func(healthCheckReply chan string) {
+	res, err := wait.WaitUntil(config.GetTimeout()*time.Millisecond, wait.ConditionCHFunc(func(healthCheckReply chan string) {
 		pod.HealthCheck(pod.ComposeFiles, healthCheckReply)
 	}))
 

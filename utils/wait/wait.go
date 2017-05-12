@@ -129,6 +129,7 @@ func CountDown(timeout time.Duration, condition ConditionFunc) (time.Duration, s
 
 // wait on exec command finished or timeout
 func WaitCmd(timeout time.Duration, cmd_result *types.CmdResult) error {
+	log.Println("test:::::", timeout)
 	if timeout < time.Duration(0) {
 		log.Println("TIMEOUT is less than zero")
 		return ErrTimeOut
