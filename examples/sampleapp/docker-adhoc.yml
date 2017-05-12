@@ -1,4 +1,4 @@
 version: "2.1"
 services:
   adhoc:
-    image: dockerhub.paypalcorp.com/kkrishna/adhoc:1.0
+    image: dcego/adhoc:1.0
