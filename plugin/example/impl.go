@@ -43,7 +43,7 @@ func init() {
 }
 
 func (ex *exampleExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
-	logger.Println("PreLaunchTask Starting")
+	logger.Println("PreLaunchTask begin")
 	// docker compose YML files are saved in context as type SERVICE_DETAIL which is map[interface{}]interface{}.
 	// Massage YML files and save it in context.
 	// Then pass to next plugin.
@@ -72,21 +72,21 @@ func (ex *exampleExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 }
 
 func (ex *exampleExt) PostLaunchTask(ctx *context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error) {
-	logger.Println("PostLaunchTask Starting")
+	logger.Println("PostLaunchTask begin")
 	return "", nil
 }
 
 func (ex *exampleExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
-	logger.Println("PreKillTask Starting")
+	logger.Println("PreKillTask begin")
 	return nil
 }
 
 func (ex *exampleExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
-	logger.Println("PostKillTask Starting")
+	logger.Println("PostKillTask begin")
 	return nil
 }
 
 func (ex *exampleExt) Shutdown(executor.ExecutorDriver) error {
-	logger.Println("Shutdown Starting")
+	logger.Println("Shutdown begin")
 	return nil
 }

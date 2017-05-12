@@ -85,7 +85,7 @@ job = realis.NewJob().
 			CPU(0.5).
 			RAM(64).
 			Disk(100).
-			IsService(false).
+			IsService(true).
 			InstanceCount(1).
 			AddPorts(3).
 			AddLabel("fileName", "sampleapp/docker-compose.yml,sampleapp/docker-compose-healthcheck.yml").

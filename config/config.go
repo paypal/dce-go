@@ -131,7 +131,7 @@ func GetPullRetryCount() int {
 
 	_retry, err := strconv.Atoi(retry)
 	if err != nil {
-		log.Println("Error to convert retry count from string to int : ", err.Error())
+		log.Println("Error converting retry count from string to int : ", err.Error())
 		return 1
 	}
 
@@ -149,7 +149,7 @@ func GetTimeout() time.Duration {
 	}
 	t, err := strconv.Atoi(timeout)
 	if err != nil {
-		log.Fatalf("Error to convert timeout from string to int : %s\n", err.Error())
+		log.Fatalf("Error converting timeout from string to int : %s\n", err.Error())
 	}
 	return time.Duration(t)
 }
@@ -157,12 +157,12 @@ func GetTimeout() time.Duration {
 func GetMaxRetry() int {
 	retry := GetConfigSection(LAUNCH_TASK)[MAX_RETRY]
 	if retry == "" {
-		log.Warningln("retry for ps and inspect doesn't set in config...retry will be set to zero")
+		log.Warningln("maxretry setting missing in config...setting to zero")
 		return 0
 	}
 	i, err := strconv.Atoi(retry)
 	if err != nil {
-		log.Fatalf("Error to convert retry from string to int : %s\n", err.Error())
+		log.Fatalf("Error converting retry from string to int : %s\n", err.Error())
 	}
 	return i
 }
@@ -170,7 +170,7 @@ func GetMaxRetry() int {
 func GetNetwork() (types.Network, bool) {
 	nmap, ok := GetConfig().GetStringMap(INFRA_CONTAINER)[NETWORKS].(map[string]interface{})
 	if !ok {
-		log.Println("Session networks isn't set in configration file")
+		log.Println("networks section missing in configration file")
 		return types.Network{}, false
 	}
 

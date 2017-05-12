@@ -78,7 +78,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	// Remove restart session
 	if _, ok := containerDetails[types.RESTART].(string); ok {
 		delete(containerDetails, types.RESTART)
-		log.Println("Edit Compose File : Remove session of restart")
+		log.Println("Edit Compose File : Remove restart")
 	}
 
 	// Update session of network_mode
