@@ -165,20 +165,18 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 
 	case types.POD_STARTING:
 		// Initial health check
-		go func() {
-			res, err := initHealthCheck()
-			if err != nil {
-				cancel()
-				pod.SendPodStatus(types.POD_FAILED)
+		res, err := initHealthCheck()
+		if err != nil {
+			cancel()
+			pod.SendPodStatus(types.POD_FAILED)
+		}
+		if res == types.POD_RUNNING {
+			cancel()
+			if pod.GetPodStatus() != types.POD_RUNNING {
+				pod.SendPodStatus(types.POD_RUNNING)
+				go monitor.MonitorPoller()
 			}
-			if res == types.POD_RUNNING {
-				cancel()
-				if pod.GetPodStatus() != types.POD_RUNNING {
-					pod.SendPodStatus(types.POD_RUNNING)
-					go monitor.MonitorPoller()
-				}
-			}
-		}()
+		}
 
 		// Temp status keeps the pod status returned by PostLaunchTask
 		var tempStatus string

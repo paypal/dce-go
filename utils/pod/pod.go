@@ -758,6 +758,7 @@ func HealthCheck(files []string, out chan<- string) {
 			time.Sleep(interval)
 		}
 	}
+	log.Printf("Health Check List: %v", HealthCheckListId)
 
 	log.Println("Initial Health Check : send POD_RUNNING")
 
