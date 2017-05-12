@@ -36,7 +36,6 @@ import (
 var logger *log.Entry
 
 type generalExt struct {
-	serviceCount int
 }
 
 func init() {
@@ -58,7 +57,6 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 
 	var editedFiles []string
 	var err error
-	var tempCount int
 
 	logger.Println("====================context in====================")
 	logger.Println((*ctx).Value(types.SERVICE_DETAIL))
@@ -87,7 +85,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 	for i, file := range *composeFiles {
 		logger.Printf("Starting Edit compose file %s", file)
 		var editedFile string
-		editedFile, currentPort, tempCount, err = EditComposeFile(ctx, file, executorId, taskInfo.GetTaskId().GetValue(), currentPort)
+		editedFile, currentPort, err = EditComposeFile(ctx, file, executorId, taskInfo.GetTaskId().GetValue(), currentPort)
 		if err != nil {
 			logger.Errorln("Error to edit compose file : ", err.Error())
 			return err
@@ -96,8 +94,6 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 		if strings.Contains(editedFile, types.INFRA_CONTAINER_GEN_YML) {
 			indexInfra = i
 		}
-
-		ge.serviceCount = tempCount
 
 		if editedFile != "" {
 			editedFiles = append(editedFiles, editedFile)
