@@ -64,7 +64,7 @@ func podMonitor() string {
 				log.Println("Pod Monitor : Stopped and send Failed")
 				return types.POD_FAILED
 			}
-			log.Warnf("Container %s became unhealthy", containers[i])
+			log.Warnf("Container %s became unhealthy, but pod won't be killed due to cleanpod config", containers[i])
 		}
 
 		if exitCode == 0 || exitCode == -1 {
