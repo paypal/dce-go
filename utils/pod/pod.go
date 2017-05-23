@@ -49,7 +49,6 @@ var ComposeTaskInfo *mesos.TaskInfo
 var HealthCheckListId = make(map[string]bool)
 
 var ServiceNameMap = make(map[string]string)
-var PodServices = make(map[string]bool)
 var PodContainers []string
 
 // Check exit code of all the containers in the pod.
@@ -83,7 +82,7 @@ func checkContainerExitCode(containerId string) (int, error) {
 	_out := strings.Trim(strings.Trim(string(out[:]), "\n"), "'")
 	log.Printf("Check Pod Exit Code : Container %s ExitCode : %v\n", containerId, _out)
 	if err != nil {
-		log.Errorf("Error retrieving container exit code : %s, %s\n", containerId, err.Error())
+		log.Errorf("Error retrieving container exit code of container : %s, %s\n", containerId, err.Error())
 		return 1, err
 	}
 
@@ -293,7 +292,7 @@ func StopPod(files []string) error {
 	log.Println("====================Stop Pod====================")
 	parts, err := GenerateCmdParts(files, " stop")
 	if err != nil {
-		log.Errorln("Error generating compose cmd parts : ", err.Error())
+		log.Errorln("Error generating cmd parts : ", err.Error())
 		return err
 	}
 
@@ -388,7 +387,6 @@ func ForceKill(files []string) error {
 	if err != nil {
 		log.Errorln("Error to get container ids : ", err.Error())
 	}
-
 	for _, name := range containerNames {
 		err = dockerKill(name)
 		if err != nil {
@@ -439,7 +437,7 @@ func PullImage(files []string) error {
 
 	err = cmd.Start()
 	if err != nil {
-		log.Errorln("Error in pull images cmd: ", err.Error())
+		log.Errorln("Error running pull images cmd: ", err.Error())
 		return err
 	}
 
@@ -457,7 +455,7 @@ func PullImage(files []string) error {
 func CheckContainer(containerId string, healthcheck bool) (string, int, error) {
 	containerDetail, err := InspectContainerDetails(containerId, healthcheck)
 	if err != nil {
-		log.Errorf("CheckContainer : Error to inspect container with id : %s, %v", containerId, err.Error())
+		log.Errorf("CheckContainer : Error inspecting container with id : %s, %v", containerId, err.Error())
 		return types.UNHEALTHY, 1, err
 	}
 
@@ -695,22 +693,22 @@ func printStderr(cmd *exec.Cmd) {
 }
 
 // healthCheck includes health checking for primary container and exit code checking for other containers
-func HealthCheck(files []string, out chan<- string) {
-	log.Println("====================Health Check====================", len(PodServices))
+func HealthCheck(files []string, podServices map[string]bool, out chan<- string) {
+	log.Println("====================Health Check====================", len(podServices))
 
 	var err error
 	var containers []string
 
 	t, err := strconv.Atoi(config.GetConfigSection(config.LAUNCH_TASK)[config.POD_MONITOR_INTERVAL])
 	if err != nil {
-		log.Fatalf("Error to convert interval time from string to int : %s\n", err.Error())
+		log.Fatalf("Error converting interval time from string to int : %s\n", err.Error())
 	}
 	interval := time.Duration(t)
 
-	for len(containers) < len(PodServices) || !allServicesUp(containers) {
+	for len(containers) < len(podServices) || !allServicesUp(containers, podServices) {
 		containers, err = GetPodContainers(files)
 		if err != nil {
-			log.Errorln("Error to get container id list : ", err.Error())
+			log.Errorln("Error retrieving container id list : ", err.Error())
 			out <- types.POD_FAILED
 			return
 		}
@@ -722,7 +720,7 @@ func HealthCheck(files []string, out chan<- string) {
 	PodContainers = make([]string, len(containers))
 	copy(PodContainers, containers)
 
-	log.Println("Initial Health Check : Expected number of containers in monitoring : ", len(PodServices))
+	log.Println("Initial Health Check : Expected number of containers in monitoring : ", len(podServices))
 	log.Println("Initial Health Check : Acutal number of containers in monitoring : ", len(containers))
 	log.Println("Container List : ", containers)
 
@@ -758,6 +756,7 @@ func HealthCheck(files []string, out chan<- string) {
 			time.Sleep(interval)
 		}
 	}
+
 	log.Printf("Health Check List: %v", HealthCheckListId)
 
 	log.Println("Initial Health Check : send POD_RUNNING")
@@ -782,14 +781,14 @@ func HealthCheckConfigured(containerId string) bool {
 	}
 }
 
-func allServicesUp(containers []string) bool {
+func allServicesUp(containers []string, podServices map[string]bool) bool {
 	if len(containers) == 0 {
 		return false
 	}
 
 	for _, container := range containers {
 		var isService bool
-		for service := range PodServices {
+		for service := range podServices {
 			if strings.Contains(container, ServiceNameMap[service]) {
 				isService = true
 			}
