@@ -53,7 +53,7 @@ func init() {
 }
 
 func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
-	logger.Println("PreLaunchTask begin : ", *composeFiles)
+	logger.Println("PreLaunchTask Starting : ", *composeFiles)
 
 	var editedFiles []string
 	var err error
@@ -65,7 +65,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 		var servDetail types.ServiceDetail
 		servDetail, err = utils.ParseYamls(*composeFiles)
 		if err != nil {
-			log.Errorf("Error parsing yaml files : %v", err)
+			log.Errorf("Error to parse yaml files : %v", err)
 			return err
 		}
 
@@ -76,7 +76,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 
 	infrayml, err := CreateInfraContainer(ctx, types.INFRA_CONTAINER_YML)
 	if err != nil {
-		logger.Errorln("Error creating infra container : ", err.Error())
+		logger.Errorln("Error to create infra container : ", err.Error())
 		return err
 	}
 	*composeFiles = append(utils.FolderPath(*composeFiles), infrayml)
@@ -87,7 +87,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 		var editedFile string
 		editedFile, currentPort, err = EditComposeFile(ctx, file, executorId, taskInfo.GetTaskId().GetValue(), currentPort)
 		if err != nil {
-			logger.Errorln("Error editing compose file : ", err.Error())
+			logger.Errorln("Error to edit compose file : ", err.Error())
 			return err
 		}
 
@@ -128,17 +128,17 @@ func (gp *generalExt) PostLaunchTask(ctx *context.Context, files []string, taskI
 }
 
 func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
-	logger.Println("PreKillTask begin")
+	logger.Println("PreKillTask Starting")
 	return nil
 }
 
 func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
-	logger.Println("PostKillTask begin")
+	logger.Println("PostKillTask Starting")
 	return nil
 }
 
 func (gp *generalExt) Shutdown(executor.ExecutorDriver) error {
-	logger.Println("Shutdown begin")
+	logger.Println("Shutdown Starting")
 	return nil
 }
 
@@ -156,8 +156,8 @@ func CreateInfraContainer(ctx *context.Context, path string) (string, error) {
 			external := make(map[string]interface{})
 			name := make(map[string]string)
 			if network.Name == "" {
-				log.Warningln("Error in configuration file! Network Name is required if PreExist is true")
-				return "", errors.New("NetworkName missing in general.yaml")
+				log.Warningln("Confliction in configuration file! Network Name is required if PreExist is true")
+				return "", errors.New("Name is missing in general.yaml")
 			}
 			name[types.NAME] = network.Name
 			external[types.NETWORK_EXTERNAL] = name
@@ -189,13 +189,13 @@ func CreateInfraContainer(ctx *context.Context, path string) (string, error) {
 	content, _ := yaml.Marshal(_yaml)
 	fileName, err := utils.WriteToFile(path, content)
 	if err != nil {
-		log.Errorf("Error writing infra container details to file %v", err)
+		log.Errorf("Error to write infra container details into fils %v", err)
 		return "", err
 	}
 
 	fileMap, ok := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 	if !ok {
-		log.Warningln("SERVICE_DETAIL missing in context value")
+		log.Warningln("SERVICE_DETAIL isn't saved in context value")
 		fileMap = types.ServiceDetail{}
 	}
 
