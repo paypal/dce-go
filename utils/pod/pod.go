@@ -387,7 +387,6 @@ func ForceKill(files []string) error {
 	if err != nil {
 		log.Errorln("Error to get container ids : ", err.Error())
 	}
-
 	for _, name := range containerNames {
 		err = dockerKill(name)
 		if err != nil {
