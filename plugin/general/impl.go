@@ -123,7 +123,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 }
 
 func (gp *generalExt) PostLaunchTask(ctx *context.Context, files []string, taskInfo *mesos.TaskInfo) (string, error) {
-	logger.Println("PostLaunchTask Starting")
+	logger.Println("PostLaunchTask begin")
 	return "", nil
 }
 
@@ -189,7 +189,7 @@ func CreateInfraContainer(ctx *context.Context, path string) (string, error) {
 	content, _ := yaml.Marshal(_yaml)
 	fileName, err := utils.WriteToFile(path, content)
 	if err != nil {
-		log.Errorf("Error writing infra container details to file %v", err)
+		log.Errorf("Error writing infra container details into fils %v", err)
 		return "", err
 	}
 
