@@ -68,17 +68,10 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 		"taskId":      taskId,
 	})
 
-	// Count service
-	/*if _, ok := containerDetails[types.IMAGE].(string); ok {
-		pod.PodServices = append(pod.PodServices, serviceName)
-		serviceCount++
-	}*/
-	pod.PodServices[serviceName] = true
-
 	// Remove restart session
 	if _, ok := containerDetails[types.RESTART].(string); ok {
 		delete(containerDetails, types.RESTART)
-		log.Println("Edit Compose File : Remove restart")
+		log.Println("Edit Compose File : Remove session of restart")
 	}
 
 	// Update session of network_mode
