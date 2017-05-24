@@ -54,6 +54,8 @@ apt-get -y install                         \
    unzip                                   \
    --no-install-recommends
 
+sudo echo 1 > /sys/fs/cgroup/memory/memory.use_hierarchy
+
 update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java
 
 readonly IP_ADDRESS=192.168.33.8
@@ -92,6 +94,7 @@ function prepare_extra {
   cp /vagrant/examples/vagrant/mesos_config/etc_mesos-slave/* /etc/mesos-slave
   cp /vagrant/examples/vagrant/mesos_config/etc_mesos-master/* /etc/mesos-master
   cp /vagrant/examples/vagrant/mesos-module/${MESOS_MODULE}/* /output/usr/local/lib/mesos/
+  cp /vagrant/examples/vagrant/marathon/marathon /etc/default/marathon
 }
 
 function install_aurora {
