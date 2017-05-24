@@ -114,7 +114,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	// Get order of plugins from config or mesos labels
 	pluginOrder, err := utils.GetPluginOrder(taskInfo)
 	if err != nil {
-		logger.Println("Plugin order missing in mesos label, trying to retrieve from config")
+		logger.Println("Plugin order missing in mesos label, trying to get it from config")
 		pluginOrder = strings.Split(config.GetConfigSection("plugins")[types.PLUGIN_ORDER], ",")
 	}
 	logger.Println("PluginOrder : ", pluginOrder)
@@ -141,6 +141,14 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		}
 	}
 
+	podServices := getServices(ctx)
+	if err != nil {
+		log.Errorf("Failure getting pod services: %v", err)
+		pod.SetPodStatus(types.POD_FAILED)
+		cancel()
+		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+	}
+
 	err = utils.WriteChangeToFiles(ctx)
 	if err != nil {
 		log.Errorf("Failure writing updated compose files : %v", err)
@@ -165,7 +173,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 
 	case types.POD_STARTING:
 		// Initial health check
-		res, err := initHealthCheck()
+		res, err := initHealthCheck(podServices)
 		if err != nil {
 			cancel()
 			pod.SendPodStatus(types.POD_FAILED)
@@ -285,16 +293,30 @@ func pullAndLaunchPod() string {
 	return pod.LaunchPod(pod.ComposeFiles)
 }
 
-func initHealthCheck() (string, error) {
+func initHealthCheck(podServices map[string]bool) (string, error) {
 	res, err := wait.WaitUntil(config.GetTimeout()*time.Millisecond, wait.ConditionCHFunc(func(healthCheckReply chan string) {
-		pod.HealthCheck(pod.ComposeFiles, healthCheckReply)
+		pod.HealthCheck(pod.ComposeFiles, podServices, healthCheckReply)
 	}))
 
 	if err != nil {
-		log.Errorf("Error to wait on healcheck %v", err)
+		log.Errorf("Error waiting on healcheck %v", err)
 		return types.POD_FAILED, err
 	}
 	return res, err
+}
+
+func getServices(ctx context.Context) map[string]bool {
+	podService := make(map[string]bool)
+	filesMap := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+
+	for _, file := range pod.ComposeFiles {
+		servMap := filesMap[file][types.SERVICES].(map[interface{}]interface{})
+
+		for serviceName := range servMap {
+			podService[serviceName.(string)] = true
+		}
+	}
+	return podService
 }
 
 func init() {
