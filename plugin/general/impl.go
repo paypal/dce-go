@@ -38,6 +38,8 @@ var logger *log.Entry
 type generalExt struct {
 }
 
+var infraYmlPath string
+
 func init() {
 	logger = log.WithFields(log.Fields{
 		"plugin": "general",
@@ -93,6 +95,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 
 		if strings.Contains(editedFile, types.INFRA_CONTAINER_GEN_YML) {
 			indexInfra = i
+			infraYmlPath = editedFile
 		}
 
 		if editedFile != "" {
@@ -124,6 +127,13 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 
 func (gp *generalExt) PostLaunchTask(ctx *context.Context, files []string, taskInfo *mesos.TaskInfo) (string, error) {
 	logger.Println("PostLaunchTask begin")
+	if pod.SinglePort {
+		err := PostEditComposeFile(ctx, infraYmlPath)
+		if err != nil {
+			log.Errorf("PostLaunchTask: Error editing compose file : %v", err)
+			return types.POD_FAILED, err
+		}
+	}
 	return "", nil
 }
 
