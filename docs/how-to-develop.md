@@ -10,7 +10,9 @@ LaunchTask, KillTask and Shutdown methods are of our interest where plugins are 
 
 LaunchTask is executor callback for launching task on this executor. PreLaunch and PostLaunch plugin methods are invoked during this callback. Below diagram describes steps involved for LaunchTask.
 
-![launchtask](images/launchtask.png)
+<p align="center">
+  <img src="https://github.com/paypal/dce-go/blob/master/docs/images/launchtask.png?raw=true" alt="LaunchTask"/>
+</p>
 
 Pre Launch Task Plugin: Static plugins allow to inject custom behavior. For instance, General plugin via pre-launch modify/inject sections of compose such as labels, env, cgroups, networks etc.
 
@@ -24,7 +26,9 @@ Pod Monitor: Once task is running, executor launches pod monitor to periodically
 
 ##### State Diagram: Executor KillTask
 
-![deletetask](images/deletetask.png)
+<p align="center">
+  <img src="https://github.com/paypal/dce-go/blob/master/docs/images/deletetask.png?raw=true" alt="KillTask"/>
+</p>
 
 Scenarios of Kill Task
 
@@ -34,7 +38,9 @@ Scenarios of Kill Task
 
 ##### Sequence Diagram: Pod Monitor
 
-![podmonitor](images/podmonitor.png)
+<p align="center">
+  <img src="https://github.com/paypal/dce-go/blob/master/docs/images/podmonitor.png?raw=true" alt="Pod Monitor"/>
+</p>
 
 PodMonitor: Pod Monitor is launched by dce-go once task is running.  Its responsibility is to monitor the health status of pod until pod becomes unhealthy. Additionally, Pod Monitor will trigger cleanup pod and update task state as FAILED once pod is unhealthy. 
 
