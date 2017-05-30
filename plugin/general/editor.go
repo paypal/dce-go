@@ -158,6 +158,8 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 						p = strconv.FormatUint(ports.Value.(uint64), 10) + PORT_DELIMITER + portMap[1]
 						portList[i] = p.(string)
 						ports = ports.Next()
+					} else {
+						pod.SinglePort = true
 					}
 				}
 
@@ -191,4 +193,56 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	(*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName] = containerDetails
 
 	return ports, nil
+}
+
+func PostEditComposeFile(ctx *context.Context, file string) error {
+	var err error
+	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	if filesMap[file][types.SERVICES] == nil {
+		return nil
+	}
+	servMap := filesMap[file][types.SERVICES].(map[interface{}]interface{})
+	for serviceName := range servMap {
+		err = updateDynamicPorts(serviceName.(string), file, &filesMap)
+		if err != nil {
+			log.Errorf("Fail updating dynamic ports : %v", err)
+			return err
+		}
+	}
+	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
+
+	err = utils.WriteChangeToFiles(*ctx)
+	if err != nil {
+		log.Errorf("Failure writing updated compose files : %v", err)
+		return err
+	}
+	return nil
+}
+
+func updateDynamicPorts(serviceName, file string, filesMap *types.ServiceDetail) error {
+	containerDetails := (*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName].(map[interface{}]interface{})
+	ids, err := pod.GetPodContainerIds([]string{file})
+	if err != nil {
+		log.Errorf("Error retrieving infra container id : %v", err)
+		return err
+	}
+	if portList, ok := containerDetails[types.PORTS].([]interface{}); ok {
+		for i, p := range portList {
+			portMap := strings.Split(p.(string), PORT_DELIMITER)
+			if len(portMap) == 1 {
+				dynamicPort, err := pod.GetDockerPorts(ids[0], portMap[0])
+				if err != nil {
+					log.Errorf("Error retrieving docker dynamic port : %v", err)
+				}
+				p = dynamicPort + PORT_DELIMITER + portMap[0]
+				portList[i] = p.(string)
+			}
+		}
+
+		containerDetails[types.PORTS] = portList
+		(*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName] = containerDetails
+
+		logger.Println("Edit Compose File : Updated ports as ", portList)
+	}
+	return nil
 }

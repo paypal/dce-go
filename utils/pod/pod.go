@@ -35,6 +35,7 @@ import (
 
 const (
 	OUTPUT_DELIMITER        = ","
+	PORT_SEPARATOR          = ":"
 	PRIM_INSPECT_RESULT_LEN = 7
 	INSPECT_RESULT_LEN      = 6
 )
@@ -50,6 +51,7 @@ var HealthCheckListId = make(map[string]bool)
 
 var ServiceNameMap = make(map[string]string)
 var PodContainers []string
+var SinglePort bool
 
 // Check exit code of all the containers in the pod.
 // If all the exit codes are zero, then assign zero as pod's exit code,
@@ -478,6 +480,19 @@ func CheckContainer(containerId string, healthcheck bool) (string, int, error) {
 	}
 
 	return types.HEALTHY, 0, nil
+}
+
+func GetDockerPorts(containerId string, privatePort string) (string, error) {
+	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "port", containerId, privatePort))
+	if err != nil {
+		log.Errorf("Error inspecting container dynamic ports : %v", err)
+		return "", err
+	}
+	log.Printf("Get Container Dynamic Port : %s", string(out))
+	if ports := strings.Split(string(out), PORT_SEPARATOR); len(ports) > 1 {
+		return strings.TrimSuffix(ports[1], "\n"), nil
+	}
+	return "", err
 }
 
 // docker inspect
