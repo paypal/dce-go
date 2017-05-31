@@ -1,0 +1,24 @@
+services:
+  nginx:
+    cgroup_parent: /mesos/b9d0efac-6ba0-4a34-ab5f-a8e3cfd4d0a3
+    image: dcego/nginx:2.0
+    labels:
+      com.company.label: awesome
+      executorId: marathon-docker-compose-demo.ddefa95d-463d-11e7-b4d3-866758312cc8
+      taskId: docker-compose-demo.ddefa95d-463d-11e7-b4d3-866758312cc8
+    network_mode: host
+    volumes:
+    - /www/public
+    volumes_from:
+    - web
+  web:
+    cgroup_parent: /mesos/b9d0efac-6ba0-4a34-ab5f-a8e3cfd4d0a3
+    image: dcego/web:2.0
+    labels:
+      com.company.label: awesome
+      executorId: marathon-docker-compose-demo.ddefa95d-463d-11e7-b4d3-866758312cc8
+      taskId: docker-compose-demo.ddefa95d-463d-11e7-b4d3-866758312cc8
+    network_mode: host
+    volumes:
+    - ./app:/src/app
+version: "2.1"

@@ -1,0 +1,10 @@
+services:
+  redis:
+    cgroup_parent: /mesos/0b7e302e-103c-4fbe-a457-460befbae5a6
+    image: redis
+    labels:
+      com.company.label: awesome
+      executorId: marathon-docker-compose-demo.4da44f8e-463e-11e7-b4d3-866758312cc8
+      taskId: docker-compose-demo.4da44f8e-463e-11e7-b4d3-866758312cc8
+    network_mode: none
+version: "2.1"

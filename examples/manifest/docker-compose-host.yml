@@ -1,0 +1,16 @@
+# keep host mode...no concept of pod...not recommend
+# don't support multi network mode in one pod...make sure network mode of services are same(TBD)
+version: "2.1"
+services:
+  web:
+    image: dcego/web:2.0
+    volumes:
+      - "./app:/src/app"
+    network_mode: host
+  nginx:
+    image: dcego/nginx:2.0
+    network_mode: host
+    volumes:
+      - /www/public
+    volumes_from:
+      - web

@@ -1,0 +1,5 @@
+version: "2.1"
+services:
+  redis:
+    image: redis
+    network_mode: none

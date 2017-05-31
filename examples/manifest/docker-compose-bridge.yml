@@ -1,0 +1,18 @@
+# single port and map port
+version: "2.1"
+services:
+  web:
+    image: dcego/web:1.0
+    volumes:
+      - "./app:/src/app"
+    ports:
+      - "8081"
+  nginx:
+    image: dcego/nginx:1.0
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /www/public
+    volumes_from:
+      - web
