@@ -1,4 +1,4 @@
-package: github.paypal.com/jiamzhu/dce-go
+package: github.com/paypal/dce-go
 import:
 - package: github.com/mesos/mesos-go
   subpackages:
