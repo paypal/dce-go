@@ -194,7 +194,7 @@ services:
     volumes_from:
       - web
 ```
-After executing general plugin, section names are prefixed to avoid conflicts. Also you'd notice that network namespace for the pod is collapsed to infra container via network_mode section. In the example below, it points to service:52b826ca-a835-448a-9f47-97a79d0e484e_networkproxy. Service definition for infra container is covered later in this document. 
+After executing general plugin, section names are prefixed to avoid conflicts. Also you'd notice that network namespace for the pod is collapsed to infra container via network_mode section. In the example below, it points to service:networkproxy. Service definition for infra container is covered later in this document. 
 ```
 services:
   nginx:
@@ -248,7 +248,7 @@ version: "2.1"
 
 ##### Infra container 
 
-Below is the infra container section, added by General Plugin. Pod containers attach to infra container network. It also has port mapping section. In example below, application port 2368 is mapped to host port 31333. Infra container information such as image, container, network and driver is captured in General Plugin, discussed later in this document.
+Below is the infra container section, added by General Plugin. Pod containers attach to infra container network. It also has port mapping section. In example below, application port 80 is mapped to host port 31695. Infra container information such as image, container, network and driver is captured in General Plugin, discussed later in this document. 
 
 ```
 networks:
@@ -270,6 +270,15 @@ services:
     - 31754:443
 version: "2.1"
 ```
+
+Note that infra container is ONLY used for bridge mode and custom network (if defined in general plugin config). It is not added for network_mode -- "host" and "none". Here are the supported scenarios:
+1. Default network is bridge mode in absence of missing networks section. Infra container section is added with default bridge network. Here is a [sample example](../examples/manifest/docker-compose-bridge.yml) along with [generated compose file](../examples/manifest/docker-compose-bridge-generated.yml)
+
+2. If general plugin config (covered later in document) has defines networks settting as pre-existing then Infra container uses this network instead. 
+
+3. If network_mode is set to "host" and "none" then infra container is not used by general plugin. 
+
+For details, please follow [sample compose manifests here](../examples/manifest)
 
 #### How to build DCE-GO
 
