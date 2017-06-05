@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"fmt"
+
 	"github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/paypal/dce-go/config"
@@ -34,10 +36,12 @@ import (
 )
 
 const (
-	OUTPUT_DELIMITER        = ","
-	PORT_SEPARATOR          = ":"
-	PRIM_INSPECT_RESULT_LEN = 7
-	INSPECT_RESULT_LEN      = 6
+	OUTPUT_DELIMITER            = ","
+	PORT_SEPARATOR              = ":"
+	PRIM_INSPECT_RESULT_LEN     = 7
+	INSPECT_RESULT_LEN          = 6
+	COMPOSE_HTTP_TIMEOUT        = "COMPOSE_HTTP_TIMEOUT"
+	CONFIG_COMPOSE_HTTP_TIMEOUT = "composehttptimeout"
 )
 
 var ComposeExcutorDriver executor.ExecutorDriver
@@ -260,6 +264,10 @@ func LaunchPod(files []string) string {
 
 	log.Printf("Launch Pod : Command to launch task : docker-compose %v\n", parts)
 	cmd := exec.Command("docker-compose", parts...)
+
+	composeHttpTimeout := config.GetConfigSection(config.LAUNCH_TASK)[CONFIG_COMPOSE_HTTP_TIMEOUT]
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", COMPOSE_HTTP_TIMEOUT, composeHttpTimeout))
 
 	printStdout(cmd)
 	printStderr(cmd)
@@ -728,7 +736,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 			return
 		}
 
-		log.Printf("list of containers are launched : %v", containers)
+		//log.Printf("list of containers are launched : %v", containers)
 		time.Sleep(interval)
 	}
 
