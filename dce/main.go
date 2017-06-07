@@ -142,12 +142,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	}
 
 	podServices := getServices(ctx)
-	if err != nil {
-		log.Errorf("Failure getting pod services: %v", err)
-		pod.SetPodStatus(types.POD_FAILED)
-		cancel()
-		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
-	}
+	log.Println("pod service list: %v", podServices)
 
 	err = utils.WriteChangeToFiles(ctx)
 	if err != nil {
