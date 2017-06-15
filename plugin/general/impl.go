@@ -65,7 +65,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 
 	if (*ctx).Value(types.SERVICE_DETAIL) == nil {
 		var servDetail types.ServiceDetail
-		servDetail, err = utils.ParseYamls(*composeFiles)
+		servDetail, err = utils.ParseYamls(composeFiles)
 		if err != nil {
 			log.Errorf("Error parsing yaml files : %v", err)
 			return err

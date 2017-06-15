@@ -47,16 +47,11 @@ const (
 	MAP_DELIMITER  = "="
 )
 
-var ResourceYaml []string
-
 type EditorFunc func(serviceName string, taskInfo *mesos.TaskInfo, executorId string, taskId string, containerDetails map[interface{}]interface{}, ports *list.Element) (map[interface{}]interface{}, *list.Element, error)
 
 // Get required file list from label of fileName in taskInfo
 func GetFiles(taskInfo *mesos.TaskInfo) ([]string, error) {
 	log.Println("====================Retrieve  compose file list from fileName label====================")
-
-	// Get download yml file name
-	ResourceYaml = GetYAML(taskInfo)
 
 	filelist := pod.GetLabel("fileName", taskInfo)
 	if filelist == "" {
@@ -67,9 +62,6 @@ func GetFiles(taskInfo *mesos.TaskInfo) ([]string, error) {
 
 	var files []string
 	for _, file := range strings.Split(filelist, FILE_DELIMITER) {
-		/*if strings.Contains(file, PATH_DELIMITER) {
-			config.GetConfig().SetDefault(types.NO_FOLDER, true)
-		}*/
 		files = append(files, file)
 	}
 
@@ -104,12 +96,9 @@ func GetYAML(taskInfo *mesos.TaskInfo) []string {
 	for _, uri := range uris {
 		arr := strings.Split(uri.GetValue(), "/")
 		name := arr[len(arr)-1]
-		/*if strings.HasSuffix(name, ".yml") || name == "yaml" {
-			log.Printf("Get yml file name from uri : %s", name)
-		}*/
 		GetDirFilesRecv(name, &files)
 	}
-	log.Println("Compose file from URI(Pre_files): ", files)
+	log.Println("Compose file from URI: ", files)
 	return files
 }
 
@@ -118,7 +107,7 @@ func GetYAML(taskInfo *mesos.TaskInfo) []string {
 // In case they have different depth of folders to keep compose files, GetDirFilesRecv help to get the complete path of
 // compose file
 func GetDirFilesRecv(dir string, files *[]string) {
-	if d, _ := os.Stat(dir); !d.IsDir() && (strings.Contains(dir, ".yml") || dir == "yaml") {
+	if d, _ := os.Stat(dir); !d.IsDir() && (strings.HasSuffix(dir, ".yml") || strings.HasSuffix(dir, ".yaml") || dir == "yaml") {
 		*files = append(*files, dir)
 		return
 	}
@@ -267,7 +256,7 @@ func SplitYAML(file string) ([]string, error) {
 	if len(names) == 0 {
 		names = append(names, file)
 	}
-	return names, nil
+	return FolderPath(names), nil
 }
 
 // splitYAMLDocument is a bufio.SplitFunc for splitting YAML streams into individual documents.
@@ -403,13 +392,12 @@ func DeFolderPath(filepaths []string) []string {
 	return filenames
 }
 
-func ParseYamls(files []string) (map[interface{}](map[interface{}]interface{}), error) {
+func ParseYamls(files *[]string) (map[interface{}](map[interface{}]interface{}), error) {
 	res := make(map[interface{}](map[interface{}]interface{}))
-	for _, file := range files {
+	for _, file := range *files {
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
 			log.Errorf("Error reading file %s : %v", file, err)
-			return nil, err
 		}
 		m := make(map[interface{}]interface{})
 		err = yaml.Unmarshal(data, &m)
@@ -447,8 +435,18 @@ func GenerateAppFolder() error {
 
 	config.GetConfig().Set(config.FOLDER_NAME, folder)
 
+	// copy tar folder to poddata folder
+	/*tar := config.GetConfig().GetString(TAR)
+	if tar != "" {
+		err = CopyDir(path+"/"+tar, path+"/"+folder)
+		if err != nil {
+			log.Errorf("Failed copying directory: %v", err)
+			return err
+		}
+	}*/
+
 	// copy compose files into pod folder
-	/*for i, file := range pod.ComposeFiles {
+	for i, file := range pod.ComposeFiles {
 		path := strings.Split(file, PATH_DELIMITER)
 		dest := FolderPath(strings.Fields(path[len(path)-1]))[0]
 		err = CopyFile(file, dest)
@@ -457,7 +455,51 @@ func GenerateAppFolder() error {
 			return err
 		}
 		pod.ComposeFiles[i] = dest
-	}*/
+	}
+	return nil
+}
+
+func CopyDir(source string, dest string) (err error) {
+
+	// get properties of source dir
+	sourceinfo, err := os.Stat(source)
+	if err != nil {
+		return err
+	}
+
+	// create dest dir
+	err = os.MkdirAll(dest, sourceinfo.Mode())
+	if err != nil {
+		return err
+	}
+
+	directory, _ := os.Open(source)
+
+	objects, err := directory.Readdir(-1)
+
+	for _, obj := range objects {
+
+		sourcefilepointer := source + "/" + obj.Name()
+
+		destinationfilepointer := dest + "/" + obj.Name()
+
+		if obj.IsDir() {
+			// create sub-directories - recursively
+			err = CopyDir(sourcefilepointer, destinationfilepointer)
+			if err != nil {
+				log.Errorln(err)
+				return err
+			}
+		} else {
+			// perform copy
+			err = CopyFile(sourcefilepointer, destinationfilepointer)
+			if err != nil {
+				log.Errorln(err)
+				return err
+			}
+		}
+
+	}
 	return nil
 }
 
