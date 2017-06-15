@@ -26,6 +26,8 @@ import (
 	"regexp"
 	"strings"
 
+	yaml "gopkg.in/yaml.v2"
+
 	log "github.com/sirupsen/logrus"
 
 	"fmt"
@@ -35,7 +37,6 @@ import (
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/pod"
 	"golang.org/x/net/context"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -46,11 +47,16 @@ const (
 	MAP_DELIMITER  = "="
 )
 
+var ResourceYaml []string
+
 type EditorFunc func(serviceName string, taskInfo *mesos.TaskInfo, executorId string, taskId string, containerDetails map[interface{}]interface{}, ports *list.Element) (map[interface{}]interface{}, *list.Element, error)
 
 // Get required file list from label of fileName in taskInfo
 func GetFiles(taskInfo *mesos.TaskInfo) ([]string, error) {
 	log.Println("====================Retrieve  compose file list from fileName label====================")
+
+	// Get download yml file name
+	ResourceYaml = GetYAML(taskInfo)
 
 	filelist := pod.GetLabel("fileName", taskInfo)
 	if filelist == "" {
@@ -98,6 +104,9 @@ func GetYAML(taskInfo *mesos.TaskInfo) []string {
 	for _, uri := range uris {
 		arr := strings.Split(uri.GetValue(), "/")
 		name := arr[len(arr)-1]
+		/*if strings.HasSuffix(name, ".yml") || name == "yaml" {
+			log.Printf("Get yml file name from uri : %s", name)
+		}*/
 		GetDirFilesRecv(name, &files)
 	}
 	log.Println("Compose file from URI(Pre_files): ", files)
@@ -109,9 +118,7 @@ func GetYAML(taskInfo *mesos.TaskInfo) []string {
 // In case they have different depth of folders to keep compose files, GetDirFilesRecv help to get the complete path of
 // compose file
 func GetDirFilesRecv(dir string, files *[]string) {
-	if d, _ := os.Stat(dir); !d.IsDir() && (strings.Contains(dir, ".yml") ||
-		strings.Contains(dir, ".yaml") && (!strings.Contains(dir, "config") ||
-			!strings.Contains(dir, "plugin")) || dir == "yaml") {
+	if d, _ := os.Stat(dir); !d.IsDir() && (strings.Contains(dir, ".yml") || dir == "yaml") {
 		*files = append(*files, dir)
 		return
 	}
@@ -441,7 +448,7 @@ func GenerateAppFolder() error {
 	config.GetConfig().Set(config.FOLDER_NAME, folder)
 
 	// copy compose files into pod folder
-	for i, file := range pod.ComposeFiles {
+	/*for i, file := range pod.ComposeFiles {
 		path := strings.Split(file, PATH_DELIMITER)
 		dest := FolderPath(strings.Fields(path[len(path)-1]))[0]
 		err = CopyFile(file, dest)
@@ -450,7 +457,7 @@ func GenerateAppFolder() error {
 			return err
 		}
 		pod.ComposeFiles[i] = dest
-	}
+	}*/
 	return nil
 }
 
