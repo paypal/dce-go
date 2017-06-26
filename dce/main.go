@@ -142,7 +142,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	}
 
 	podServices := getServices(ctx)
-	log.Println("pod service list: %v", podServices)
+	log.Printf("pod service list: %v", podServices)
 
 	err = utils.WriteChangeToFiles(ctx)
 	if err != nil {
@@ -169,7 +169,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	case types.POD_STARTING:
 		// Initial health check
 		res, err := initHealthCheck(podServices)
-		if err != nil {
+		if err != nil || res == types.POD_FAILED {
 			cancel()
 			pod.SendPodStatus(types.POD_FAILED)
 		}
