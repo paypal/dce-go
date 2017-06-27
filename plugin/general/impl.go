@@ -144,7 +144,34 @@ func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
 
 func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
 	logger.Println("PostKillTask begin")
-	return nil
+	var err error
+	// clean pod containers if clean_container_on_kill is true
+	cleanContainer := config.GetConfigSection(config.CLEANPOD)[config.CLEAN_CONTAINER_ON_MESOS_KILL]
+	if cleanContainer == "true" {
+		err = pod.RemovePod(pod.ComposeFiles)
+		if err != nil {
+			log.Errorf("Error cleaning containers: %v", err)
+		}
+	}
+
+	// clean pod volume if clean_volume_on_kill is true
+	cleanVolume := config.GetConfigSection(config.CLEANPOD)[config.CLEAN_VOLUME_ON_MESOS_KILL]
+	if cleanVolume == "true" {
+		err = pod.RemovePodVolume(pod.ComposeFiles)
+		if err != nil {
+			log.Errorf("Error cleaning volumes: %v", err)
+		}
+	}
+
+	// clean pod images if clean_image_on_kill is true
+	cleanImage := config.GetConfigSection(config.CLEANPOD)[config.CLEAN_IMAGE_ON_MESOS_KILL]
+	if cleanImage == "true" {
+		err = pod.RemovePodImage(pod.ComposeFiles)
+		if err != nil {
+			log.Errorf("Error cleaning images: %v", err)
+		}
+	}
+	return err
 }
 
 func (gp *generalExt) Shutdown(executor.ExecutorDriver) error {

@@ -206,7 +206,8 @@ func GetPodDetail(files []string, primaryContainerId string, healthcheck bool) {
 		log.Errorln("Error generating cmd parts")
 	}
 
-	out, err := exec.Command("docker-compose", parts...).Output()
+	//out, err := exec.Command("docker-compose", parts...).Output()
+	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("docker-compose", parts...))
 	if err != nil {
 		log.Errorf("GetPodDetail : Error executing cmd docker-compose ps %#v", err)
 	}
@@ -256,7 +257,7 @@ func GetPorts(taskInfo *mesos.TaskInfo) *list.Element {
 func LaunchPod(files []string) string {
 	log.Println("====================Launch Pod====================")
 
-	parts, err := GenerateCmdParts(files, " up")
+	parts, err := GenerateCmdParts(files, " up --no-color")
 	if err != nil {
 		log.Errorf("Error generating compose cmd parts : %s\n", err.Error())
 		return types.POD_FAILED
@@ -342,6 +343,70 @@ func StopPod(files []string) error {
 	return nil
 }
 
+// remove pod containers
+// docker-compose down
+func RemovePod(files []string) error {
+	log.Println("====================Remove Pod Container====================")
+	parts, err := GenerateCmdParts(files, " down")
+	if err != nil {
+		log.Errorln("Error generating cmd parts : ", err.Error())
+		return err
+	}
+
+	cmd := exec.Command("docker-compose", parts...)
+	log.Println("Remove Pod Container: Command to rm pod container : docker-compose ", parts)
+
+	err = cmd.Run()
+	if err != nil {
+		log.Errorln("Error killing services :", err.Error())
+	}
+
+	return nil
+}
+
+// remove pod volume
+// docker-compose down -v
+func RemovePodVolume(files []string) error {
+	log.Println("====================Remove Pod Volume====================")
+	parts, err := GenerateCmdParts(files, " down -v")
+	if err != nil {
+		log.Errorln("Error generating cmd parts : ", err.Error())
+		return err
+	}
+
+	cmd := exec.Command("docker-compose", parts...)
+	log.Println("Remove Pod Volume: Command to rm volume : docker-compose ", parts)
+
+	err = cmd.Run()
+	if err != nil {
+		log.Errorf("Error removing pod volumes : %v\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// remove pod images
+// docker-compose down --rmi
+func RemovePodImage(files []string) error {
+	log.Println("====================Remove Pod Images====================")
+	parts, err := GenerateCmdParts(files, " down --rmi all")
+	if err != nil {
+		log.Errorln("Error generating cmd parts : ", err.Error())
+		return err
+	}
+
+	cmd := exec.Command("docker-compose", parts...)
+	log.Println("Remove Pod Image: Command to rm images : docker-compose ", parts)
+
+	err = cmd.Run()
+	if err != nil {
+		log.Errorln("Failed removing pod images, probably images are in used by other containers")
+	}
+
+	return nil
+}
+
 func GetContainerNetwork(name string) (string, error) {
 	//cmd := exec.Command("docker", "inspect", "--format='{{.HostConfig.NetworkMode}}'", name)
 	//out, err := utils.RetryCmd(config.GetMaxRetry(), cmd)
@@ -366,27 +431,6 @@ func RemoveNetwork(name string) error {
 		log.Errorf("Error in rm network : %s , %s\n", name, err.Error())
 	}
 	return err
-}
-
-// Remove pod
-// docker-compose down
-func RemovePod(files []string) error {
-	log.Println("====================Remove Pod====================")
-	parts, err := GenerateCmdParts(files, " down")
-	if err != nil {
-		log.Errorln("Error generating compose cmd parts : ", err.Error())
-		return err
-	}
-
-	cmd := exec.Command("docker-compose", parts...)
-	log.Println("Remove Pod : Command to remove pod : docker-compose ", parts)
-
-	err = cmd.Run()
-	if err != nil {
-		log.Errorln("Error in remove services :", err.Error())
-		return err
-	}
-	return nil
 }
 
 // Force kill pod
@@ -418,16 +462,6 @@ func ForceKill(files []string) error {
 		return err
 	}
 	return nil
-}
-
-// docker kill -f
-func dockerKill(containerName string) error {
-	cmd := exec.Command("docker", "kill", containerName)
-	err := cmd.Run()
-	if err != nil {
-		log.Errorf("Error killing container : %s , %s\n", containerName, err.Error())
-	}
-	return err
 }
 
 // pull image
@@ -663,8 +697,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 
 	time.Sleep(200 * time.Millisecond)
 	if state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() ||
-		state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
-		state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() {
+		state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() {
 		log.Println("====================Stop ExecutorDriver====================")
 		driver.Stop()
 	}
@@ -721,6 +754,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 
 	var err error
 	var containers []string
+	var healthCount int
 
 	t, err := strconv.Atoi(config.GetConfigSection(config.LAUNCH_TASK)[config.POD_MONITOR_INTERVAL])
 	if err != nil {
@@ -740,15 +774,12 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 		time.Sleep(interval)
 	}
 
-	PodContainers = make([]string, len(containers))
-	copy(PodContainers, containers)
-
 	log.Println("Initial Health Check : Expected number of containers in monitoring : ", len(podServices))
 	log.Println("Initial Health Check : Acutal number of containers in monitoring : ", len(containers))
 	log.Println("Container List : ", containers)
 
 	// Keep health check until all the containers become healthy/running
-	for len(containers) != 0 {
+	/*for len(containers) != 0 {
 
 		for i := 0; i < len(containers); i++ {
 
@@ -778,9 +809,51 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 		if len(containers) != 0 {
 			time.Sleep(interval)
 		}
+	}*/
+
+	for len(containers) != healthCount {
+		healthCount = 0
+
+		for i := 0; i < len(containers); i++ {
+
+			var healthy string
+			var exitCode int
+
+			if hc, ok := HealthCheckListId[containers[i]]; ok && hc || HealthCheckConfigured(containers[i]) {
+				healthy, exitCode, err = CheckContainer(containers[i], true)
+			} else {
+				healthy, exitCode, err = CheckContainer(containers[i], false)
+			}
+
+			if err != nil || healthy == types.UNHEALTHY {
+				log.Println("Initial Health Check : send FAILED")
+				out <- types.POD_FAILED
+				log.Println("Initial Health Check : send FAILED and stopped")
+				return
+			}
+
+			if healthy == types.HEALTHY {
+				healthCount++
+			}
+
+			if exitCode == 0 {
+				log.Printf("Remove exited(exit code = 0)container %s from monitor list", containers[i])
+				containers = append(containers[:i], containers[i+1:]...)
+				i--
+				healthCount--
+			}
+		}
+
+		if len(containers) != healthCount {
+			time.Sleep(interval)
+		}
 	}
 
+	PodContainers = make([]string, len(containers))
+	copy(PodContainers, containers)
+
 	log.Printf("Health Check List: %v", HealthCheckListId)
+	log.Printf("Pod Monitor List: %v", PodContainers)
 
 	log.Println("Initial Health Check : send POD_RUNNING")
 

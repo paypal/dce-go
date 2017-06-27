@@ -247,6 +247,11 @@ func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *
 				logkill.Errorf("Error executing PreLaunchTask of plugin : %v", err)
 			}
 		}
+
+		log.Println("====================Stop ExecutorDriver====================")
+		time.Sleep(200 * time.Millisecond)
+		driver.Stop()
+
 	}
 
 	logkill.Println("====================Mesos KillTask Stopped====================")

@@ -36,25 +36,28 @@ import (
 
 // Define default values
 const (
-	cfgFile              = "config"
-	FOLDER_NAME          = "foldername"
-	LAUNCH_TASK          = "launchtask"
-	HEALTH_CHECK         = "healthcheck"
-	POD_MONITOR_INTERVAL = "podmonitorinterval"
-	TIMEOUT              = "timeout"
-	INFRA_CONTAINER      = "infracontainer"
-	PULL_RETRY           = "pullretry"
-	MAX_RETRY            = "maxretry"
-	NETWORKS             = "networks"
-	PRE_EXIST            = "pre_existing"
-	NETWORK_NAME         = "name"
-	NETWORK_DRIVER       = "driver"
-	CLEANPOD             = "cleanpod"
+	CONFIG_File                   = "config"
+	FOLDER_NAME                   = "foldername"
+	LAUNCH_TASK                   = "launchtask"
+	HEALTH_CHECK                  = "healthcheck"
+	POD_MONITOR_INTERVAL          = "podmonitorinterval"
+	TIMEOUT                       = "timeout"
+	INFRA_CONTAINER               = "infracontainer"
+	PULL_RETRY                    = "pullretry"
+	MAX_RETRY                     = "maxretry"
+	NETWORKS                      = "networks"
+	PRE_EXIST                     = "pre_existing"
+	NETWORK_NAME                  = "name"
+	NETWORK_DRIVER                = "driver"
+	CLEANPOD                      = "cleanpod"
+	CLEAN_CONTAINER_ON_MESOS_KILL = "cleancontaineronmesoskill"
+	CLEAN_VOLUME_ON_MESOS_KILL    = "cleanvolumeonmesoskill"
+	CLEAN_IMAGE_ON_MESOS_KILL     = "cleanimageonmesoskill"
 )
 
 // Read from default configuration file and set config as key/values
 func init() {
-	err := getConfigFromFile(cfgFile)
+	err := getConfigFromFile(CONFIG_File)
 
 	if err != nil {
 		log.Fatalf("Fail to retreive data from file, err: %s\n", err.Error())
