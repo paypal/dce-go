@@ -7,6 +7,5 @@ plugins:
    pluginorder: general
 cleanpod:
    unhealthy: true
-   cleancontaineronkill: true
-   cleanvolumeonkill: true
-   cleanimageonkill: true
+   cleanvolumeandcontaineronmesoskill: true
+   cleanimageonmesoskill: true
