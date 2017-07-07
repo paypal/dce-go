@@ -65,7 +65,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 
 	if (*ctx).Value(types.SERVICE_DETAIL) == nil {
 		var servDetail types.ServiceDetail
-		servDetail, err = utils.ParseYamls(*composeFiles)
+		servDetail, err = utils.ParseYamls(composeFiles)
 		if err != nil {
 			log.Errorf("Error parsing yaml files : %v", err)
 			return err
@@ -144,7 +144,26 @@ func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
 
 func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
 	logger.Println("PostKillTask begin")
-	return nil
+	var err error
+
+	// clean pod volume and container if clean_container_volume_on_kill is true
+	cleanVolumeAndContainer := config.GetConfigSection(config.CLEANPOD)[config.CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL]
+	if cleanVolumeAndContainer == "true" {
+		err = pod.RemovePodVolume(pod.ComposeFiles)
+		if err != nil {
+			log.Errorf("Error cleaning volumes: %v", err)
+		}
+	}
+
+	// clean pod images if clean_image_on_kill is true
+	cleanImage := config.GetConfigSection(config.CLEANPOD)[config.CLEAN_IMAGE_ON_MESOS_KILL]
+	if cleanImage == "true" {
+		err = pod.RemovePodImage(pod.ComposeFiles)
+		if err != nil {
+			log.Errorf("Error cleaning images: %v", err)
+		}
+	}
+	return err
 }
 
 func (gp *generalExt) Shutdown(executor.ExecutorDriver) error {
