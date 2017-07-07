@@ -343,27 +343,6 @@ func StopPod(files []string) error {
 	return nil
 }
 
-// remove pod containers
-// docker-compose down
-func RemovePod(files []string) error {
-	log.Println("====================Remove Pod Container====================")
-	parts, err := GenerateCmdParts(files, " down")
-	if err != nil {
-		log.Errorln("Error generating cmd parts : ", err.Error())
-		return err
-	}
-
-	cmd := exec.Command("docker-compose", parts...)
-	log.Println("Remove Pod Container: Command to rm pod container : docker-compose ", parts)
-
-	err = cmd.Run()
-	if err != nil {
-		log.Errorln("Error killing services :", err.Error())
-	}
-
-	return nil
-}
-
 // remove pod volume
 // docker-compose down -v
 func RemovePodVolume(files []string) error {
