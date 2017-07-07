@@ -778,39 +778,6 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	log.Println("Initial Health Check : Acutal number of containers in monitoring : ", len(containers))
 	log.Println("Container List : ", containers)
 
-	// Keep health check until all the containers become healthy/running
-	/*for len(containers) != 0 {
-
-		for i := 0; i < len(containers); i++ {
-
-			var healthy string
-
-			if hc, ok := HealthCheckListId[containers[i]]; ok && hc || HealthCheckConfigured(containers[i]) {
-				healthy, _, err = CheckContainer(containers[i], true)
-			} else {
-				healthy, _, err = CheckContainer(containers[i], false)
-			}
-
-			if err != nil || healthy == types.UNHEALTHY {
-				log.Println("Initial Health Check : send FAILED")
-				out <- types.POD_FAILED
-				log.Println("Initial Health Check : send FAILED and stopped")
-				return
-			}
-
-			if healthy == types.HEALTHY {
-				// remove healthy container from check list
-				log.Printf("Container %s is healthy, remove it from health check list", containers[i])
-				containers = append(containers[:i], containers[i+1:]...)
-				i--
-			}
-		}
-
-		if len(containers) != 0 {
-			time.Sleep(interval)
-		}
-	}*/
-
 	for len(containers) != healthCount {
 		healthCount = 0
 
@@ -819,10 +786,14 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 			var healthy string
 			var exitCode int
 
-			if hc, ok := HealthCheckListId[containers[i]]; ok && hc || HealthCheckConfigured(containers[i]) {
+			if hc, ok := HealthCheckListId[containers[i]]; ok && hc {
 				healthy, exitCode, err = CheckContainer(containers[i], true)
 			} else {
-				healthy, exitCode, err = CheckContainer(containers[i], false)
+				if hc, err = isHealthCheckConfigured(containers[i]); hc {
+					healthy, exitCode, err = CheckContainer(containers[i], true)
+				} else {
+					healthy, exitCode, err = CheckContainer(containers[i], false)
+				}
 			}
 
 			if err != nil || healthy == types.UNHEALTHY {
@@ -865,16 +836,21 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 }
 
 // check if primary container unable health check or not
-func HealthCheckConfigured(containerId string) bool {
-	_, err := exec.Command("docker", "inspect", "--format='{{.State.Health.Status}}'", containerId).Output()
+func isHealthCheckConfigured(containerId string) (bool, error) {
+	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "inspect", "--format='{{if .State.Health }}{{.State.Health.Status}}{{ end }}'", containerId))
 	if err != nil {
-		//log.Printf("Initial Health Check : Container %s Health check is configured to false", containerId)
-		return false
-	} else {
-		HealthCheckListId[containerId] = true
-		//log.Printf("Initial Health Check : Contaienr %s Health check is configured to true", containerId)
-		return true
+		log.Errorf("Error executing cmd to check if healtcheck configured: %v", err)
+		return false, err
 	}
+
+	_out := strings.Replace(strings.TrimSuffix(string(out[:]), "\n"), "'", "", -1)
+	if _out == "" {
+		return false, nil
+	}
+
+	HealthCheckListId[containerId] = true
+	//log.Printf("Initial Health Check : Contaienr %s Health check is configured to true", containerId)
+	return true, nil
 }
 
 func allServicesUp(containers []string, podServices map[string]bool) bool {
