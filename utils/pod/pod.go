@@ -265,13 +265,12 @@ func LaunchPod(files []string) string {
 
 	log.Printf("Launch Pod : Command to launch task : docker-compose %v\n", parts)
 	cmd := exec.Command("docker-compose", parts...)
+        cmd.Stdout = os.Stdout
+        cmd.Stderr = os.Stderr
 
 	composeHttpTimeout := config.GetConfigSection(config.LAUNCH_TASK)[CONFIG_COMPOSE_HTTP_TIMEOUT]
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", COMPOSE_HTTP_TIMEOUT, composeHttpTimeout))
-
-	printStdout(cmd)
-	printStderr(cmd)
 
 	err = cmd.Start()
 	if err != nil {
@@ -454,9 +453,8 @@ func PullImage(files []string) error {
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
+        cmd.Stdout = os.Stdout
 	log.Println("Pull Image : Command to pull images : docker-compose ", parts)
-
-	printStdout(cmd)
 
 	err = cmd.Start()
 	if err != nil {
@@ -695,37 +693,7 @@ func WaitOnPod(ctx *context.Context) {
 	}
 }
 
-// print output of command
-func printStdout(cmd *exec.Cmd) {
-	log.Println("====================print stdout====================")
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Errorln("Error in stdoutPipe : ", err.Error())
-	}
 
-	scanner := bufio.NewScanner(stdout)
-	go func() {
-		for scanner.Scan() {
-			log.Println("Container Log  |", scanner.Text())
-		}
-	}()
-}
-
-// print error output of command
-func printStderr(cmd *exec.Cmd) {
-	log.Println("====================print stderr====================")
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		log.Errorln("Error in stderrPipe : ", err.Error())
-	}
-
-	scanner := bufio.NewScanner(stderr)
-	go func() {
-		for scanner.Scan() {
-			log.Println("Container Log  |", scanner.Text())
-		}
-	}()
-}
 
 // healthCheck includes health checking for primary container and exit code checking for other containers
 func HealthCheck(files []string, podServices map[string]bool, out chan<- string) {
