@@ -45,6 +45,7 @@ const (
 	INFRA_CONTAINER                      = "infracontainer"
 	PULL_RETRY                           = "pullretry"
 	MAX_RETRY                            = "maxretry"
+	RETRY_INTERVAL                       = "retryinterval"
 	NETWORKS                             = "networks"
 	PRE_EXIST                            = "pre_existing"
 	NETWORK_NAME                         = "name"
@@ -150,6 +151,28 @@ func GetTimeout() time.Duration {
 		return time.Duration(500000)
 	}
 	t, err := strconv.Atoi(timeout)
+	if err != nil {
+		log.Fatalf("Error converting timeout from string to int : %s\n", err.Error())
+	}
+	return time.Duration(t)
+}
+
+func GetStopTimeout() string {
+	timeout := GetConfigSection(CLEANPOD)[TIMEOUT]
+	if timeout == "" {
+		log.Warningln("pod timeout doesn't set in config...timeout will be set as 10s")
+		return "10"
+	}
+	return timeout
+}
+
+func GetRetryInterval() time.Duration {
+	interval := GetConfigSection(LAUNCH_TASK)[RETRY_INTERVAL]
+	if interval == "" {
+		log.Warningln("retry interval doesn't set in config...timeout will be set as 10s")
+		return time.Duration(10000)
+	}
+	t, err := strconv.Atoi(interval)
 	if err != nil {
 		log.Fatalf("Error converting timeout from string to int : %s\n", err.Error())
 	}
