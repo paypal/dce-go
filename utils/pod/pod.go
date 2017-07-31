@@ -322,7 +322,10 @@ func dockerLogToStdout(files []string) {
 // docker-compose stop
 func StopPod(files []string) error {
 	log.Println("====================Stop Pod====================")
-	parts, err := GenerateCmdParts(files, " stop")
+
+	//get stop timeout from config
+	timeout := config.GetStopTimeout()
+	parts, err := GenerateCmdParts(files, " stop -t "+timeout)
 	if err != nil {
 		log.Errorln("Error generating cmd parts : ", err.Error())
 		return err
@@ -332,7 +335,7 @@ func StopPod(files []string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	log.Println("Stop Pod : Command to stop task : docker-compose ", parts)
+	log.Printf("Stop Pod : Command to stop task : %s", cmd.Args)
 
 	err = cmd.Run()
 	if err != nil {
@@ -498,7 +501,7 @@ func PullImage(files []string) error {
 		return err
 	}
 
-	err = utils.WaitCmd(config.GetTimeout()*time.Millisecond, &types.CmdResult{
+	err = utils.WaitCmd(config.GetLaunchTimeout()*time.Millisecond, &types.CmdResult{
 		Command: cmd,
 	})
 	if err != nil {
