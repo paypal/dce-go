@@ -144,7 +144,7 @@ func GetPullRetryCount() int {
 	return _retry
 }
 
-func GetTimeout() time.Duration {
+func GetLaunchTimeout() time.Duration {
 	timeout := GetConfigSection(LAUNCH_TASK)[TIMEOUT]
 	if timeout == "" {
 		log.Warningln("pod timeout doesn't set in config...timeout will be set as 500s")
