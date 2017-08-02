@@ -104,6 +104,9 @@ func checkContainerExitCode(containerId string) (int, error) {
 // example : docker-compose -f compose.yaml up
 // "docker-compose" will be the main cmd, "-f compose.yaml up" will be parts and return as an array
 func GenerateCmdParts(files []string, cmd string) ([]string, error) {
+	if config.EnableVerbose() {
+		cmd = " --verbose" + cmd
+	}
 	var s string
 	for _, file := range files {
 		if _, err := os.Stat(file); err != nil {

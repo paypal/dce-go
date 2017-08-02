@@ -11,3 +11,4 @@ cleanpod:
    unhealthy: true
    cleanvolumeandcontaineronmesoskill: true
    cleanimageonmesoskill: true
+dockercomposeverbose: true
