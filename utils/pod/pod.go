@@ -26,6 +26,8 @@ import (
 
 	"fmt"
 
+	"io/ioutil"
+
 	"github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/paypal/dce-go/config"
@@ -689,11 +691,130 @@ func WaitOnPod(ctx *context.Context) {
 	case <-(*ctx).Done():
 		if (*ctx).Err() == context.DeadlineExceeded {
 			log.Println("Timeout launching pod")
+			if dump, ok := config.GetConfig().GetStringMap("dockerdump")["enable"].(bool); ok && dump {
+				DockerDump()
+			}
 			SendPodStatus(types.POD_FAILED)
 		} else if (*ctx).Err() == context.Canceled {
 			log.Println("Stop wait on pod, since pod is running/finished/failed")
 		}
 	}
+}
+
+func DockerDump() {
+	log.Println(" ######## Begin dockerDump ######## ")
+
+	dockerDumpPath := config.GetConfigSection("dockerdump")["path"]
+	if dockerDumpPath == "" {
+		log.Println("docker dump path can't find in config, set it as /home/ubuntu")
+		dockerDumpPath = "/home/ubuntu"
+	}
+
+	//STEP1 -- kill docker pid
+	f, err := ioutil.ReadFile("/var/run/docker.pid")
+	if err != nil {
+		log.Errorln("Error opening file /var/run/docker.pid", err)
+		return
+	} else {
+		pid := string(f)
+		log.Println(" docker pid: ", pid)
+
+		cmdDocker := exec.Command("kill", "-USR1", pid)
+		log.Printf("Cmd to kill docker pid: %s", cmdDocker.Path)
+		cmdDocker.Stdout = os.Stdout
+		cmdDocker.Stderr = os.Stderr
+		err = cmdDocker.Run()
+		if err != nil {
+			log.Errorf("Error running cmd to kill -USR1 dockerPid: %v", err)
+			return
+		} else {
+			log.Println(" docker KILL -USR1 dockerPid completed... ")
+		}
+	}
+
+	//STEP2 --  kill containerd pid
+	f, err = ioutil.ReadFile("/var/run/docker/libcontainerd/docker-containerd.pid")
+	if err != nil {
+		log.Errorln("Error opening file /var/run/docker/libcontainerd/docker-containerd.pid", err)
+		return
+	} else {
+		dockerContainerdPid := string(f)
+		log.Println(" DockerContainerdPid: ", dockerContainerdPid)
+		cmdContainerd := exec.Command("kill", "-USR1", dockerContainerdPid)
+		log.Printf("Cmd to kill containerd pid: %s", cmdContainerd.Path)
+		cmdContainerd.Stdout = os.Stdout
+		cmdContainerd.Stderr = os.Stderr
+		err = cmdContainerd.Run()
+		if err != nil {
+			log.Errorf("Error running cmd to kill containerd pid: %v", err)
+			return
+		} else {
+			log.Println(" docker KILL -USR1 dockerContainerdPid completed... ")
+		}
+
+	}
+
+	// sleep for 15 seconds
+	log.Println(fmt.Sprintf("Sleep 15 seconds from: %s", time.Now().Format("2006-01-02 15:04:05")))
+	time.Sleep(15 * time.Second)
+
+	timeNow := time.Now()
+	fmtTime := timeNow.Format("2006-01-02 15:04:05")
+
+	//STEP3 --  copy docker log
+	cmdCpDockerLog := exec.Command("cp", "/var/log/upstart/docker.log", dockerDumpPath+"/docker.log."+fmtTime)
+	log.Printf("Cmd to copy docker log: %s", cmdCpDockerLog.Path)
+	err = cmdCpDockerLog.Run()
+	if err != nil {
+		log.Errorf("Error running cmd to copy docker log: %v", err)
+	} else {
+		log.Println(" CP docker.log complete ...")
+	}
+
+	//STEP4 -- copy log of docker info
+	outDockerInfo, err := exec.Command("docker", "info").Output()
+	log.Println("Cmd : docker info")
+	if err != nil {
+		log.Errorf("Error running cmd to get docker info: %v", err)
+	} else {
+		f, err := os.OpenFile(dockerDumpPath+"/docker.info."+fmtTime, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			log.Errorln("Error opening file")
+		}
+		defer f.Close()
+		_, err = f.Write(outDockerInfo)
+		if err != nil {
+			log.Errorf(" Failed file write: %s/docker.info.. error:%v", dockerDumpPath, err)
+		}
+		log.Println("create docker.info log complete....")
+	}
+
+	//STEP5 --  copy log of vmstat
+	outVmstat, err := exec.Command("vmstat").Output()
+	log.Println("Cmd : vmstat")
+	if err != nil {
+		log.Errorf("Error running cmd vmstat: %v", err)
+	} else {
+		f, err := os.OpenFile(dockerDumpPath+"/vmstat.info."+fmtTime, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			log.Errorln("Error opening file")
+		}
+		defer f.Close()
+		_, err = f.Write(outVmstat)
+		if err != nil {
+			log.Errorf(" Failed file write: %s/vmstat.info.. error:%v", dockerDumpPath, err)
+		}
+	}
+
+	//STEP6 --  restart docker
+	/*restart := exec.Command("restart", "docker")
+	log.Println("Cmd : restart docker")
+	err = restart.Run()
+	if err != nil {
+		log.Errorf("Error running cmd to restart docker: %v", err)
+	}*/
+
+	log.Println(" ######## End dockerDump ######## ")
 }
 
 // healthCheck includes health checking for primary container and exit code checking for other containers

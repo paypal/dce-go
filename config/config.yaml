@@ -9,4 +9,7 @@ cleanpod:
    unhealthy: true
    cleanvolumeandcontaineronmesoskill: true
    cleanimageonmesoskill: true
+dockerdump:
+   enable: true
+   path: /home/ubuntu
 dockercomposeverbose: true
