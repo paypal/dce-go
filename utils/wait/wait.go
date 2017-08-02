@@ -22,6 +22,11 @@ import (
 
 	"os/exec"
 
+	"strings"
+
+	"os"
+
+	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 )
 
@@ -116,17 +121,6 @@ func WaitUntil(timeout time.Duration, condition ConditionCHFunc) (string, error)
 	}
 }
 
-// count down the time left after condition func is finished
-func CountDown(timeout time.Duration, condition ConditionFunc) (time.Duration, string, error) {
-	if timeout > 0 {
-		var start time.Time
-		start = time.Now()
-		res, err := condition()
-		return timeout - time.Since(start), res, err
-	}
-	return 0, "", ErrTimeOut
-}
-
 // wait on exec command finished or timeout
 func WaitCmd(timeout time.Duration, cmd_result *types.CmdResult) error {
 	if timeout < time.Duration(0) {
@@ -157,11 +151,26 @@ func WaitCmd(timeout time.Duration, cmd_result *types.CmdResult) error {
 func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	var err error
 	var out []byte
+
+	retryInterval := config.GetRetryInterval()
 	for i := 0; i < retry; i++ {
-		cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
-		out, err = cmd.Output()
+		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
+
+		if cmd.Stdout == nil {
+			_cmd.Stderr = os.Stderr
+			out, err = _cmd.Output()
+		} else {
+			_cmd.Stdout = cmd.Stdout
+			_cmd.Stderr = cmd.Stderr
+			err = _cmd.Run()
+		}
+
 		if err != nil {
-			log.Warnf("Error to exec cmd %v with count %d : %v", cmd.Args, i, err)
+			log.Warnf("Error to exec cmd %v with count %d : %v", _cmd.Args, i, err)
+			if strings.Contains(err.Error(), "already started") {
+				return out, nil
+			}
+			time.Sleep(retryInterval * time.Millisecond)
 			continue
 		}
 		return out, nil

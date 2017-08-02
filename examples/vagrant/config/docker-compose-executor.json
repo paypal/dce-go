@@ -2,7 +2,7 @@
   {
     "executor": {
       "command": {
-        "value": "./executor",
+        "value": "./executor -log_dir=/var/log -logtostderr=true -v=1",
         "shell": "true",
         "uris": [
           {

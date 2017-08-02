@@ -45,6 +45,7 @@ const (
 	INFRA_CONTAINER                      = "infracontainer"
 	PULL_RETRY                           = "pullretry"
 	MAX_RETRY                            = "maxretry"
+	RETRY_INTERVAL                       = "retryinterval"
 	NETWORKS                             = "networks"
 	PRE_EXIST                            = "pre_existing"
 	NETWORK_NAME                         = "name"
@@ -52,6 +53,7 @@ const (
 	CLEANPOD                             = "cleanpod"
 	CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL = "cleanvolumeandcontaineronmesoskill"
 	CLEAN_IMAGE_ON_MESOS_KILL            = "cleanimageonmesoskill"
+	DOCKER_COMPOSE_VERBOSE               = "dockercomposeverbose"
 )
 
 // Read from default configuration file and set config as key/values
@@ -59,7 +61,7 @@ func init() {
 	err := getConfigFromFile(CONFIG_File)
 
 	if err != nil {
-		log.Fatalf("Fail to retreive data from file, err: %s\n", err.Error())
+		log.Errorf("Fail to retreive data from file, err: %s\n", err.Error())
 	}
 }
 
@@ -98,7 +100,7 @@ func getConfigFromFile(cfgFile string) error {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatalf("No config file loaded, err: %s\n", err.Error())
+		log.Errorf("No config file loaded, err: %s\n", err.Error())
 		return err
 	}
 	return nil
@@ -143,7 +145,7 @@ func GetPullRetryCount() int {
 	return _retry
 }
 
-func GetTimeout() time.Duration {
+func GetLaunchTimeout() time.Duration {
 	timeout := GetConfigSection(LAUNCH_TASK)[TIMEOUT]
 	if timeout == "" {
 		log.Warningln("pod timeout doesn't set in config...timeout will be set as 500s")
@@ -151,7 +153,29 @@ func GetTimeout() time.Duration {
 	}
 	t, err := strconv.Atoi(timeout)
 	if err != nil {
-		log.Fatalf("Error converting timeout from string to int : %s\n", err.Error())
+		log.Errorf("Error converting timeout from string to int : %s\n", err.Error())
+	}
+	return time.Duration(t)
+}
+
+func GetStopTimeout() string {
+	timeout := GetConfigSection(CLEANPOD)[TIMEOUT]
+	if timeout == "" {
+		log.Warningln("pod timeout doesn't set in config...timeout will be set as 10s")
+		return "10"
+	}
+	return timeout
+}
+
+func GetRetryInterval() time.Duration {
+	interval := GetConfigSection(LAUNCH_TASK)[RETRY_INTERVAL]
+	if interval == "" {
+		log.Warningln("retry interval doesn't set in config...timeout will be set as 10s")
+		return time.Duration(10000)
+	}
+	t, err := strconv.Atoi(interval)
+	if err != nil {
+		log.Errorf("Error converting timeout from string to int : %s\n", err.Error())
 	}
 	return time.Duration(t)
 }
@@ -164,7 +188,7 @@ func GetMaxRetry() int {
 	}
 	i, err := strconv.Atoi(retry)
 	if err != nil {
-		log.Fatalf("Error converting retry from string to int : %s\n", err.Error())
+		log.Errorf("Error converting retry from string to int : %s\n", err.Error())
 	}
 	return i
 }
@@ -194,4 +218,8 @@ func GetNetwork() (types.Network, bool) {
 		Driver:   nmap[NETWORK_DRIVER].(string),
 	}
 	return network, true
+}
+
+func EnableVerbose() bool {
+	return GetConfig().GetBool(DOCKER_COMPOSE_VERBOSE)
 }

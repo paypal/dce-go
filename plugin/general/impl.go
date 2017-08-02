@@ -109,6 +109,10 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 		delete(filesMap, editedFiles[indexInfra])
 		*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
 		editedFiles = append(editedFiles[:indexInfra], editedFiles[indexInfra+1:]...)
+		err = utils.DeleteFile(types.INFRA_CONTAINER_YML)
+		if err != nil {
+			log.Errorf("Error deleting infra yml file %v", err)
+		}
 	}
 
 	logger.Println("====================context out====================")
