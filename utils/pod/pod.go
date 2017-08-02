@@ -104,6 +104,9 @@ func checkContainerExitCode(containerId string) (int, error) {
 // example : docker-compose -f compose.yaml up
 // "docker-compose" will be the main cmd, "-f compose.yaml up" will be parts and return as an array
 func GenerateCmdParts(files []string, cmd string) ([]string, error) {
+	if config.EnableVerbose() {
+		cmd = " --verbose" + cmd
+	}
 	var s string
 	for _, file := range files {
 		if _, err := os.Stat(file); err != nil {
@@ -265,8 +268,8 @@ func LaunchPod(files []string) string {
 
 	log.Printf("Launch Pod : Command to launch task : docker-compose %v\n", parts)
 	cmd := exec.Command("docker-compose", parts...)
-        cmd.Stdout = os.Stdout
-        cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	composeHttpTimeout := config.GetConfigSection(config.LAUNCH_TASK)[CONFIG_COMPOSE_HTTP_TIMEOUT]
 	cmd.Env = os.Environ()
@@ -453,7 +456,7 @@ func PullImage(files []string) error {
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
-        cmd.Stdout = os.Stdout
+	cmd.Stdout = os.Stdout
 	log.Println("Pull Image : Command to pull images : docker-compose ", parts)
 
 	err = cmd.Start()
@@ -692,8 +695,6 @@ func WaitOnPod(ctx *context.Context) {
 		}
 	}
 }
-
-
 
 // healthCheck includes health checking for primary container and exit code checking for other containers
 func HealthCheck(files []string, podServices map[string]bool, out chan<- string) {
