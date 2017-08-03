@@ -257,7 +257,7 @@ func GetPorts(taskInfo *mesos.TaskInfo) *list.Element {
 func LaunchPod(files []string) string {
 	log.Println("====================Launch Pod====================")
 
-	parts, err := GenerateCmdParts(files, " up --no-color")
+	parts, err := GenerateCmdParts(files, " up -d")
 	if err != nil {
 		log.Errorf("Error generating compose cmd parts : %s\n", err.Error())
 		return types.POD_FAILED
@@ -265,14 +265,22 @@ func LaunchPod(files []string) string {
 
 	log.Printf("Launch Pod : Command to launch task : docker-compose %v\n", parts)
 	cmd := exec.Command("docker-compose", parts...)
-        cmd.Stdout = os.Stdout
-        cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	composeHttpTimeout := config.GetConfigSection(config.LAUNCH_TASK)[CONFIG_COMPOSE_HTTP_TIMEOUT]
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", COMPOSE_HTTP_TIMEOUT, composeHttpTimeout))
 
-	err = cmd.Start()
+	err = cmd.Run()
+	if err != nil {
+		log.Errorln("Error running launch task command : ", err.Error())
+		return types.POD_FAILED
+	}
+
+	go dockerLogToStdout(files)
+
+	/*err = cmd.Start()
 	if err != nil {
 		log.Errorln("Error running launch task command : ", err.Error())
 		return types.POD_FAILED
@@ -291,23 +299,43 @@ func LaunchPod(files []string) string {
 		} else {
 			SendPodStatus(types.POD_FINISHED)
 		}
-	}()
+	}()*/
 
 	return types.POD_STARTING
+}
+
+func dockerLogToStdout(files []string) {
+	parts, err := GenerateCmdParts(files, " logs --follow --no-color")
+	if err != nil {
+		log.Errorf("Error generating compose cmd parts : %s\n", err.Error())
+	}
+	cmd := exec.Command("docker-compose", parts...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	_, err = utils.RetryCmd(types.FOREVER, cmd)
+	if err != nil {
+		log.Errorf("Error running cmd %s", cmd.Args)
+	}
 }
 
 // Stop pod
 // docker-compose stop
 func StopPod(files []string) error {
 	log.Println("====================Stop Pod====================")
-	parts, err := GenerateCmdParts(files, " stop")
+
+	//get stop timeout from config
+	timeout := config.GetStopTimeout()
+	parts, err := GenerateCmdParts(files, " stop -t "+timeout)
 	if err != nil {
 		log.Errorln("Error generating cmd parts : ", err.Error())
 		return err
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
-	log.Println("Stop Pod : Command to stop task : docker-compose ", parts)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	log.Printf("Stop Pod : Command to stop task : %s", cmd.Args)
 
 	err = cmd.Run()
 	if err != nil {
@@ -353,6 +381,8 @@ func RemovePodVolume(files []string) error {
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	log.Println("Remove Pod Volume: Command to rm volume : docker-compose ", parts)
 
 	err = cmd.Run()
@@ -375,6 +405,9 @@ func RemovePodImage(files []string) error {
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
 	log.Println("Remove Pod Image: Command to rm images : docker-compose ", parts)
 
 	err = cmd.Run()
@@ -403,7 +436,8 @@ func GetContainerNetwork(name string) (string, error) {
 func RemoveNetwork(name string) error {
 	log.Println("====================Remove network====================")
 	cmd := exec.Command("docker", "network", "rm", name)
-	//_, err := utils.RetryCmd(config.GetMaxRetry(), cmd)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
 		log.Errorf("Error in rm network : %s , %s\n", name, err.Error())
@@ -432,6 +466,9 @@ func ForceKill(files []string) error {
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
 	log.Println("Kill Pod : Command to kill task : docker-compose ", parts)
 
 	err = cmd.Run()
@@ -453,7 +490,9 @@ func PullImage(files []string) error {
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
-        cmd.Stdout = os.Stdout
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
 	log.Println("Pull Image : Command to pull images : docker-compose ", parts)
 
 	err = cmd.Start()
@@ -462,7 +501,7 @@ func PullImage(files []string) error {
 		return err
 	}
 
-	err = utils.WaitCmd(config.GetTimeout()*time.Millisecond, &types.CmdResult{
+	err = utils.WaitCmd(config.GetLaunchTimeout()*time.Millisecond, &types.CmdResult{
 		Command: cmd,
 	})
 	if err != nil {
@@ -693,8 +732,6 @@ func WaitOnPod(ctx *context.Context) {
 	}
 }
 
-
-
 // healthCheck includes health checking for primary container and exit code checking for other containers
 func HealthCheck(files []string, podServices map[string]bool, out chan<- string) {
 	log.Println("====================Health Check====================", len(podServices))
@@ -773,9 +810,13 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	log.Printf("Health Check List: %v", HealthCheckListId)
 	log.Printf("Pod Monitor List: %v", PodContainers)
 
-	log.Println("Initial Health Check : send POD_RUNNING")
-
-	out <- types.POD_RUNNING
+	if len(containers) == 0 {
+		log.Println("Initial Health Check : send POD_FINISHED")
+		out <- types.POD_FINISHED
+	} else {
+		log.Println("Initial Health Check : send POD_RUNNING")
+		out <- types.POD_RUNNING
+	}
 
 	log.Println("====================Health check Done====================")
 
