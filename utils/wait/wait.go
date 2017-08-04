@@ -68,8 +68,8 @@ func PollRetry(retry int, interval time.Duration, condition ConditionFunc) error
 
 // Keep polling a condition func until timeout or a message/error is returned
 func PollUntil(interval time.Duration, done <-chan string, timeout time.Duration, condition ConditionFunc) (string, error) {
-	tricker := time.NewTicker(interval)
-	defer tricker.Stop()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 
 	var after <-chan time.Time
 	if timeout != 0 {
@@ -80,7 +80,7 @@ func PollUntil(interval time.Duration, done <-chan string, timeout time.Duration
 
 	for {
 		select {
-		case <-tricker.C:
+		case <-ticker.C:
 			res, err := WaitUntil(timeout, ConditionCHFunc(func(reply chan string) {
 				condition_reply, _ := condition()
 				reply <- condition_reply
