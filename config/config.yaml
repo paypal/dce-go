@@ -11,3 +11,10 @@ cleanpod:
    unhealthy: true
    cleanvolumeandcontaineronmesoskill: true
    cleanimageonmesoskill: true
+dockerdump:
+   enable: true
+   dumppath: /home/ubuntu
+   dockerpidfile: /var/run/docker.pid
+   containerpidfile: /run/docker/libcontainerd/docker-containerd.pid
+   dockerlogpath: /var/log/upstart/docker.log
+dockercomposeverbose: true

@@ -173,13 +173,6 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			cancel()
 			pod.SendPodStatus(types.POD_FAILED)
 		}
-		if res == types.POD_RUNNING {
-			cancel()
-			if pod.GetPodStatus() != types.POD_RUNNING {
-				pod.SendPodStatus(types.POD_RUNNING)
-				go monitor.MonitorPoller()
-			}
-		}
 
 		// Temp status keeps the pod status returned by PostLaunchTask
 		var tempStatus string
@@ -195,6 +188,14 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			if tempStatus == types.POD_FAILED {
 				cancel()
 				pod.SendPodStatus(types.POD_FAILED)
+			}
+		}
+
+		if res == types.POD_RUNNING {
+			cancel()
+			if pod.GetPodStatus() != types.POD_RUNNING {
+				pod.SendPodStatus(types.POD_RUNNING)
+				go monitor.MonitorPoller()
 			}
 		}
 

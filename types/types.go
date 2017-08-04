@@ -24,6 +24,7 @@ import (
 const (
 	HEALTHY                 = "healthy"
 	UNHEALTHY               = "unhealthy"
+	STARTING                = "starting"
 	POD_STAGING             = "POD_STAGING"
 	POD_STARTING            = "POD_STARTING"
 	POD_RUNNING             = "POD_RUNNING"

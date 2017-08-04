@@ -41,7 +41,6 @@ func podMonitor() string {
 			healthy, exitCode, err = pod.CheckContainer(pod.PodContainers[i], true)
 			//log.Printf("container %s has health check, health status: %s, exitCode: %d, err : %v", containers[i], healthy, exitCode, err)
 		} else {
-			// b) others
 			healthy, exitCode, err = pod.CheckContainer(pod.PodContainers[i], false)
 			//log.Printf("container %s no health check, exitCode: %d, err : %v", containers[i], healthy, exitCode, err)
 		}
@@ -130,10 +129,11 @@ func MonitorPoller() {
 
 	gap, err := strconv.Atoi(config.GetConfigSection(config.LAUNCH_TASK)[config.POD_MONITOR_INTERVAL])
 	if err != nil {
-		log.Fatalf("Error converting podmonitorinterval from string to int : %s|\n", err.Error())
+		log.Errorf("Error converting podmonitorinterval from string to int : %s", err.Error())
+		gap = 10000
 	}
 
-	res, _ := wait.PollForever(time.Duration(gap)*time.Millisecond, nil, wait.ConditionFunc(func() (string, error) {
+	res, err := wait.PollForever(time.Duration(gap)*time.Millisecond, nil, wait.ConditionFunc(func() (string, error) {
 		return podMonitor(), nil
 	}))
 
@@ -142,6 +142,11 @@ func MonitorPoller() {
 	curntPodStatus := pod.GetPodStatus()
 	if curntPodStatus == types.POD_KILLED || curntPodStatus == types.POD_FAILED {
 		log.Println("====================Pod Monitor Stopped====================")
+		return
+	}
+
+	if err != nil {
+		pod.SendPodStatus(types.POD_FAILED)
 		return
 	}
 
