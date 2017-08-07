@@ -108,7 +108,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	var ctx context.Context
 	var cancel context.CancelFunc
 	ctx = context.Background()
-	ctx, cancel = context.WithTimeout(ctx, config.GetTimeout()*time.Millisecond)
+	ctx, cancel = context.WithTimeout(ctx, config.GetLaunchTimeout()*time.Millisecond)
 	go pod.WaitOnPod(&ctx)
 
 	// Get order of plugins from config or mesos labels
@@ -173,13 +173,6 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			cancel()
 			pod.SendPodStatus(types.POD_FAILED)
 		}
-		if res == types.POD_RUNNING {
-			cancel()
-			if pod.GetPodStatus() != types.POD_RUNNING {
-				pod.SendPodStatus(types.POD_RUNNING)
-				go monitor.MonitorPoller()
-			}
-		}
 
 		// Temp status keeps the pod status returned by PostLaunchTask
 		var tempStatus string
@@ -195,6 +188,14 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			if tempStatus == types.POD_FAILED {
 				cancel()
 				pod.SendPodStatus(types.POD_FAILED)
+			}
+		}
+
+		if res == types.POD_RUNNING {
+			cancel()
+			if pod.GetPodStatus() != types.POD_RUNNING {
+				pod.SendPodStatus(types.POD_RUNNING)
+				go monitor.MonitorPoller()
 			}
 		}
 
@@ -294,7 +295,7 @@ func pullAndLaunchPod() string {
 }
 
 func initHealthCheck(podServices map[string]bool) (string, error) {
-	res, err := wait.WaitUntil(config.GetTimeout()*time.Millisecond, wait.ConditionCHFunc(func(healthCheckReply chan string) {
+	res, err := wait.WaitUntil(config.GetLaunchTimeout()*time.Millisecond, wait.ConditionCHFunc(func(healthCheckReply chan string) {
 		pod.HealthCheck(pod.ComposeFiles, podServices, healthCheckReply)
 	}))
 

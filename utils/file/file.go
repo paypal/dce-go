@@ -200,6 +200,13 @@ func WriteToFile(file string, data []byte) (string, error) {
 	return f.Name(), nil
 }
 
+func DeleteFile(file string) error {
+	if !strings.Contains(file, config.GetAppFolder()) {
+		file = FolderPath(strings.Fields(file))[0]
+	}
+	return os.Remove(file)
+}
+
 func WriteChangeToFiles(ctx context.Context) error {
 	filesMap := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 	for file := range filesMap {

@@ -91,6 +91,8 @@ function prepare_extra {
   mkdir -p /etc/mesos-slave
   mkdir -p /etc/mesos-master
   mkdir -p /output/usr/local/lib/mesos
+  mkdir -p /etc/docker || true
+  cp /vagrant/examples/vagrant/config/daemon.json /etc/docker/
   cp /vagrant/examples/vagrant/mesos_config/etc_mesos-slave/* /etc/mesos-slave
   cp /vagrant/examples/vagrant/mesos_config/etc_mesos-master/* /etc/mesos-master
   cp /vagrant/examples/vagrant/mesos-module/${MESOS_MODULE}/* /output/usr/local/lib/mesos/
