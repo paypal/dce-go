@@ -332,11 +332,17 @@ cleanpod:                    # This section determines whether pod should be cle
                                                  # (Optional, defaults to false)
 dockerdump:
    enable: true                                  # do docker dump if pod launch timeout.(Optional, default value is false)
-   dumppath: /home/ubuntu                        # path to dump docker           
+   dumppath: /home/ubuntu                        # path to dump docker  
+                                                 # (Optional, default value is /home/ubuntu)
    dockerpidfile: /var/run/docker.pid            # path of docker pid
+                                                 # (Optional, default value is /var/run/docker.pid)
    containerpidfile: /run/docker/libcontainerd/docker-containerd.pid     # path of containerd pid
-   dockerlogpath: /var/log/upstart/docker.log                            # path of docker log
+                                                 # (Optional, default value is /var/run/docker.pid)
+   dockerlogpath: /var/log/upstart/docker.log    # path of docker log
+                                                 # (Optional, default value is /var/log/upstart/docker.log)
 dockercomposeverbose: true                       # enable verbose mode for each docker cmd
+                                                 # (Optional, default value is false)
+   
  
 ```
 <!--
