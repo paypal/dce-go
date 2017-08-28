@@ -1,15 +1,15 @@
-##Installing environment
+## Installing environment
 
 This vagrant box helps you quickly create DCE environment which has mesos, marathon, aurora, golang1.7, docker, docker-compose and DCE installed. DCE will be compiled as a binary file called "executor" and you can find it at /home/vagrant. 
 
-###Requirements
+### Requirements
 
 * Linux/Unix/Mac OS X
 * VirtualBox
 * Vagrant
 * Git
 
-###Steps
+### Steps
 1. [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 
 2. [Install Vagrant](https://www.vagrantup.com/downloads.html)

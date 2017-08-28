@@ -1,5 +1,6 @@
 launchtask:
    podmonitorinterval: 10000
+   composehttptimeout: 300
    pullretry: 3
    maxretry: 3
    retryinterval: 10000
