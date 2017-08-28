@@ -288,7 +288,7 @@ func pullAndLaunchPod() string {
 	}))
 
 	if err != nil {
-		logger.Println("Pull Image : Send POD_PULL_FAILED")
+		logger.Printf("Image Pull Failure: %v", err)
 		return types.POD_PULL_FAILED
 	}
 	return pod.LaunchPod(pod.ComposeFiles)
@@ -300,7 +300,7 @@ func initHealthCheck(podServices map[string]bool) (string, error) {
 	}))
 
 	if err != nil {
-		log.Errorf("Error waiting on healcheck %v", err)
+		log.Errorf("Initial Healthcheck Failure: %v", err)
 		return types.POD_FAILED, err
 	}
 	return res, err

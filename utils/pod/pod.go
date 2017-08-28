@@ -264,7 +264,7 @@ func LaunchPod(files []string) string {
 
 	parts, err := GenerateCmdParts(files, " up -d")
 	if err != nil {
-		log.Errorf("Error generating compose cmd parts : %s\n", err.Error())
+		log.Errorf("Launch Pod Failure...Error generating compose cmd parts : %s\n", err.Error())
 		return types.POD_FAILED
 	}
 
@@ -280,7 +280,7 @@ func LaunchPod(files []string) string {
 
 	err = cmd.Run()
 	if err != nil {
-		log.Errorln("Error running launch task command : ", err.Error())
+		log.Errorln("Launch Pod Failure...Error running launch task command : ", err.Error())
 		return types.POD_FAILED
 	}
 
@@ -928,7 +928,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 			if err != nil || healthy == types.UNHEALTHY {
 				log.Println("Initial Health Check : send FAILED")
 				out <- types.POD_FAILED
-				log.Println("Initial Health Check : send FAILED and stopped")
+				log.Println("Initial Health Check : send FAILED and stop health check")
 				return
 			}
 
