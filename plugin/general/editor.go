@@ -62,7 +62,10 @@ func EditComposeFile(ctx *context.Context, file string, executorId string, taskI
 }
 
 func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMap *types.ServiceDetail, ports *list.Element) (*list.Element, error) {
-	containerDetails := (*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName].(map[interface{}]interface{})
+	containerDetails, ok := (*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName].(map[interface{}]interface{})
+	if !ok {
+		log.Println("POD_UPDATE_YAML_FAIL")
+	}
 	logger := log.WithFields(log.Fields{
 		"serviceName": serviceName,
 		"taskId":      taskId,
