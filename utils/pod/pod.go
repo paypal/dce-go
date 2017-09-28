@@ -321,7 +321,7 @@ func dockerLogToStdout(files []string) {
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	_, err = utils.RetryCmd(types.FOREVER, cmd)
+	_, err = utils.RetryCmdLogs(cmd)
 	if err != nil {
 		log.Printf("POD_LAUNCH_LOG_FAIL -- Error running cmd %s\n", cmd.Args)
 	}

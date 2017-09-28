@@ -22,9 +22,9 @@ import (
 
 	"os/exec"
 
-	"strings"
-
 	"os"
+
+	"strings"
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
@@ -173,7 +173,36 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 			time.Sleep(retryInterval * time.Millisecond)
 			continue
 		}
+
 		return out, nil
 	}
 	return nil, err
+}
+
+// Retry command util reach the maximum try out count
+func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
+	var err error
+	var out []byte
+
+	retryInterval := config.GetRetryInterval()
+	for {
+		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
+		log.Printf("Run cmd %s", _cmd.Args)
+
+		if cmd.Stdout == nil {
+			_cmd.Stderr = os.Stderr
+			out, err = _cmd.Output()
+		} else {
+			_cmd.Stdout = cmd.Stdout
+			_cmd.Stderr = cmd.Stderr
+			err = _cmd.Run()
+			if err != nil {
+				log.Printf("Error running cmd: %v", err)
+			}
+		}
+
+		log.Printf("cmd %s exits, retry...",_cmd.Args)
+		time.Sleep(retryInterval * time.Millisecond)
+	}
+	return out, err
 }
