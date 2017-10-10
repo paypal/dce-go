@@ -35,6 +35,7 @@ const (
 	PORT_DELIMITER = ":"
 	PATH_DELIMITER = "/"
 	NETWORK_PROXY  = "networkproxy"
+	ENVIRONMENT    = "environment"
 )
 
 func EditComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element) (string, *list.Element, error) {
@@ -62,7 +63,10 @@ func EditComposeFile(ctx *context.Context, file string, executorId string, taskI
 }
 
 func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMap *types.ServiceDetail, ports *list.Element) (*list.Element, error) {
-	containerDetails := (*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName].(map[interface{}]interface{})
+	containerDetails, ok := (*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName].(map[interface{}]interface{})
+	if !ok {
+		log.Println("POD_UPDATE_YAML_FAIL")
+	}
 	logger := log.WithFields(log.Fields{
 		"serviceName": serviceName,
 		"taskId":      taskId,
@@ -72,6 +76,29 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	if _, ok := containerDetails[types.RESTART].(string); ok {
 		delete(containerDetails, types.RESTART)
 		log.Println("Edit Compose File : Remove restart")
+	}
+
+	// Get env list
+	var envIsArray bool
+	envMap, ok := containerDetails[ENVIRONMENT].(map[interface{}]interface{})
+	if ok {
+		logger.Printf("ENV is an array %v of %s : %v", envIsArray, serviceName, envMap)
+	}
+	envList, ok := containerDetails[ENVIRONMENT].([]interface{})
+	if ok {
+		logger.Printf("ENV is an array %v of %s : %v", envIsArray, serviceName, envList)
+		envIsArray = true
+	}
+	if envMap == nil && envList == nil {
+		envMap = make(map[interface{}]interface{})
+	}
+
+	if envIsArray {
+		envList = append(envList, fmt.Sprintf("%s=%d", "PYTHONUNBUFFERED", 1))
+		containerDetails[ENVIRONMENT] = envList
+	} else {
+		envMap["PYTHONUNBUFFERED"] = 1
+		containerDetails[ENVIRONMENT] = envMap
 	}
 
 	// Update session of network_mode

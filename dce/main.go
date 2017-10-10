@@ -300,7 +300,7 @@ func initHealthCheck(podServices map[string]bool) (string, error) {
 	}))
 
 	if err != nil {
-		log.Printf("POD_INIT_HEALTH_CHECK_FAILURE -- %v", err)
+		log.Printf("POD_INIT_HEALTH_CHECK_TIMEOUT -- %v", err)
 		return types.POD_FAILED, err
 	}
 	return res, err
