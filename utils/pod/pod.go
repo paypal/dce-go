@@ -278,13 +278,13 @@ func LaunchPod(files []string) string {
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", COMPOSE_HTTP_TIMEOUT, composeHttpTimeout))
 
+	go dockerLogToStdout(files)
+
 	err = cmd.Run()
 	if err != nil {
 		log.Printf("POD_LAUNCH_FAIL -- Error running launch task command : %v", err)
 		return types.POD_FAILED
 	}
-
-	go dockerLogToStdout(files)
 
 	/*err = cmd.Start()
 	if err != nil {
@@ -321,7 +321,7 @@ func dockerLogToStdout(files []string) {
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	_, err = utils.RetryCmd(types.FOREVER, cmd)
+	_, err = utils.RetryCmdLogs(cmd)
 	if err != nil {
 		log.Printf("POD_LAUNCH_LOG_FAIL -- Error running cmd %s\n", cmd.Args)
 	}
