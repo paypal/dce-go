@@ -1,6 +1,10 @@
 hash: 61e63c389c2a58be0e90bcb12ba4e6895d593da56082e645223ba5cd6b04e0d3
 updated: 2017-04-26T14:31:16.544638389-07:00
 imports:
+- name: git.apache.org/thrift.git
+  version: b2a4d4ae21c789b689dd162deb819665567f481c
+  subpackages:
+  - lib/go/thrift
 - name: github.com/fsnotify/fsnotify
   version: fd9ec7deca8bf46ecd2a795baaacf2b3a9be1197
 - name: github.com/gogo/protobuf
@@ -62,6 +66,8 @@ imports:
   version: 5ccb023bc27df288a957c5e994cd44fd19619465
 - name: github.com/spf13/viper
   version: 651d9d916abc3c3d6a91a12549495caba5edffd2
+  subpackages:
+  - remote
 - name: golang.org/x/crypto
   version: 9477e0b78b9ac3d0b03822fd95422e2fe07627cd
   subpackages:
