@@ -63,6 +63,7 @@ const (
 	COMPOSE_HTTP_TIMEOUT    = "COMPOSE_HTTP_TIMEOUT"
 	SERVICE_DETAIL          = "serviceDetail"
 	FOREVER                 = 1<<63 - 1
+	VOLUMES                 = "volumes"
 )
 
 type PodStatus struct {

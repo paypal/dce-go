@@ -1005,3 +1005,16 @@ func allServicesUp(containers []string, podServices map[string]bool) bool {
 
 	return true
 }
+
+// Function to create the volume with the name passed in as parameter (volumeName)
+func CreateNamedVolume(volumeName string) error {
+	log.Println("====================Create volumes====================")
+	cmd := exec.Command("docker", "volume", "create", volumeName)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Errorf("Error to create volume : %s , %s\n", volumeName, err.Error())
+	}
+	return err
+}
