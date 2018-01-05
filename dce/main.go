@@ -199,6 +199,11 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			}
 		}
 
+		if res == types.POD_FINISHED {
+			cancel()
+			pod.SendPodStatus(types.POD_FINISHED)
+		}
+
 	default:
 		logger.Printf("default: Unknown status -- %s from pullAndLaunchPod ", replyPodStatus)
 
