@@ -286,27 +286,6 @@ func LaunchPod(files []string) string {
 		return types.POD_FAILED
 	}
 
-	/*err = cmd.Start()
-	if err != nil {
-		log.Errorln("Error running launch task command : ", err.Error())
-		return types.POD_FAILED
-	}
-
-	go func() {
-		err = cmd.Wait()
-		if err != nil {
-			log.Errorln("Launch task cmd return non zero exit code : ", err.Error())
-			SendPodStatus(types.POD_FAILED)
-		}
-
-		exitCode, err := CheckPodExitCode(files)
-		if err != nil || exitCode != 0 {
-			SendPodStatus(types.POD_FAILED)
-		} else {
-			SendPodStatus(types.POD_FINISHED)
-		}
-	}()*/
-
 	return types.POD_STARTING
 }
 
@@ -682,8 +661,9 @@ func SetPodStatus(status string) {
 
 func SendPodStatus(status string) {
 	curntPodStatus := GetPodStatus()
-	if curntPodStatus == types.POD_FAILED || curntPodStatus == types.POD_KILLED || curntPodStatus == status {
-		log.Printf("Task has already been killed or failed or updated as required status: %s", curntPodStatus)
+	if curntPodStatus == types.POD_FAILED || curntPodStatus == types.POD_KILLED ||
+		curntPodStatus == types.POD_FINISHED || curntPodStatus == status {
+		log.Printf("Task has already been killed or failed or finished or updated as required status: %s", curntPodStatus)
 		return
 	}
 
