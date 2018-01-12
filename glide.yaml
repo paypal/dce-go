@@ -11,5 +11,5 @@ import:
   subpackages:
   - context
 - package: gopkg.in/yaml.v2
-- package: github.com/rdelval/gorealis
-  version: v1.0.5
+- package: github.com/paypal/gorealis
+  version: v1.1.0

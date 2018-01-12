@@ -24,7 +24,7 @@ import (
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/file"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func TestEditComposeFile(t *testing.T) {

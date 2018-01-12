@@ -39,7 +39,8 @@ import (
 	"github.com/paypal/dce-go/utils/pod"
 	"github.com/paypal/dce-go/utils/wait"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
+
+	"context"
 )
 
 var logger *log.Entry

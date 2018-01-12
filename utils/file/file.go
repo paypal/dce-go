@@ -36,7 +36,7 @@ import (
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/pod"
-	"golang.org/x/net/context"
+	"context"
 )
 
 const (

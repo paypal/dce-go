@@ -34,7 +34,7 @@ import (
 	"github.com/paypal/dce-go/types"
 	utils "github.com/paypal/dce-go/utils/wait"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
+	"context"
 )
 
 const (
