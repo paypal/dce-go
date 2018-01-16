@@ -1,10 +1,6 @@
-hash: 78eb39a4c34d1b157a8bbc099ea255fdfaf459f49a87940e2f2d434f9eca46bf
-updated: 2018-01-12T23:09:31.739163111Z
+hash: d9dd754fe98b7e31855232c75be540564b5fa196e94e2988496901d5c15e70bb
+updated: 2018-01-16T11:40:44.457930049-08:00
 imports:
-- name: git.apache.org/thrift.git
-  version: 31d5b7be27dc6010ded49ab943b51a87f1298967
-  subpackages:
-  - lib/go/thrift
 - name: github.com/fsnotify/fsnotify
   version: fd9ec7deca8bf46ecd2a795baaacf2b3a9be1197
 - name: github.com/gogo/protobuf
@@ -41,11 +37,6 @@ imports:
   - upid
 - name: github.com/mitchellh/mapstructure
   version: f3009df150dadf309fdee4a54ed65c124afad715
-- name: github.com/paypal/gorealis
-  version: 9631aa3aab9964631946814fa0d8b99a133c982f
-  subpackages:
-  - gen-go/apache/aurora
-  - response
 - name: github.com/pborman/uuid
   version: 1b00554d822231195d1babd97ff4a781231955c9
 - name: github.com/pelletier/go-buffruneio
@@ -56,14 +47,6 @@ imports:
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/pkg/sftp
   version: 4d0e916071f68db74f8a73926335f809396d6b42
-- name: github.com/rdelval/gorealis
-  version: e12370ffbbb5208cc522ebf544ab270098a65e37
-  subpackages:
-  - gen-go/apache/aurora
-- name: github.com/samuel/go-zookeeper
-  version: 471cd4e61d7a78ece1791fa5faa0345dc8c7d5a5
-  subpackages:
-  - zk
 - name: github.com/sirupsen/logrus
   version: c078b1e43f58d563c74cebe63c85789e76ddb627
 - name: github.com/spf13/afero
@@ -101,4 +84,9 @@ imports:
   - unicode/norm
 - name: gopkg.in/yaml.v2
   version: a5b47d31c556af34a302ce5d659e6fea44d90de0
+- name: github.com/paypal/gorealis
+  version: 9631aa3aab9964631946814fa0d8b99a133c982f
+  subpackages:
+  - gen-go/apache/aurora
+  - response
 testImports: []

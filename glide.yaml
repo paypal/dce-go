@@ -7,6 +7,8 @@ import:
 - package: github.com/pkg/errors
 - package: github.com/sirupsen/logrus
 - package: github.com/spf13/viper
+  subpackages:
+  - remote
 - package: golang.org/x/net
   subpackages:
   - context
