@@ -24,7 +24,7 @@ import (
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/file"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func TestEditComposeFile(t *testing.T) {
@@ -40,13 +40,13 @@ func TestEditComposeFile(t *testing.T) {
 	var ctx context.Context
 	ctx = context.Background()
 	var servDetail types.ServiceDetail
-	servDetail, err := file.ParseYamls([]string{"testdata/test.yml"})
+	servDetail, err := file.ParseYamls(&[]string{"testdata/test.yml"})
 	if err != nil {
 		t.Fatalf("Error to parse yaml files : %v", err)
 	}
 	fmt.Println(servDetail)
 	ctx = context.WithValue(ctx, types.SERVICE_DETAIL, servDetail)
-	_, curPort, _, _ := EditComposeFile(&ctx, "testdata/test.yml", "executorId", "taskId", ports.Front())
+	_, curPort, _ := EditComposeFile(&ctx, "testdata/test.yml", "executorId", "taskId", ports.Front())
 
 	if curPort == nil || strconv.FormatUint(curPort.Value.(uint64), 10) != "3000" {
 		t.Errorf("expected current port to be 3000 but got %v", curPort)

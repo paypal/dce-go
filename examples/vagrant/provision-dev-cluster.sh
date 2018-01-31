@@ -65,8 +65,8 @@ readonly MARATHON_VERSION=1.1.2-1.0.482
 
 function install_go {
 
-  wget -c "https://storage.googleapis.com/golang/go1.7.4.linux-amd64.tar.gz" "--no-check-certificate"
-  tar -xvf go1.7.4.linux-amd64.tar.gz
+  wget -c "https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz" "--no-check-certificate"
+  tar -xvf go1.9.2.linux-amd64.tar.gz
   sudo mv go /usr/local
 
   export GOROOT=/usr/local/go

@@ -19,7 +19,7 @@ import (
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func TestCreateInfraContainer(t *testing.T) {

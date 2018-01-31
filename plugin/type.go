@@ -16,7 +16,7 @@
 package plugin
 
 import (
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"

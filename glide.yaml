@@ -7,9 +7,11 @@ import:
 - package: github.com/pkg/errors
 - package: github.com/sirupsen/logrus
 - package: github.com/spf13/viper
+  subpackages:
+  - remote
 - package: golang.org/x/net
   subpackages:
   - context
 - package: gopkg.in/yaml.v2
-- package: github.com/rdelval/gorealis
-  version: v1.0.5
+- package: github.com/paypal/gorealis
+  version: v1.1.0

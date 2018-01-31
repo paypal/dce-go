@@ -46,20 +46,20 @@ func podMonitor() string {
 		}
 
 		if err != nil {
-			log.Println(fmt.Sprintf("Error inspecting container with id : %s, %v", pod.PodContainers[i], err.Error()))
-			log.Println("Pod Monitor : Send Failed")
+			log.Println(fmt.Sprintf("POD_MONITOR_HEALTH_CHECK_FAILED -- Error inspecting container with id : %s, %v", pod.PodContainers[i], err.Error()))
+			log.Println("POD_MONITOR_FAILED -- Send Failed")
 			return types.POD_FAILED
 		}
 
 		if exitCode != 0 && exitCode != -1 {
-			log.Println("Pod Monitor : Stopped and send Failed")
+			log.Println("POD_MONITOR_APP_EXIT -- Stop pod monitor and send Failed")
 			return types.POD_FAILED
 		}
 
 		if healthy == types.UNHEALTHY {
 			if config.GetConfigSection(config.CLEANPOD) == nil ||
 				config.GetConfigSection(config.CLEANPOD)[types.UNHEALTHY] == "true" {
-				log.Println("Pod Monitor : Stopped and send Failed")
+				log.Println("POD_MONITOR_HEALTH_CHECK_FAILED -- Stop pod monitor and send Failed")
 				return types.POD_FAILED
 			}
 			log.Warnf("Container %s became unhealthy, but pod won't be killed due to cleanpod config", pod.PodContainers[i])

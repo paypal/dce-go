@@ -39,7 +39,8 @@ import (
 	"github.com/paypal/dce-go/utils/pod"
 	"github.com/paypal/dce-go/utils/wait"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
+
+	"context"
 )
 
 var logger *log.Entry
@@ -288,7 +289,7 @@ func pullAndLaunchPod() string {
 	}))
 
 	if err != nil {
-		logger.Println("Pull Image : Send POD_PULL_FAILED")
+		logger.Printf("POD_IMAGE_PULL_FAILED -- %v", err)
 		return types.POD_PULL_FAILED
 	}
 	return pod.LaunchPod(pod.ComposeFiles)
@@ -300,7 +301,7 @@ func initHealthCheck(podServices map[string]bool) (string, error) {
 	}))
 
 	if err != nil {
-		log.Errorf("Error waiting on healcheck %v", err)
+		log.Printf("POD_INIT_HEALTH_CHECK_TIMEOUT -- %v", err)
 		return types.POD_FAILED, err
 	}
 	return res, err
