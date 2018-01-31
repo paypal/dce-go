@@ -49,7 +49,7 @@ More information on how an executor can be configured for consumption by Aurora 
 under the custom executors section.
 
 
-[Gorealis](https://github.com/rdelval/gorealis) is a go-library for communicating with apache aurora. The [Sample client](https://github.com/paypal/dce-go/blob/opensource/examples/client.go) in this project leverages Gorealis to launch job using aurora scheduler. This is a quick way to try out aurora scheduler apis using our vagrantbox setup. Follow [Installing environment](environment.md) for vagrant setup.
+[Gorealis](https://github.com/paypal/gorealis) is a go-library for communicating with apache aurora. The [Sample client](https://github.com/paypal/dce-go/blob/opensource/examples/client.go) in this project leverages Gorealis to launch job using aurora scheduler. This is a quick way to try out aurora scheduler apis using our vagrantbox setup. Follow [Installing environment](environment.md) for vagrant setup.
  
 **create** command launches a new aurora job. As indicated below, Environment, Role, and Name serve as JobKey, ExecutorName refers to the executor (as specified in scheduler configuration file) to be launched. Further, resources URIs are also specified for the job.
 

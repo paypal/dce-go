@@ -1,5 +1,5 @@
-hash: 61e63c389c2a58be0e90bcb12ba4e6895d593da56082e645223ba5cd6b04e0d3
-updated: 2017-04-26T14:31:16.544638389-07:00
+hash: d9dd754fe98b7e31855232c75be540564b5fa196e94e2988496901d5c15e70bb
+updated: 2018-01-16T11:40:44.457930049-08:00
 imports:
 - name: github.com/fsnotify/fsnotify
   version: fd9ec7deca8bf46ecd2a795baaacf2b3a9be1197
@@ -70,7 +70,7 @@ imports:
   - ed25519/internal/edwards25519
   - ssh
 - name: golang.org/x/net
-  version: 6c4ac8bdbf06a105c4baf3dcda28bd9b0fb15588
+  version: 5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec
   subpackages:
   - context
 - name: golang.org/x/sys
@@ -84,6 +84,9 @@ imports:
   - unicode/norm
 - name: gopkg.in/yaml.v2
   version: a5b47d31c556af34a302ce5d659e6fea44d90de0
-- name: github.com/rdelval/gorealis
-  version: e12370ffbbb5208cc522ebf544ab270098a65e37
+- name: github.com/paypal/gorealis
+  version: 9631aa3aab9964631946814fa0d8b99a133c982f
+  subpackages:
+  - gen-go/apache/aurora
+  - response
 testImports: []

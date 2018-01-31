@@ -20,9 +20,9 @@ import (
 	_ "io/ioutil"
 	"os"
 
-	"github.com/rdelval/gorealis"
-	"github.com/rdelval/gorealis/gen-go/apache/aurora"
-	_ "github.com/rdelval/gorealis/response"
+	"github.com/paypal/gorealis"
+	"github.com/paypal/gorealis/gen-go/apache/aurora"
+	_"github.com/paypal/gorealis/response"
 )
 
 func main() {

@@ -28,7 +28,7 @@ import (
 	utils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
+	"context"
 )
 
 const (
