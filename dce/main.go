@@ -310,8 +310,12 @@ func pullAndLaunchPod() string {
 	}))
 
 	if err != nil {
-		logger.Printf("POD_IMAGE_PULL_FAILED -- %v", err)
-		return types.POD_PULL_FAILED
+		if config.IgnorePullFailure() {
+			logger.Printf("Ignoring pull image failures: %v \n",err)
+		}else {
+			logger.Printf("POD_IMAGE_PULL_FAILED -- %v", err)
+			return types.POD_PULL_FAILED
+		}
 	}
 	return pod.LaunchPod(pod.ComposeFiles)
 }
