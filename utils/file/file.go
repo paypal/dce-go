@@ -308,28 +308,54 @@ func getYAMLDocumentName(data, pattern string) string {
 	return name
 }
 
-// replace element in array
-func ReplaceArrayElement(array interface{}, old string, new string) interface{} {
-	if _array, ok := array.([]interface{}); ok {
-		index, err := IndexArray(_array, old)
+//ReplaceElement does replace element in array/map
+func ReplaceElement(i interface{}, old string, new string) interface{} {
+	if array, ok := i.([]interface{}); ok {
+		index, err := IndexArray(array, old)
 		if err != nil {
-			return _array
+			return array
 		}
-		_array[index] = new
-		return _array
+		array[index] = new
+		return array
 
 	}
 
-	if _array, ok := array.(map[interface{}]interface{}); ok {
-		_, exit := _array[old]
+	if m, ok := i.(map[interface{}]interface{}); ok {
+		_, exit := m[old]
 		if exit {
-			_array[old] = new
+			m[old] = new
 		}
-		return _array
+		return m
 
 	}
 
-	return array
+	log.Println("Only support replacing elements in array and map")
+
+	return i
+}
+
+//AppendElement does append element in array/map
+func AppendElement(i interface{}, old string, new string) interface{} {
+	if array, ok := i.([]interface{}); ok {
+		index, err := IndexArray(array, old)
+		if err != nil {
+			array = append(array, new)
+			return array
+		}else{
+			array[index] = new
+		}
+		return array
+
+	}
+
+	if m, ok := i.(map[interface{}]interface{}); ok {
+		m[old] = new
+		return m
+	}
+
+	log.Println("Only support appending elements in array and map")
+
+	return i
 }
 
 // get index of an element in array

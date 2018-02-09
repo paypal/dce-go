@@ -95,7 +95,7 @@ func TestReplaceArrayElement(t *testing.T) {
 	array[0] = "pen"
 	array[1] = "apple"
 	array[2] = "peach"
-	res := ReplaceArrayElement(array, "pen", "pencil").([]interface{})
+	res := ReplaceElement(array, "pen", "pencil").([]interface{})
 	if len(res) != len(array) || res[0] != "pencil" {
 		t.Fatalf("expected first element to be 'pencil', but got %s", res[0])
 	}
