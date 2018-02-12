@@ -494,11 +494,7 @@ func ForceKill(files []string) error {
 func PullImage(files []string) error {
 	log.Println("====================Pull Image====================")
 
-	cmdParts := " pull"
-	if config.IgnorePullFailure() {
-		cmdParts = cmdParts + " --ignore-pull-failures"
-	}
-	parts, err := GenerateCmdParts(files, cmdParts)
+	parts, err := GenerateCmdParts(files, " pull")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
 		return err

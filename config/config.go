@@ -54,7 +54,7 @@ const (
 	CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL = "cleanvolumeandcontaineronmesoskill"
 	CLEAN_IMAGE_ON_MESOS_KILL            = "cleanimageonmesoskill"
 	DOCKER_COMPOSE_VERBOSE               = "dockercomposeverbose"
-	IGNORE_PULL_FAILURE                  = "launchtask.ignorepullfailures"
+	SKIP_PULL_IMAGES                     = "launchtask.skippull"
 )
 
 // Read from default configuration file and set config as key/values
@@ -227,6 +227,6 @@ func EnableVerbose() bool {
 	return GetConfig().GetBool(DOCKER_COMPOSE_VERBOSE)
 }
 
-func IgnorePullFailure() bool {
-	return GetConfig().GetBool(IGNORE_PULL_FAILURE)
+func SkipPullImages() bool {
+	return GetConfig().GetBool(SKIP_PULL_IMAGES)
 }
