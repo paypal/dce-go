@@ -47,21 +47,20 @@ func PollForever(interval time.Duration, done <-chan string, condition Condition
 // The backoff time will be retry * interval
 func PollRetry(retry int, interval time.Duration, condition ConditionFunc) error {
 	log.Println("PullRetry : max pull retry is set as", retry)
-	//log.Println("PullRetry : timeout :", timeout)
 	log.Println("PullRetry : interval:", interval)
+
 	var err error
+	factor := 2
 	for i := 0; i < retry; i++ {
 		if i != 0 {
 			log.Println("Condition Func failed, Start Retrying : ", i)
 		}
-		//timeout, _, err = CountDown(timeout, condition)
 		_, err = condition()
 		if err == nil {
 			return nil
 		}
 
-		time.Sleep(time.Duration(i+1) * interval)
-		//timeout -= time.Duration(i+1) * interval
+		time.Sleep(time.Duration((i+1)*factor) * interval)
 	}
 	return ErrTimeOut
 }
@@ -201,7 +200,7 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 			}
 		}
 
-		log.Printf("cmd %s exits, retry...",_cmd.Args)
+		log.Printf("cmd %s exits, retry...", _cmd.Args)
 		time.Sleep(retryInterval * time.Millisecond)
 	}
 	return out, err

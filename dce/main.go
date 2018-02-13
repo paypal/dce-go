@@ -35,12 +35,15 @@ import (
 	_ "github.com/paypal/dce-go/plugin/example"
 	_ "github.com/paypal/dce-go/plugin/general"
 	"github.com/paypal/dce-go/types"
-	utils "github.com/paypal/dce-go/utils/file"
+	fileUtils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
 	"github.com/paypal/dce-go/utils/wait"
 	log "github.com/sirupsen/logrus"
 
 	"context"
+	"errors"
+
+	"github.com/paypal/dce-go/utils"
 )
 
 var logger *log.Entry
@@ -98,10 +101,10 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_STARTING.Enum())
 
 	// Get required compose file list
-	pod.ComposeFiles, _ = utils.GetFiles(taskInfo)
+	pod.ComposeFiles, _ = fileUtils.GetFiles(taskInfo)
 
 	// Generate app folder to keep temp files
-	err = utils.GenerateAppFolder()
+	err = fileUtils.GenerateAppFolder()
 	if err != nil {
 		logger.Errorln("Error creating app folder")
 	}
@@ -113,7 +116,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	go pod.WaitOnPod(&ctx)
 
 	// Get order of plugins from config or mesos labels
-	pluginOrder, err := utils.GetPluginOrder(taskInfo)
+	pluginOrder, err := fileUtils.GetPluginOrder(taskInfo)
 	if err != nil {
 		logger.Println("Plugin order missing in mesos label, trying to get it from config")
 		pluginOrder = strings.Split(config.GetConfigSection("plugins")[types.PLUGIN_ORDER], ",")
@@ -121,31 +124,34 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	logger.Println("PluginOrder : ", pluginOrder)
 
 	// Select plugin extension points from plugin pools
-	// And executing preLaunchTask in order
 	extpoints = plugin.GetOrderedExtpoints(pluginOrder)
-	for _, ext := range extpoints {
-		if ext == nil {
-			logger.Errorln("Error getting plugins from plugin registration pools")
-			pod.SetPodStatus(types.POD_FAILED)
-			cancel()
-			pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
-			return
-		}
 
-		err = ext.PreLaunchTask(&ctx, &pod.ComposeFiles, executorId, taskInfo)
-		if err != nil {
-			logger.Errorf("Error executing PreLaunchTask of plugin : %v\n", err)
-			pod.SetPodStatus(types.POD_FAILED)
-			cancel()
-			pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
-			return
+	// Executing PreLaunchTask in order
+	_, err = utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+		for _, ext := range extpoints {
+			if ext == nil {
+				logger.Errorln("Error getting plugins from plugin registration pools")
+				return "", errors.New("plugin is nil")
+			}
+			err = ext.PreLaunchTask(&ctx, &pod.ComposeFiles, executorId, taskInfo)
+			if err != nil {
+				logger.Errorf("Error executing PreLaunchTask of plugin : %v\n", err)
+				return "", err
+			}
 		}
+		return "", err
+	}))
+	if err != nil {
+		pod.SetPodStatus(types.POD_FAILED)
+		cancel()
+		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		return
 	}
 
 	podServices := getServices(ctx)
 	log.Printf("pod service list: %v", podServices)
 
-	err = utils.WriteChangeToFiles(ctx)
+	err = fileUtils.WriteChangeToFiles(ctx)
 	if err != nil {
 		log.Errorf("Failure writing updated compose files : %v", err)
 		pod.SetPodStatus(types.POD_FAILED)
@@ -176,20 +182,29 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		}
 
 		// Temp status keeps the pod status returned by PostLaunchTask
-		var tempStatus string
-		for _, ext := range extpoints {
-			logger.Println("Executing post launch task plugin")
+		tempStatus, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+			var tempStatus string
+			for _, ext := range extpoints {
+				logger.Println("Executing post launch task plugin")
 
-			tempStatus, err = ext.PostLaunchTask(&ctx, pod.ComposeFiles, taskInfo)
-			if err != nil {
-				logger.Errorf("Error executing PostLaunchTask : %v", err)
-			}
-			logger.Printf("Get pod status : %s returned by PostLaunchTask", tempStatus)
+				tempStatus, err = ext.PostLaunchTask(&ctx, pod.ComposeFiles, taskInfo)
+				if err != nil {
+					logger.Errorf("Error executing PostLaunchTask : %v", err)
+				}
+				logger.Printf("Get pod status : %s returned by PostLaunchTask", tempStatus)
 
-			if tempStatus == types.POD_FAILED {
-				cancel()
-				pod.SendPodStatus(types.POD_FAILED)
+				if tempStatus == types.POD_FAILED {
+					return tempStatus, nil
+				}
 			}
+			return tempStatus, nil
+		}))
+		if err != nil {
+			logger.Errorf("Error executing PostLaunchTask : %v", err)
+		}
+		if tempStatus == types.POD_FAILED {
+			cancel()
+			pod.SendPodStatus(types.POD_FAILED)
 		}
 
 		if res == types.POD_RUNNING {
@@ -225,12 +240,15 @@ func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *
 		pod.SetPodStatus(types.POD_KILLED)
 
 		// Execute prekilltask plugin extensions in order
-		for _, ext := range extpoints {
-			err := ext.PreKillTask(pod.ComposeTaskInfo)
-			if err != nil {
-				logkill.Errorf("Error executing PreLaunchTask of plugin : %v", err)
+		utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+			for _, ext := range extpoints {
+				err := ext.PreKillTask(pod.ComposeTaskInfo)
+				if err != nil {
+					logkill.Errorf("Error executing PreKillTask of plugin : %v", err)
+				}
 			}
-		}
+			return "", nil
+		}))
 
 		err := pod.StopPod(pod.ComposeFiles)
 		if err != nil {
@@ -243,12 +261,15 @@ func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *
 		}
 
 		// Execute postkilltask plugin extensions in order
-		for _, ext := range extpoints {
-			err = ext.PostKillTask(pod.ComposeTaskInfo)
-			if err != nil {
-				logkill.Errorf("Error executing PreLaunchTask of plugin : %v", err)
+		utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+			for _, ext := range extpoints {
+				err = ext.PostKillTask(pod.ComposeTaskInfo)
+				if err != nil {
+					logkill.Errorf("Error executing PostKillTask of plugin : %v", err)
+				}
 			}
-		}
+			return "", nil
+		}))
 
 		log.Println("====================Stop ExecutorDriver====================")
 		time.Sleep(200 * time.Millisecond)

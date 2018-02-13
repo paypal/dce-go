@@ -23,12 +23,13 @@ import (
 
 	"fmt"
 
+	"context"
+
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	utils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
 	log "github.com/sirupsen/logrus"
-	"context"
 )
 
 const (
@@ -43,13 +44,22 @@ func EditComposeFile(ctx *context.Context, file string, executorId string, taskI
 
 	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 	if filesMap[file][types.SERVICES] == nil {
+		log.Printf("Services is empty for file %s \n", file)
 		return "", ports, nil
 	}
 
-	servMap := filesMap[file][types.SERVICES].(map[interface{}]interface{})
+	servMap, ok := filesMap[file][types.SERVICES].(map[interface{}]interface{})
+	if !ok {
+		log.Printf("Failed converting services to map[interface{}]interface{}")
+		return "", ports, nil
+	}
 
 	for serviceName := range servMap {
 		ports, err = UpdateServiceSessions(serviceName.(string), file, executorId, taskId, &filesMap, ports)
+		if err != nil {
+			log.Printf("Failed updating services: %v \n", err)
+			return file, ports, err
+		}
 	}
 
 	filesMap[file][types.VERSION] = "2.1"
