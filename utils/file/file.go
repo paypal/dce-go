@@ -32,11 +32,12 @@ import (
 
 	"fmt"
 
+	"context"
+
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/pod"
-	"context"
 )
 
 const (
@@ -62,7 +63,7 @@ func GetFiles(taskInfo *mesos.TaskInfo) ([]string, error) {
 
 	var files []string
 	for _, file := range strings.Split(filelist, FILE_DELIMITER) {
-		files = append(files, file)
+		files = append(files, strings.TrimSpace(file))
 	}
 
 	log.Println("Required file list : ", files)
