@@ -493,6 +493,7 @@ func ForceKill(files []string) error {
 // docker-compose pull
 func PullImage(files []string) error {
 	log.Println("====================Pull Image====================")
+
 	parts, err := GenerateCmdParts(files, " pull")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
@@ -519,10 +520,10 @@ func PullImage(files []string) error {
 	return nil
 }
 
-//Check container
+//CheckContainer does check container details
 //return healthy,run,err
-func CheckContainer(containerId string, healthcheck bool) (string, int, error) {
-	containerDetail, err := InspectContainerDetails(containerId, healthcheck)
+func CheckContainer(containerId string, healthCheck bool) (string, int, error) {
+	containerDetail, err := InspectContainerDetails(containerId, healthCheck)
 	if err != nil {
 		log.Printf("CheckContainer : Error inspecting container with id : %s, %v", containerId, err.Error())
 		return types.UNHEALTHY, 1, err
@@ -533,7 +534,7 @@ func CheckContainer(containerId string, healthcheck bool) (string, int, error) {
 		return types.UNHEALTHY, containerDetail.ExitCode, nil
 	}
 
-	if healthcheck {
+	if healthCheck {
 		if containerDetail.IsRunning {
 			//log.Printf("CheckContainer : Primary container %s is running , %s\n", containerId, containerDetail.HealthStatus)
 			return containerDetail.HealthStatus, -1, nil

@@ -305,14 +305,17 @@ func pullAndLaunchPod() string {
 		logger.Fatalf("Error converting podmonitorinterval from string to int : %s\n", err.Error())
 	}
 
-	err = wait.PollRetry(config.GetPullRetryCount(), time.Duration(pt)*time.Millisecond, wait.ConditionFunc(func() (string, error) {
-		return "", pod.PullImage(pod.ComposeFiles)
-	}))
+	if !config.SkipPullImages() {
+		err = wait.PollRetry(config.GetPullRetryCount(), time.Duration(pt)*time.Millisecond, wait.ConditionFunc(func() (string, error) {
+			return "", pod.PullImage(pod.ComposeFiles)
+		}))
 
-	if err != nil {
-		logger.Printf("POD_IMAGE_PULL_FAILED -- %v", err)
-		return types.POD_PULL_FAILED
+		if err != nil {
+			logger.Printf("POD_IMAGE_PULL_FAILED -- %v", err)
+			return types.POD_PULL_FAILED
+		}
 	}
+
 	return pod.LaunchPod(pod.ComposeFiles)
 }
 

@@ -5,17 +5,18 @@ launchtask:
    maxretry: 3
    retryinterval: 10000
    timeout: 500000
+   skippull: true
 plugins:
    pluginorder: general
 cleanpod:
    timeout: 20
    unhealthy: true
    cleanvolumeandcontaineronmesoskill: true
-   cleanimageonmesoskill: true
+   cleanimageonmesoskill: false
 dockerdump:
-   enable: true
+   enable: false
    dumppath: /home/ubuntu
    dockerpidfile: /var/run/docker.pid
    containerpidfile: /run/docker/libcontainerd/docker-containerd.pid
    dockerlogpath: /var/log/upstart/docker.log
-dockercomposeverbose: true
+dockercomposeverbose: false
