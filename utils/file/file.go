@@ -341,7 +341,7 @@ func AppendElement(i interface{}, old string, new string) interface{} {
 		if err != nil {
 			array = append(array, new)
 			return array
-		}else{
+		} else {
 			array[index] = new
 		}
 		return array
