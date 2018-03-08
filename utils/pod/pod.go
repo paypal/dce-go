@@ -175,6 +175,7 @@ func GetPodContainers(files []string) ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		log.Errorln(os.Stderr, "reading standard input:", err)
 	}
+	log.Printf("container list: %v\n", containers)
 	return containers, nil
 }
 
@@ -730,6 +731,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 	return nil
 }
 
+// Wait for pod running/finished until timeout or failed
 func WaitOnPod(ctx *context.Context) {
 	select {
 	case <-(*ctx).Done():
@@ -745,6 +747,7 @@ func WaitOnPod(ctx *context.Context) {
 	}
 }
 
+// DockerDump does dump docker.pid and docker-containerd.pid and docker log if docker dump is enabled in config
 func DockerDump() {
 	log.Println(" ######## Begin dockerDump ######## ")
 
@@ -895,6 +898,8 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	interval := time.Duration(t)
 
 	for len(containers) < len(podServices) || !allServicesUp(containers, podServices) {
+		log.Printf("pod services %d: %v\n", len(podServices), podServices)
+		log.Printf("containers %d: %v\n", len(containers), containers)
 		containers, err = GetPodContainers(files)
 		if err != nil {
 			log.Errorln("Error retrieving container id list : ", err.Error())
@@ -902,7 +907,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 			return
 		}
 
-		//log.Printf("list of containers are launched : %v", containers)
+		log.Printf("list of containers are launched : %v", containers)
 		time.Sleep(interval)
 	}
 
@@ -994,13 +999,16 @@ func allServicesUp(containers []string, podServices map[string]bool) bool {
 	}
 
 	for _, container := range containers {
+		log.Printf("container name: %s\n", container)
 		var isService bool
 		for service := range podServices {
 			if strings.Contains(container, ServiceNameMap[service]) {
 				isService = true
 			}
+			log.Printf("ServiceNameMap[service]: %s\n", ServiceNameMap[service])
 		}
 		if !isService {
+			log.Printf("Doesn't match")
 			return false
 		}
 	}

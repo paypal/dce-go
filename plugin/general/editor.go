@@ -69,6 +69,8 @@ func EditComposeFile(ctx *context.Context, file string, executorId string, taskI
 		file = file + utils.FILE_POSTFIX
 	}
 	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
+
+	logger.Printf("Updated compose files, current context: %v\n", filesMap)
 	return file, ports, err
 }
 
@@ -136,6 +138,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 
 		if pod.ServiceNameMap[serviceName] == "" {
 			pod.ServiceNameMap[serviceName] = containerName
+			log.Printf("Adding to service name map: %s --- %s\n", serviceName, containerName)
 		}
 
 		logger.Println("Edit Compose File : Updated container_name as ", containerName)

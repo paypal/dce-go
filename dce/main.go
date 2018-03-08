@@ -109,6 +109,8 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		logger.Errorln("Error creating app folder")
 	}
 
+	// Create context with timeout
+	// Wait for pod launching until timeout
 	var ctx context.Context
 	var cancel context.CancelFunc
 	ctx = context.Background()
@@ -148,9 +150,11 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		return
 	}
 
+	// Service list from all compose files
 	podServices := getServices(ctx)
 	log.Printf("pod service list: %v", podServices)
 
+	// Write updated compose files into pod folder
 	err = fileUtils.WriteChangeToFiles(ctx)
 	if err != nil {
 		log.Errorf("Failure writing updated compose files : %v", err)
@@ -159,6 +163,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
+	// Pulling image and launch pod
 	replyPodStatus := pullAndLaunchPod()
 
 	logger.Printf("Pod status returned by pullAndLaunchPod : %v", replyPodStatus)

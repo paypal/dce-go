@@ -152,6 +152,7 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	var out []byte
 
 	retryInterval := config.GetRetryInterval()
+	factor := 2
 	for i := 0; i < retry; i++ {
 		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
 
@@ -169,7 +170,7 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 			if strings.Contains(err.Error(), "already started") {
 				return out, nil
 			}
-			time.Sleep(retryInterval * time.Millisecond)
+			time.Sleep(retryInterval * time.Duration((i+1)*factor) * time.Millisecond)
 			continue
 		}
 
@@ -178,7 +179,7 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	return nil, err
 }
 
-// Retry command util reach the maximum try out count
+// Retry command forever
 func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 	var err error
 	var out []byte

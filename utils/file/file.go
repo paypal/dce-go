@@ -187,6 +187,7 @@ func WriteToFile(file string, data []byte) (string, error) {
 		file = FolderPath(strings.Fields(file))[0]
 	}
 
+	log.Printf("Write to file : %s\n", file)
 	f, err := os.Create(file)
 	if err != nil {
 		log.Errorf("Error creating file %v", err)
@@ -221,6 +222,8 @@ func WriteChangeToFiles(ctx context.Context) error {
 }
 
 func OverwriteFile(file string, data []byte) {
+	log.Printf("Over-write file: %s\n", file)
+
 	os.Remove(file)
 
 	f, err := os.Create(file)
@@ -236,8 +239,15 @@ func OverwriteFile(file string, data []byte) {
 
 //Split a large file into a number of smaller files by file separator
 func SplitYAML(file string) ([]string, error) {
+	logger := log.WithFields(log.Fields{
+		"File": file,
+		"Func": "SplitYAML",
+	})
+
+	logger.Println("Start split downloaded compose file")
 	var names []string
 	if _, err := os.Stat(file); os.IsNotExist(err) {
+		logger.Printf("%s doesn't exit\n", file)
 		return nil, err
 	}
 
@@ -250,20 +260,29 @@ func SplitYAML(file string) ([]string, error) {
 	scanner.Split(SplitFunc)
 	for scanner.Scan() {
 		splitData := scanner.Text()
+		logger.Printf("Split data : %s\n", splitData)
+
+		// Get split compose file name from split data
+		// If name isn't found, skip writing split data into a separate file
 		name := strings.TrimLeft(getYAMLDocumentName(splitData, "#.*yml"), "#")
 		if name == "" {
+			logger.Println("No file name found from split data")
 			continue
 		}
 		fileName, err := WriteToFile(name, []byte(splitData))
 		if err != nil {
+			logger.Errorf("Error writing files %s : %v\n", fileName, err)
 			return nil, err
 		}
 		names = append(names, fileName)
 	}
 
+	// If file doesn't need to be split, just return the file
 	if len(names) == 0 {
 		names = append(names, file)
 	}
+
+	logger.Printf("After split file, get file names: %s\n", names)
 	return FolderPath(names), nil
 }
 
@@ -443,23 +462,21 @@ func ParseYamls(files *[]string) (map[interface{}](map[interface{}]interface{}),
 	return res, nil
 }
 
-// app folder is used to keep all the generated yml files
+// GenerateAppFolder does generate app folder and copy compose files exist in fileName label
+// into folder
 func GenerateAppFolder() error {
-	// if app comes with a folder, then skip creating app folder
-	/*if config.GetConfig().GetBool(types.NO_FOLDER) {
-		return nil
-	}*/
-
 	folder := config.GetAppFolder()
 	if folder == "" {
 		folder = types.DEFAULT_FOLDER
 		config.SetConfig(config.FOLDER_NAME, types.DEFAULT_FOLDER)
 	}
 
+	// Append run id to folder name
 	path, _ := filepath.Abs("")
 	dirs := strings.Split(path, PATH_DELIMITER)
 	folder = strings.TrimSpace(fmt.Sprintf("%s_%s", folder, dirs[len(dirs)-1]))
 
+	// Generate directory
 	_folder := []string{strings.TrimSpace(folder)}
 	err := GenerateFileDirs(_folder)
 	if err != nil {
@@ -469,17 +486,7 @@ func GenerateAppFolder() error {
 
 	config.GetConfig().Set(config.FOLDER_NAME, folder)
 
-	// copy tar folder to poddata folder
-	/*tar := config.GetConfig().GetString(TAR)
-	if tar != "" {
-		err = CopyDir(path+"/"+tar, path+"/"+folder)
-		if err != nil {
-			log.Errorf("Failed copying directory: %v", err)
-			return err
-		}
-	}*/
-
-	// copy compose files into pod folder
+	// Copy compose files into pod folder
 	for i, file := range pod.ComposeFiles {
 		path := strings.Split(file, PATH_DELIMITER)
 		dest := FolderPath(strings.Fields(path[len(path)-1]))[0]
@@ -490,6 +497,8 @@ func GenerateAppFolder() error {
 		}
 		pod.ComposeFiles[i] = dest
 	}
+
+	log.Printf("compose file list: %s\n", pod.ComposeFiles)
 	return nil
 }
 
@@ -558,7 +567,7 @@ func CopyFile(source string, dest string) (err error) {
 		if err != nil {
 			err = os.Chmod(dest, sourceinfo.Mode())
 		}
-
+		log.Printf("Copy file from %s to %s\n", sourcefile, destfile)
 	}
 
 	return
