@@ -43,6 +43,9 @@ import (
 	"context"
 	"errors"
 
+	"os/signal"
+	"syscall"
+
 	"github.com/paypal/dce-go/utils"
 )
 
@@ -364,6 +367,13 @@ func init() {
 
 func main() {
 	fmt.Println("====================Genesis Executor (Go)====================")
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	go func() {
+		sig := <-sig
+		fmt.Printf("Received signal %s\n", sig.String())
+	}()
 
 	dConfig := exec.DriverConfig{
 		Executor: newDockerComposeExecutor(),
