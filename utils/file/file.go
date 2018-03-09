@@ -330,8 +330,8 @@ func getYAMLDocumentName(data, pattern string) string {
 //ReplaceElement does replace element in array/map
 func ReplaceElement(i interface{}, old string, new string) interface{} {
 	if array, ok := i.([]interface{}); ok {
-		index, err := IndexArray(array, old)
-		if err != nil {
+		index, err := IndexArrayRegex(array, old)
+		if err != nil || index == -1 {
 			return array
 		}
 		array[index] = new
@@ -354,10 +354,12 @@ func ReplaceElement(i interface{}, old string, new string) interface{} {
 }
 
 //AppendElement does append element in array/map
+//Element will be overwrite if it already exist
+//Using regular expression to match the element
 func AppendElement(i interface{}, old string, new string) interface{} {
 	if array, ok := i.([]interface{}); ok {
-		index, err := IndexArray(array, old)
-		if err != nil {
+		index, err := IndexArrayRegex(array, old)
+		if err != nil || index == -1 {
 			array = append(array, new)
 			return array
 		} else {
@@ -375,6 +377,20 @@ func AppendElement(i interface{}, old string, new string) interface{} {
 	log.Println("Only support appending elements in array and map")
 
 	return i
+}
+
+func IndexArrayRegex(array []interface{}, expr string) (int, error) {
+	r, err := regexp.Compile(expr)
+	if err != nil {
+		log.Errorf("Error compile expression: %v\n", err)
+		return -1, err
+	}
+	for i, a := range array {
+		if r.MatchString(a.(string)) {
+			return i, nil
+		}
+	}
+	return -1, err
 }
 
 // get index of an element in array
