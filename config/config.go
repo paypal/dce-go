@@ -55,6 +55,7 @@ const (
 	CLEAN_IMAGE_ON_MESOS_KILL            = "cleanimageonmesoskill"
 	DOCKER_COMPOSE_VERBOSE               = "dockercomposeverbose"
 	SKIP_PULL_IMAGES                     = "launchtask.skippull"
+	TRACE_MODE                           = "launchtask.trace"
 )
 
 // Read from default configuration file and set config as key/values
@@ -62,7 +63,7 @@ func init() {
 	err := getConfigFromFile(CONFIG_File)
 
 	if err != nil {
-		log.Fatalf("Fail to retreive data from file, err: %s\n", err.Error())
+		log.Fatalf("Fail to retrieve data from file, err: %s\n", err.Error())
 	}
 }
 
@@ -79,6 +80,8 @@ func ConfigInit(pluginConfig string) {
 	if err != nil {
 		log.Fatalf("Fail to merge config, err: %s\n", err.Error())
 	}
+
+	setEnvironmentConfig(GetConfig())
 }
 
 func getConfigFromFile(cfgFile string) error {
@@ -118,6 +121,10 @@ func GetConfigSection(section string) map[string]string {
 
 func GetConfig() *viper.Viper {
 	return viper.GetViper()
+}
+
+func setEnvironmentConfig(conf *viper.Viper) {
+	conf.BindEnv(TRACE_MODE, TRACE_MODE)
 }
 
 func GetAppFolder() string {
@@ -229,4 +236,8 @@ func EnableVerbose() bool {
 
 func SkipPullImages() bool {
 	return GetConfig().GetBool(SKIP_PULL_IMAGES)
+}
+
+func EnableTraceMode() bool {
+	return GetConfig().GetBool(TRACE_MODE)
 }

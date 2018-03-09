@@ -35,7 +35,6 @@ import (
 const (
 	PORT_DELIMITER = ":"
 	PATH_DELIMITER = "/"
-	NETWORK_PROXY  = "networkproxy"
 	ENVIRONMENT    = "environment"
 )
 
@@ -114,11 +113,11 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	}
 
 	// Update session of network_mode
-	if serviceName != NETWORK_PROXY {
+	if serviceName != types.NETWORK_PROXY {
 		if network_mode, ok := containerDetails[types.NETWORK_MODE].(string); !ok ||
 			(network_mode != types.HOST_MODE && network_mode != types.NONE_NETWORK_MODE) {
 
-			containerDetails[types.NETWORK_MODE] = "service:" + NETWORK_PROXY
+			containerDetails[types.NETWORK_MODE] = "service:" + types.NETWORK_PROXY
 
 		} else {
 			config.GetConfig().SetDefault(types.RM_INFRA_CONTAINER, true)
@@ -132,7 +131,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 		containerName = utils.PrefixTaskId(taskId, containerName)
 		containerDetails[types.CONTAINER_NAME] = containerName
 
-		if serviceName == NETWORK_PROXY {
+		if serviceName == types.NETWORK_PROXY {
 			config.SetConfig(types.INFRA_CONTAINER_NAME, containerName)
 		}
 
@@ -221,7 +220,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	}
 
 	// Add service ports to infra container
-	if serviceName == NETWORK_PROXY {
+	if serviceName == types.NETWORK_PROXY {
 
 		if portList := config.GetConfig().Get(types.PORTS); portList != nil {
 

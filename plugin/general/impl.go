@@ -216,7 +216,7 @@ func CreateInfraContainer(ctx *context.Context, path string) (string, error) {
 		}
 	}
 
-	service[NETWORK_PROXY] = containerDetail
+	service[types.NETWORK_PROXY] = containerDetail
 	_yaml[types.SERVICES] = service
 	_yaml[types.VERSION] = "2.1"
 	log.Println(_yaml)

@@ -152,12 +152,12 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 
 	// Service list from all compose files
 	podServices := getServices(ctx)
-	log.Printf("pod service list: %v", podServices)
+	logger.Printf("pod service list: %v", podServices)
 
 	// Write updated compose files into pod folder
 	err = fileUtils.WriteChangeToFiles(ctx)
 	if err != nil {
-		log.Errorf("Failure writing updated compose files : %v", err)
+		logger.Errorf("Failure writing updated compose files : %v", err)
 		pod.SetPodStatus(types.POD_FAILED)
 		cancel()
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
@@ -353,6 +353,13 @@ func getServices(ctx context.Context) map[string]bool {
 func init() {
 	flag.Parse()
 	log.SetOutput(os.Stdout)
+
+	// Set log to debug level when trace mode is turned on
+	if config.EnableTraceMode() {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 }
 
 func main() {
