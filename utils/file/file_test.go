@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mesos/mesos-go/examples/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 )
@@ -208,4 +209,16 @@ func TestSplitYAML(t *testing.T) {
 		t.Errorf("expected file name is testdata/docker-adhoc.yml , but got %v", files[0])
 	}
 	os.Remove(types.DEFAULT_FOLDER)
+}
+
+func TestConvertArrayToMap(t *testing.T) {
+	a := []interface{}{"a=b", "c", "d="}
+	m := ConvertArrayToMap(a)
+	assert.Equal(t, m["a"], "b", "a=b")
+	assert.Equal(t, m["c"], "", "c")
+	assert.Equal(t, m["d"], "", "d=")
+
+	b := []interface{}{}
+	m = ConvertArrayToMap(b)
+	assert.Equal(t, len(m), 0, "empty map")
 }

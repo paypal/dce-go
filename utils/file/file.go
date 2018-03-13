@@ -588,3 +588,17 @@ func CopyFile(source string, dest string) (err error) {
 
 	return
 }
+
+// Convert array like a=b to map a:b
+func ConvertArrayToMap(arr []interface{}) map[interface{}]interface{} {
+	m := make(map[interface{}]interface{})
+	for _, i := range arr {
+		b := strings.SplitN(i.(string), "=", 2)
+		if len(b) == 2 {
+			m[b[0]] = b[1]
+		} else {
+			m[b[0]] = ""
+		}
+	}
+	return m
+}
