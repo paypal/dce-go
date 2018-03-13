@@ -55,8 +55,6 @@ var ComposeFiles []string
 var ComposeTaskInfo *mesos.TaskInfo
 
 var HealthCheckListId = make(map[string]bool)
-
-var ServiceNameMap = make(map[string]string)
 var PodContainers []string
 var SinglePort bool
 
@@ -441,16 +439,6 @@ func RemoveNetwork(name string) error {
 // docker kill -f
 func ForceKill(files []string) error {
 	log.Println("====================Force Kill Pod====================")
-	/*containerNames, err := GetRunningPodContainers(files)
-	if err != nil {
-		log.Errorln("Error to get container ids : ", err.Error())
-	}
-	for _, name := range containerNames {
-		err = dockerKill(name)
-		if err != nil {
-			return err
-		}
-	}*/
 	parts, err := GenerateCmdParts(files, " kill")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)

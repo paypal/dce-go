@@ -508,8 +508,7 @@ func GenerateAppFolder() error {
 		dest := FolderPath(strings.Fields(path[len(path)-1]))[0]
 		err = CopyFile(file, dest)
 		if err != nil {
-			log.Errorf("Failed to copy file into pod folder %v", err)
-			return err
+			log.Printf("Copy file %s into pod folder %v", file, err)
 		}
 		pod.ComposeFiles[i] = dest
 	}
@@ -583,7 +582,7 @@ func CopyFile(source string, dest string) (err error) {
 		if err != nil {
 			err = os.Chmod(dest, sourceinfo.Mode())
 		}
-		log.Printf("Copy file from %s to %s\n", sourcefile, destfile)
+		log.Printf("Copy file from %s to %s\n", sourcefile.Name(), destfile.Name())
 	}
 
 	return

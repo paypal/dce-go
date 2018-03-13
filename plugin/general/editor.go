@@ -35,7 +35,6 @@ import (
 const (
 	PORT_DELIMITER = ":"
 	PATH_DELIMITER = "/"
-	ENVIRONMENT    = "environment"
 )
 
 func EditComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element) (string, *list.Element, error) {
@@ -91,11 +90,11 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 
 	// Get env list
 	var envIsArray bool
-	envMap, ok := containerDetails[ENVIRONMENT].(map[interface{}]interface{})
+	envMap, ok := containerDetails[types.ENVIRONMENT].(map[interface{}]interface{})
 	if ok {
 		logger.Printf("ENV is an array %v of %s : %v", envIsArray, serviceName, envMap)
 	}
-	envList, ok := containerDetails[ENVIRONMENT].([]interface{})
+	envList, ok := containerDetails[types.ENVIRONMENT].([]interface{})
 	if ok {
 		logger.Printf("ENV is an array %v of %s : %v", envIsArray, serviceName, envList)
 		envIsArray = true
@@ -106,10 +105,10 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 
 	if envIsArray {
 		envList = append(envList, fmt.Sprintf("%s=%d", "PYTHONUNBUFFERED", 1))
-		containerDetails[ENVIRONMENT] = envList
+		containerDetails[types.ENVIRONMENT] = envList
 	} else {
 		envMap["PYTHONUNBUFFERED"] = 1
-		containerDetails[ENVIRONMENT] = envMap
+		containerDetails[types.ENVIRONMENT] = envMap
 	}
 
 	// Update session of network_mode
@@ -135,19 +134,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 			config.SetConfig(types.INFRA_CONTAINER_NAME, containerName)
 		}
 
-		if pod.ServiceNameMap[serviceName] == "" {
-			pod.ServiceNameMap[serviceName] = containerName
-			log.Printf("Adding to service name map: %s --- %s\n", serviceName, containerName)
-		}
-
 		logger.Println("Edit Compose File : Updated container_name as ", containerName)
-	} else {
-
-		if pod.ServiceNameMap[serviceName] == "" {
-			pod.ServiceNameMap[serviceName] = fmt.Sprintf("%s_%s",
-				strings.Replace(strings.Replace(config.GetConfig().GetString(config.FOLDER_NAME), "_", "", -1),
-					"-", "", -1), serviceName)
-		}
 	}
 
 	// Update value of LINKS

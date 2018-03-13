@@ -50,7 +50,7 @@ func PollRetry(retry int, interval time.Duration, condition ConditionFunc) error
 	log.Println("PullRetry : interval:", interval)
 
 	var err error
-	factor := 2
+	factor := 1
 	for i := 0; i < retry; i++ {
 		if i != 0 {
 			log.Println("Condition Func failed, Start Retrying : ", i)
@@ -152,7 +152,7 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	var out []byte
 
 	retryInterval := config.GetRetryInterval()
-	factor := 2
+	factor := 1
 	for i := 0; i < retry; i++ {
 		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
 

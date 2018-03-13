@@ -38,6 +38,7 @@ const (
 	LINKS                   = "links"
 	PORTS                   = "ports"
 	LABELS                  = "labels"
+	ENVIRONMENT             = "environment"
 	RESTART                 = "restart"
 	SERVICES                = "services"
 	IMAGE                   = "image"
