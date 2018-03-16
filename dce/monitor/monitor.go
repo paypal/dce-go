@@ -31,6 +31,10 @@ import (
 
 // Watching pod status and notifying executor if any container in the pod goes wrong
 func podMonitor() string {
+	logger := log.WithFields(log.Fields{
+		"func": "monitor.podMonitor",
+	})
+
 	var err error
 
 	for i := 0; i < len(pod.PodContainers); i++ {
@@ -39,34 +43,34 @@ func podMonitor() string {
 
 		if hc, ok := pod.HealthCheckListId[pod.PodContainers[i]]; ok && hc {
 			healthy, exitCode, err = pod.CheckContainer(pod.PodContainers[i], true)
-			//log.Printf("container %s has health check, health status: %s, exitCode: %d, err : %v", containers[i], healthy, exitCode, err)
+			logger.Debugf("container %s has health check, health status: %s, exitCode: %d, err : %v", pod.PodContainers[i], healthy, exitCode, err)
 		} else {
 			healthy, exitCode, err = pod.CheckContainer(pod.PodContainers[i], false)
-			//log.Printf("container %s no health check, exitCode: %d, err : %v", containers[i], healthy, exitCode, err)
+			log.Debugf("container %s no health check, exitCode: %d, err : %v", pod.PodContainers[i], healthy, exitCode, err)
 		}
 
 		if err != nil {
-			log.Println(fmt.Sprintf("POD_MONITOR_HEALTH_CHECK_FAILED -- Error inspecting container with id : %s, %v", pod.PodContainers[i], err.Error()))
-			log.Println("POD_MONITOR_FAILED -- Send Failed")
+			logger.Errorf(fmt.Sprintf("POD_MONITOR_HEALTH_CHECK_FAILED -- Error inspecting container with id : %s, %v", pod.PodContainers[i], err.Error()))
+			logger.Errorln("POD_MONITOR_FAILED -- Send Failed")
 			return types.POD_FAILED
 		}
 
 		if exitCode != 0 && exitCode != -1 {
-			log.Println("POD_MONITOR_APP_EXIT -- Stop pod monitor and send Failed")
+			logger.Println("POD_MONITOR_APP_EXIT -- Stop pod monitor and send Failed")
 			return types.POD_FAILED
 		}
 
 		if healthy == types.UNHEALTHY {
 			if config.GetConfigSection(config.CLEANPOD) == nil ||
 				config.GetConfigSection(config.CLEANPOD)[types.UNHEALTHY] == "true" {
-				log.Println("POD_MONITOR_HEALTH_CHECK_FAILED -- Stop pod monitor and send Failed")
+				logger.Println("POD_MONITOR_HEALTH_CHECK_FAILED -- Stop pod monitor and send Failed")
 				return types.POD_FAILED
 			}
-			log.Warnf("Container %s became unhealthy, but pod won't be killed due to cleanpod config", pod.PodContainers[i])
+			logger.Warnf("Container %s became unhealthy, but pod won't be killed due to cleanpod config", pod.PodContainers[i])
 		}
 
 		if exitCode == 0 {
-			log.Printf("Removed finished(exit with 0) container %s from monitor list", pod.PodContainers[i])
+			logger.Printf("Removed finished(exit with 0) container %s from monitor list", pod.PodContainers[i])
 			pod.PodContainers = append(pod.PodContainers[:i], pod.PodContainers[i+1:]...)
 			i--
 
@@ -74,62 +78,24 @@ func podMonitor() string {
 	}
 
 	if len(pod.PodContainers) == 0 {
-		log.Println("Pod Monitor : Finished")
+		logger.Println("Pod Monitor : Finished")
 		return types.POD_FINISHED
 	}
 
-	/*var healthCount int
-	containers := make([]string, len(pod.PodContainers))
-	copy(containers, pod.PodContainers)
-
-		for i := 0; i < len(containers); i++ {
-		var healthy string
-		var exitCode int
-
-		if hc, ok := pod.HealthCheckListId[containers[i]]; ok && hc {
-			healthy, exitCode, err = pod.CheckContainer(containers[i], true)
-			//log.Printf("container %s has health check, health status: %s, exitCode: %d, err : %v", containers[i], healthy, exitCode, err)
-		} else {
-			healthy, exitCode, err = pod.CheckContainer(containers[i], false)
-			//log.Printf("container %s no health check, exitCode: %d, err : %v", containers[i], healthy, exitCode, err)
-		}
-
-		if err != nil {
-			log.Println(fmt.Sprintf("Error inspecting container with id : %s, %v", containers[i], err.Error()))
-			log.Println("Pod Monitor : Send Failed")
-			return types.POD_FAILED
-		}
-
-		if exitCode != 0 && exitCode != -1 {
-			log.Println("Pod Monitor : Stopped and send Failed")
-			return types.POD_FAILED
-		}
-
-		if healthy == types.UNHEALTHY {
-			if config.GetConfigSection(config.CLEANPOD) == nil ||
-				config.GetConfigSection(config.CLEANPOD)[types.UNHEALTHY] == "true" {
-				log.Println("Pod Monitor : Stopped and send Failed")
-				return types.POD_FAILED
-			}
-			log.Warnf("Container %s became unhealthy, but pod won't be killed due to cleanpod config", containers[i])
-		}
-
-		if exitCode == 0 || exitCode == -1 {
-			containers = append(containers[:i], containers[i+1:]...)
-			i--
-		}*/
-
-	//}
 	return ""
 }
 
 // Polling pod monitor periodically
 func MonitorPoller() {
-	log.Println("====================Pod Monitor Poller====================")
+	logger := log.WithFields(log.Fields{
+		"func": "monitor.MonitorPoller",
+	})
+
+	logger.Println("====================Pod Monitor Poller====================")
 
 	gap, err := strconv.Atoi(config.GetConfigSection(config.LAUNCH_TASK)[config.POD_MONITOR_INTERVAL])
 	if err != nil {
-		log.Errorf("Error converting podmonitorinterval from string to int : %s", err.Error())
+		logger.Errorf("Error converting podmonitorinterval from string to int : %s", err.Error())
 		gap = 10000
 	}
 
@@ -137,11 +103,11 @@ func MonitorPoller() {
 		return podMonitor(), nil
 	}))
 
-	log.Printf("Pod Monitor Receiver : Received  message %s", res)
+	logger.Printf("Pod Monitor Receiver : Received  message %s", res)
 
 	curntPodStatus := pod.GetPodStatus()
 	if curntPodStatus == types.POD_KILLED || curntPodStatus == types.POD_FAILED {
-		log.Println("====================Pod Monitor Stopped====================")
+		logger.Println("====================Pod Monitor Stopped====================")
 		return
 	}
 
@@ -156,7 +122,5 @@ func MonitorPoller() {
 
 	case types.POD_FINISHED:
 		pod.SendPodStatus(types.POD_FINISHED)
-
 	}
-
 }

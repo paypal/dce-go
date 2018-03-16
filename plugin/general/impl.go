@@ -76,6 +76,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 
 	currentPort := pod.GetPorts(taskInfo)
 
+	// Create infra container yml file
 	infrayml, err := CreateInfraContainer(ctx, types.INFRA_CONTAINER_YML)
 	if err != nil {
 		logger.Errorln("Error creating infra container : ", err.Error())
@@ -103,8 +104,9 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 		}
 	}
 
+	// Remove infra container yml file if network mode is host
 	if config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
-		logger.Println("Reomve infra container")
+		logger.Printf("Remove file: %s\n", types.INFRA_CONTAINER_GEN_YML)
 		filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 		delete(filesMap, editedFiles[indexInfra])
 		*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
@@ -214,7 +216,7 @@ func CreateInfraContainer(ctx *context.Context, path string) (string, error) {
 		}
 	}
 
-	service[NETWORK_PROXY] = containerDetail
+	service[types.NETWORK_PROXY] = containerDetail
 	_yaml[types.SERVICES] = service
 	_yaml[types.VERSION] = "2.1"
 	log.Println(_yaml)

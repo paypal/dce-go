@@ -38,6 +38,7 @@ const (
 	LINKS                   = "links"
 	PORTS                   = "ports"
 	LABELS                  = "labels"
+	ENVIRONMENT             = "environment"
 	RESTART                 = "restart"
 	SERVICES                = "services"
 	IMAGE                   = "image"
@@ -62,6 +63,7 @@ const (
 	RM_INFRA_CONTAINER      = "rm_infra_container"
 	COMPOSE_HTTP_TIMEOUT    = "COMPOSE_HTTP_TIMEOUT"
 	SERVICE_DETAIL          = "serviceDetail"
+	NETWORK_PROXY           = "networkproxy"
 	FOREVER                 = 1<<63 - 1
 )
 

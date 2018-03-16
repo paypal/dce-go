@@ -43,6 +43,9 @@ import (
 	"context"
 	"errors"
 
+	"os/signal"
+	"syscall"
+
 	"github.com/paypal/dce-go/utils"
 )
 
@@ -109,6 +112,8 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		logger.Errorln("Error creating app folder")
 	}
 
+	// Create context with timeout
+	// Wait for pod launching until timeout
 	var ctx context.Context
 	var cancel context.CancelFunc
 	ctx = context.Background()
@@ -148,17 +153,20 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		return
 	}
 
+	// Service list from all compose files
 	podServices := getServices(ctx)
-	log.Printf("pod service list: %v", podServices)
+	logger.Printf("pod service list: %v", podServices)
 
+	// Write updated compose files into pod folder
 	err = fileUtils.WriteChangeToFiles(ctx)
 	if err != nil {
-		log.Errorf("Failure writing updated compose files : %v", err)
+		logger.Errorf("Failure writing updated compose files : %v", err)
 		pod.SetPodStatus(types.POD_FAILED)
 		cancel()
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
+	// Pulling image and launch pod
 	replyPodStatus := pullAndLaunchPod()
 
 	logger.Printf("Pod status returned by pullAndLaunchPod : %v", replyPodStatus)
@@ -348,10 +356,24 @@ func getServices(ctx context.Context) map[string]bool {
 func init() {
 	flag.Parse()
 	log.SetOutput(os.Stdout)
+
+	// Set log to debug level when trace mode is turned on
+	if config.EnableTraceMode() {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 }
 
 func main() {
 	fmt.Println("====================Genesis Executor (Go)====================")
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	go func() {
+		sig := <-sig
+		fmt.Printf("Received signal %s\n", sig.String())
+	}()
 
 	dConfig := exec.DriverConfig{
 		Executor: newDockerComposeExecutor(),

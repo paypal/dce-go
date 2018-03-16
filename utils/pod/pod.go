@@ -55,8 +55,6 @@ var ComposeFiles []string
 var ComposeTaskInfo *mesos.TaskInfo
 
 var HealthCheckListId = make(map[string]bool)
-
-var ServiceNameMap = make(map[string]string)
 var PodContainers []string
 var SinglePort bool
 
@@ -150,59 +148,62 @@ func GetPodContainerIds(files []string) ([]string, error) {
 	return containerIds, nil
 }
 
-// Get set of containers id in pod
-// docker-compose -f docker-compose.yaml ps -q
-func GetPodContainers(files []string) ([]string, error) {
-	var containers []string
-
-	args := "docker-compose"
-	for _, file := range files {
-		args += " -f " + file
+// GetContainerIdsByServices get container ids by a list of services
+func GetContainerIdsByServices(files, services []string) ([]string, error) {
+	var ids []string
+	for _, s := range services {
+		id, err := GetContainerIdByService(files, s)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
 	}
-	args += " ps | tail -n +3 | awk '{print $1}'"
-
-	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("/bin/bash", "-c", args))
-	if err != nil {
-		log.Errorf("GetContainerIds : Error executing cmd docker-compose ps %#v", err)
-		return nil, err
-	}
-
-	scanner := bufio.NewScanner(strings.NewReader(string(out[:])))
-	for scanner.Scan() {
-		containers = append(containers, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		log.Errorln(os.Stderr, "reading standard input:", err)
-	}
-	return containers, nil
+	return ids, nil
 }
 
-// Get set of running containers in pod
-func GetRunningPodContainers(files []string) ([]string, error) {
-	var containers []string
+// GetContainerIdByService does query container id by service name
+func GetContainerIdByService(files []string, service string) (string, error) {
+	logger := log.WithFields(log.Fields{
+		"service": service,
+		"func":    "GetContainerIdByService",
+	})
 
-	args := "docker-compose"
-	for _, file := range files {
-		args += " -f " + file
+	// Return err if service name is empty
+	if service == "" {
+		err := fmt.Errorf("service name can't be empty")
+		return "", err
 	}
-	args += " ps | grep Up | awk '{print $1}'"
 
-	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("/bin/bash", "-c", args))
+	// Generate cmd -- docker-compose -f [file] ps -q [service]
+	parts, err := GenerateCmdParts(files, " ps -q "+service)
 	if err != nil {
-		log.Errorf("GetContainerIds : Error executing cmd docker-compose ps %#v", err)
-		return nil, err
+		logger.Errorf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
+		return "", err
 	}
 
+	// Run cmd to get container id
+	cmd := exec.Command("docker-compose", parts...)
+	logger.Printf("Command to get container id by service name: %s", cmd.Args)
+
+	out, err := utils.RetryCmd(config.GetMaxRetry(), cmd)
+	if err != nil {
+		logger.Errorf("Error getting container id by service: %v", err)
+		return "", err
+	}
+
+	// Scan output
+	var id string
 	scanner := bufio.NewScanner(strings.NewReader(string(out[:])))
 	for scanner.Scan() {
-		containers = append(containers, scanner.Text())
+		id += scanner.Text()
+	}
+	if err := scanner.Err(); err != nil {
+		logger.Errorln(os.Stderr, "stderr: ", err)
+		return "", err
 	}
 
-	if err := scanner.Err(); err != nil {
-		log.Errorln(os.Stderr, "reading standard input:", err)
-	}
-	return containers, nil
+	logger.Printf("container id: %s", id)
+	return id, nil
 }
 
 // docker-compose -f docker-compose.yaml ps
@@ -286,27 +287,6 @@ func LaunchPod(files []string) string {
 		log.Printf("POD_LAUNCH_FAIL -- Error running launch task command : %v", err)
 		return types.POD_FAILED
 	}
-
-	/*err = cmd.Start()
-	if err != nil {
-		log.Errorln("Error running launch task command : ", err.Error())
-		return types.POD_FAILED
-	}
-
-	go func() {
-		err = cmd.Wait()
-		if err != nil {
-			log.Errorln("Launch task cmd return non zero exit code : ", err.Error())
-			SendPodStatus(types.POD_FAILED)
-		}
-
-		exitCode, err := CheckPodExitCode(files)
-		if err != nil || exitCode != 0 {
-			SendPodStatus(types.POD_FAILED)
-		} else {
-			SendPodStatus(types.POD_FINISHED)
-		}
-	}()*/
 
 	return types.POD_STARTING
 }
@@ -459,16 +439,6 @@ func RemoveNetwork(name string) error {
 // docker kill -f
 func ForceKill(files []string) error {
 	log.Println("====================Force Kill Pod====================")
-	/*containerNames, err := GetRunningPodContainers(files)
-	if err != nil {
-		log.Errorln("Error to get container ids : ", err.Error())
-	}
-	for _, name := range containerNames {
-		err = dockerKill(name)
-		if err != nil {
-			return err
-		}
-	}*/
 	parts, err := GenerateCmdParts(files, " kill")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
@@ -683,10 +653,14 @@ func SetPodStatus(status string) {
 }
 
 func SendPodStatus(status string) {
+	logger := log.WithFields(log.Fields{
+		"status": status,
+		"func":   "pod.SendPodStatus",
+	})
 	curntPodStatus := GetPodStatus()
-	if curntPodStatus == types.POD_FAILED || curntPodStatus == types.POD_KILLED || curntPodStatus == status {
-		log.Printf("Task has already been killed or failed or updated as required status: %s", curntPodStatus)
-		return
+	if curntPodStatus == types.POD_FAILED || curntPodStatus == types.POD_KILLED ||
+		curntPodStatus == types.POD_FINISHED || curntPodStatus == status {
+		log.Printf("Task has already been killed or failed or finished or updated as required status: %s", curntPodStatus)
 	}
 
 	SetPodStatus(status)
@@ -699,7 +673,7 @@ func SendPodStatus(status string) {
 	case types.POD_FAILED:
 		err := StopPod(ComposeFiles)
 		if err != nil {
-			log.Errorf("Error cleaning up pod : %v\n", err.Error())
+			logger.Errorf("Error cleaning up pod : %v\n", err.Error())
 		}
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	case types.POD_PULL_FAILED:
@@ -730,6 +704,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 	return nil
 }
 
+// Wait for pod running/finished until timeout or failed
 func WaitOnPod(ctx *context.Context) {
 	select {
 	case <-(*ctx).Done():
@@ -745,6 +720,7 @@ func WaitOnPod(ctx *context.Context) {
 	}
 }
 
+// DockerDump does dump docker.pid and docker-containerd.pid and docker log if docker dump is enabled in config
 func DockerDump() {
 	log.Println(" ######## Begin dockerDump ######## ")
 
@@ -881,7 +857,10 @@ func DockerDump() {
 
 // healthCheck includes health checking for primary container and exit code checking for other containers
 func HealthCheck(files []string, podServices map[string]bool, out chan<- string) {
-	log.Println("====================Health Check====================", len(podServices))
+	logger := log.WithFields(log.Fields{
+		"func": "HealthCheck",
+	})
+	logger.Println("====================Health Check====================", len(podServices))
 
 	var err error
 	var containers []string
@@ -889,26 +868,34 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 
 	t, err := strconv.Atoi(config.GetConfigSection(config.LAUNCH_TASK)[config.POD_MONITOR_INTERVAL])
 	if err != nil {
-		log.Printf("Error converting interval time from string to int : %s\n", err.Error())
+		logger.Errorf("Error converting interval time from string to int : %s\n", err.Error())
 		t = 10000
 	}
 	interval := time.Duration(t)
 
-	for len(containers) < len(podServices) || !allServicesUp(containers, podServices) {
-		containers, err = GetPodContainers(files)
+	// Convert pod services from map to array
+	var services []string
+	for name := range podServices {
+		services = append(services, name)
+	}
+
+	// Start checking containers are running and healthy ONLY when all the services are launched by docker
+	// Poll until all the services are showed in docker-compose ps
+	for len(containers) < len(podServices) {
+		containers, err = GetContainerIdsByServices(files, services)
 		if err != nil {
-			log.Errorln("Error retrieving container id list : ", err.Error())
+			logger.Errorln("Error retrieving container id list : ", err.Error())
 			out <- types.POD_FAILED
 			return
 		}
 
-		//log.Printf("list of containers are launched : %v", containers)
+		logger.Debugf("list of containers are launched : %v", containers)
 		time.Sleep(interval)
 	}
 
-	log.Println("Initial Health Check : Expected number of containers in monitoring : ", len(podServices))
-	log.Println("Initial Health Check : Acutal number of containers in monitoring : ", len(containers))
-	log.Println("Container List : ", containers)
+	logger.Println("Initial Health Check : Expected number of containers in monitoring : ", len(podServices))
+	logger.Println("Initial Health Check : Actual number of containers in monitoring : ", len(containers))
+	logger.Println("Container List : ", containers)
 
 	for len(containers) != healthCount {
 		healthCount = 0
@@ -954,18 +941,18 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	PodContainers = make([]string, len(containers))
 	copy(PodContainers, containers)
 
-	log.Printf("Health Check List: %v", HealthCheckListId)
-	log.Printf("Pod Monitor List: %v", PodContainers)
+	logger.Printf("Health Check List: %v", HealthCheckListId)
+	logger.Printf("Pod Monitor List: %v", PodContainers)
 
 	if len(containers) == 0 {
-		log.Println("Initial Health Check : send POD_FINISHED")
+		logger.Println("Initial Health Check : send POD_FINISHED")
 		out <- types.POD_FINISHED
 	} else {
-		log.Println("Initial Health Check : send POD_RUNNING")
+		logger.Println("Initial Health Check : send POD_RUNNING")
 		out <- types.POD_RUNNING
 	}
 
-	log.Println("====================Health check Done====================")
+	logger.Println("====================Health check Done====================")
 
 	GetPodDetail(files, "", false)
 }
@@ -984,26 +971,6 @@ func isHealthCheckConfigured(containerId string) (bool, error) {
 	}
 
 	HealthCheckListId[containerId] = true
-	//log.Printf("Initial Health Check : Contaienr %s Health check is configured to true", containerId)
+	//log.Debugf("Initial Health Check : Container %s Health check is configured to true", containerId)
 	return true, nil
-}
-
-func allServicesUp(containers []string, podServices map[string]bool) bool {
-	if len(containers) == 0 {
-		return false
-	}
-
-	for _, container := range containers {
-		var isService bool
-		for service := range podServices {
-			if strings.Contains(container, ServiceNameMap[service]) {
-				isService = true
-			}
-		}
-		if !isService {
-			return false
-		}
-	}
-
-	return true
 }
