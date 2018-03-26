@@ -45,7 +45,7 @@ func TestPrefixTaskId(t *testing.T) {
 func TestParseYamls(t *testing.T) {
 	config.GetConfig().SetDefault(types.NO_FOLDER, true)
 	yamls := []string{"testdata/docker-adhoc.yml", "testdata/docker-long.yml", "testdata/docker-empty.yml"}
-	res, err := ParseYamls(yamls)
+	res, err := ParseYamls(&yamls)
 	if err != nil {
 		t.Fatalf("Got error to parseyamls %v", err)
 	}
@@ -91,13 +91,60 @@ func TestIndexArray(t *testing.T) {
 }
 
 func TestReplaceArrayElement(t *testing.T) {
+	//Test array
 	array := make([]interface{}, 3)
 	array[0] = "pen"
 	array[1] = "apple"
 	array[2] = "peach"
-	res := ReplaceArrayElement(array, "pen", "pencil").([]interface{})
+	res := ReplaceElement(array, "pen", "pencil").([]interface{})
 	if len(res) != len(array) || res[0] != "pencil" {
 		t.Fatalf("expected first element to be 'pencil', but got %s", res[0])
+	}
+
+	//Replace element not exist in array
+	res1 := ReplaceElement(array, "not_exist", "not_exist").([]interface{})
+	if len(res1) != len(res) {
+		t.Fatalf("Expected array doesn't change, but got %v \n", res1)
+	}
+	//Test map
+	m := make(map[interface{}]interface{})
+	m["key1"] = "val1"
+	m["key2"] = "val2"
+	res2 := ReplaceElement(m, "key2", "val3").(map[interface{}]interface{})
+	if res2["key2"].(string) != "val3" {
+		t.Fatalf("expected first element to be 'val3', but got %s", res2["key3"])
+	}
+
+	res3 := ReplaceElement(m, "key3", "val3").(map[interface{}]interface{})
+	_, ok := res3["key3"]
+	if ok {
+		t.Fatalf("expected new element not added, but got", res2["key3"])
+	}
+}
+
+func TestAppendElement(t *testing.T) {
+	//Test array
+	array := make([]interface{}, 3)
+	array[0] = "pen"
+	array[1] = "apple"
+	array[2] = "peach"
+	res := AppendElement(array, "monkey", "monkey").([]interface{})
+	if len(res) != len(array)+1 || res[3] != "monkey" {
+		t.Fatalf("expected first element to be 'monkey', but got %s", res[3])
+	}
+	//Test duplicate element won't be appended
+	res = AppendElement(array, "monkey", "monkey").([]interface{})
+	if len(res) != len(array)+1 || res[3] != "monkey" {
+		t.Fatalf("expected first element to be 'monkey', but got %s", res[3])
+	}
+
+	//Test map
+	m := make(map[interface{}]interface{})
+	m["key1"] = "val1"
+	m["key2"] = "val2"
+	res1 := AppendElement(m, "key3", "val3").(map[interface{}]interface{})
+	if res1["key3"].(string) != "val3" {
+		t.Fatalf("expected first element to be 'val3', but got %s", res1["key3"])
 	}
 }
 

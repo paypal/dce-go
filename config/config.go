@@ -54,6 +54,7 @@ const (
 	CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL = "cleanvolumeandcontaineronmesoskill"
 	CLEAN_IMAGE_ON_MESOS_KILL            = "cleanimageonmesoskill"
 	DOCKER_COMPOSE_VERBOSE               = "dockercomposeverbose"
+	SKIP_PULL_IMAGES                     = "launchtask.skippull"
 )
 
 // Read from default configuration file and set config as key/values
@@ -184,13 +185,13 @@ func GetRetryInterval() time.Duration {
 func GetMaxRetry() int {
 	retry := GetConfigSection(LAUNCH_TASK)[MAX_RETRY]
 	if retry == "" {
-		log.Warningln("maxretry setting missing in config...setting to zero")
-		return 0
+		log.Warningln("maxretry setting missing in config...setting to 1")
+		return 1
 	}
 	i, err := strconv.Atoi(retry)
 	if err != nil {
-		log.Errorf("Error converting retry from string to int : %s...setting max retry to zero\n", err.Error())
-		return 0
+		log.Errorf("Error converting retry from string to int : %s...setting max retry to 1\n", err.Error())
+		return 1
 	}
 	return i
 }
@@ -224,4 +225,8 @@ func GetNetwork() (types.Network, bool) {
 
 func EnableVerbose() bool {
 	return GetConfig().GetBool(DOCKER_COMPOSE_VERBOSE)
+}
+
+func SkipPullImages() bool {
+	return GetConfig().GetBool(SKIP_PULL_IMAGES)
 }
