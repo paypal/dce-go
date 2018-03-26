@@ -50,7 +50,7 @@ func PollRetry(retry int, interval time.Duration, condition ConditionFunc) error
 	log.Println("PullRetry : interval:", interval)
 
 	var err error
-	factor := 2
+	factor := 1
 	for i := 0; i < retry; i++ {
 		if i != 0 {
 			log.Println("Condition Func failed, Start Retrying : ", i)
@@ -151,7 +151,10 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	var err error
 	var out []byte
 
+	log.Debugf("Run cmd: %s\n", cmd.Args)
+
 	retryInterval := config.GetRetryInterval()
+	factor := 1
 	for i := 0; i < retry; i++ {
 		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
 
@@ -169,7 +172,7 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 			if strings.Contains(err.Error(), "already started") {
 				return out, nil
 			}
-			time.Sleep(retryInterval * time.Millisecond)
+			time.Sleep(retryInterval * time.Duration((i+1)*factor) * time.Millisecond)
 			continue
 		}
 
@@ -178,7 +181,7 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	return nil, err
 }
 
-// Retry command util reach the maximum try out count
+// Retry command forever
 func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 	var err error
 	var out []byte

@@ -32,7 +32,7 @@ func GenBody(t interface{}) io.Reader {
 	if err != nil {
 		log.Panic("Error marshalling : ", err.Error())
 	}
-	fmt.Println("Allocate IP Request Body : ", string(tjson))
+	fmt.Println("Request Body : ", string(tjson))
 	return bytes.NewReader(tjson)
 }
 

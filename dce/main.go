@@ -17,7 +17,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -42,6 +41,9 @@ import (
 
 	"context"
 	"errors"
+
+	"os/signal"
+	"syscall"
 
 	"github.com/paypal/dce-go/utils"
 )
@@ -109,6 +111,8 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		logger.Errorln("Error creating app folder")
 	}
 
+	// Create context with timeout
+	// Wait for pod launching until timeout
 	var ctx context.Context
 	var cancel context.CancelFunc
 	ctx = context.Background()
@@ -128,7 +132,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 
 	// Executing PreLaunchTask in order
 	_, err = utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
-		for _, ext := range extpoints {
+		for i, ext := range extpoints {
 			if ext == nil {
 				logger.Errorln("Error getting plugins from plugin registration pools")
 				return "", errors.New("plugin is nil")
@@ -137,6 +141,9 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			if err != nil {
 				logger.Errorf("Error executing PreLaunchTask of plugin : %v\n", err)
 				return "", err
+			}
+			if !config.DisableTraceMode() {
+				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], i)
 			}
 		}
 		return "", err
@@ -148,17 +155,20 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		return
 	}
 
+	// Service list from all compose files
 	podServices := getServices(ctx)
-	log.Printf("pod service list: %v", podServices)
+	logger.Printf("pod service list: %v", podServices)
 
+	// Write updated compose files into pod folder
 	err = fileUtils.WriteChangeToFiles(ctx)
 	if err != nil {
-		log.Errorf("Failure writing updated compose files : %v", err)
+		logger.Errorf("Failure writing updated compose files : %v", err)
 		pod.SetPodStatus(types.POD_FAILED)
 		cancel()
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
+	// Pulling image and launch pod
 	replyPodStatus := pullAndLaunchPod()
 
 	logger.Printf("Pod status returned by pullAndLaunchPod : %v", replyPodStatus)
@@ -213,6 +223,12 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				pod.SendPodStatus(types.POD_RUNNING)
 				go monitor.MonitorPoller()
 			}
+		}
+
+		//For adhoc job, send finished to mesos if job already finished during init health check
+		if res == types.POD_FINISHED {
+			cancel()
+			pod.SendPodStatus(types.POD_FINISHED)
 		}
 
 	default:
@@ -300,13 +316,8 @@ func (exec *dockerComposeExecutor) Error(driver exec.ExecutorDriver, err string)
 func pullAndLaunchPod() string {
 	logger.Println("====================Pod Pull And Launch====================")
 
-	pt, err := strconv.Atoi(config.GetConfigSection(config.LAUNCH_TASK)[config.POD_MONITOR_INTERVAL])
-	if err != nil {
-		logger.Fatalf("Error converting podmonitorinterval from string to int : %s\n", err.Error())
-	}
-
 	if !config.SkipPullImages() {
-		err = wait.PollRetry(config.GetPullRetryCount(), time.Duration(pt)*time.Millisecond, wait.ConditionFunc(func() (string, error) {
+		err := wait.PollRetry(config.GetPullRetryCount(), time.Duration(config.GetPollInterval())*time.Millisecond, wait.ConditionFunc(func() (string, error) {
 			return "", pod.PullImage(pod.ComposeFiles)
 		}))
 
@@ -348,10 +359,30 @@ func getServices(ctx context.Context) map[string]bool {
 func init() {
 	flag.Parse()
 	log.SetOutput(os.Stdout)
+
+	// Set log to debug level when trace mode is turned on
+	if config.EnableDebugMode() {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 }
 
 func main() {
 	fmt.Println("====================Genesis Executor (Go)====================")
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGUSR1)
+	go func() {
+		for {
+			sig := <-sig
+			fmt.Printf("Received signal %s\n", sig.String())
+			if sig == syscall.SIGUSR1 {
+				fmt.Println("switch debug mode")
+				config.SwitchDebugMode()
+			}
+		}
+	}()
 
 	dConfig := exec.DriverConfig{
 		Executor: newDockerComposeExecutor(),

@@ -23,8 +23,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"strconv"
-
 	"fmt"
 
 	"time"
@@ -38,14 +36,13 @@ import (
 const (
 	CONFIG_File                          = "config"
 	FOLDER_NAME                          = "foldername"
-	LAUNCH_TASK                          = "launchtask"
 	HEALTH_CHECK                         = "healthcheck"
-	POD_MONITOR_INTERVAL                 = "podmonitorinterval"
-	TIMEOUT                              = "timeout"
+	POD_MONITOR_INTERVAL                 = "launchtask.podmonitorinterval"
+	TIMEOUT                              = "launchtask.timeout"
 	INFRA_CONTAINER                      = "infracontainer"
-	PULL_RETRY                           = "pullretry"
-	MAX_RETRY                            = "maxretry"
-	RETRY_INTERVAL                       = "retryinterval"
+	PULL_RETRY                           = "launchtask.pullretry"
+	MAX_RETRY                            = "launchtask.maxretry"
+	RETRY_INTERVAL                       = "launchtask.retryinterval"
 	NETWORKS                             = "networks"
 	PRE_EXIST                            = "pre_existing"
 	NETWORK_NAME                         = "name"
@@ -55,6 +52,9 @@ const (
 	CLEAN_IMAGE_ON_MESOS_KILL            = "cleanimageonmesoskill"
 	DOCKER_COMPOSE_VERBOSE               = "dockercomposeverbose"
 	SKIP_PULL_IMAGES                     = "launchtask.skippull"
+	DISABLE_TRACE_MODE                   = "launchtask.disabletrace"
+	DEBUG_MODE                           = "launchtask.debug"
+	COMPOSE_HTTP_TIMEOUT                 = "launchtask.composehttptimeout"
 )
 
 // Read from default configuration file and set config as key/values
@@ -62,7 +62,7 @@ func init() {
 	err := getConfigFromFile(CONFIG_File)
 
 	if err != nil {
-		log.Fatalf("Fail to retreive data from file, err: %s\n", err.Error())
+		log.Fatalf("Fail to retrieve data from file, err: %s\n", err.Error())
 	}
 }
 
@@ -79,6 +79,8 @@ func ConfigInit(pluginConfig string) {
 	if err != nil {
 		log.Fatalf("Fail to merge config, err: %s\n", err.Error())
 	}
+
+	setDefaultConfig(GetConfig())
 }
 
 func getConfigFromFile(cfgFile string) error {
@@ -120,6 +122,15 @@ func GetConfig() *viper.Viper {
 	return viper.GetViper()
 }
 
+func setDefaultConfig(conf *viper.Viper) {
+	conf.SetDefault("launchtask.podmonitorinterval", 10000)
+	conf.SetDefault("launchtask.composehttptimeout", 300)
+	conf.SetDefault("launchtask.maxretry", 3)
+	conf.SetDefault("launchtask.pullretry", 3)
+	conf.SetDefault("launchtask.retryinterval", 10000)
+	conf.SetDefault("launchtask.timeout", 500000)
+}
+
 func GetAppFolder() string {
 	folder := GetConfig().GetString(FOLDER_NAME)
 	if folder == "" {
@@ -129,35 +140,11 @@ func GetAppFolder() string {
 }
 
 func GetPullRetryCount() int {
-	retry := GetConfigSection(LAUNCH_TASK)[PULL_RETRY]
-	if retry == "" {
-		return 1
-	}
-
-	_retry, err := strconv.Atoi(retry)
-	if err != nil {
-		log.Println("Error converting retry count from string to int : ", err.Error())
-		return 1
-	}
-
-	if _retry <= 0 {
-		return 1
-	}
-	return _retry
+	return GetConfig().GetInt(PULL_RETRY)
 }
 
 func GetLaunchTimeout() time.Duration {
-	timeout := GetConfigSection(LAUNCH_TASK)[TIMEOUT]
-	if timeout == "" {
-		log.Warningln("pod timeout doesn't set in config...timeout will be set as 500s")
-		return time.Duration(500000)
-	}
-	t, err := strconv.Atoi(timeout)
-	if err != nil {
-		log.Errorf("Error converting timeout from string to int : %s...timeout will be set as 500s\n", err.Error())
-		return time.Duration(500000)
-	}
-	return time.Duration(t)
+	return time.Duration(GetConfig().GetInt(TIMEOUT))
 }
 
 func GetStopTimeout() string {
@@ -170,30 +157,11 @@ func GetStopTimeout() string {
 }
 
 func GetRetryInterval() time.Duration {
-	interval := GetConfigSection(LAUNCH_TASK)[RETRY_INTERVAL]
-	if interval == "" {
-		log.Warningln("retry interval doesn't set in config...timeout will be set as 10s")
-		return time.Duration(10000)
-	}
-	t, err := strconv.Atoi(interval)
-	if err != nil {
-		log.Fatalf("Error converting timeout from string to int : %s\n", err.Error())
-	}
-	return time.Duration(t)
+	return time.Duration(GetConfig().GetInt(RETRY_INTERVAL))
 }
 
 func GetMaxRetry() int {
-	retry := GetConfigSection(LAUNCH_TASK)[MAX_RETRY]
-	if retry == "" {
-		log.Warningln("maxretry setting missing in config...setting to 1")
-		return 1
-	}
-	i, err := strconv.Atoi(retry)
-	if err != nil {
-		log.Errorf("Error converting retry from string to int : %s...setting max retry to 1\n", err.Error())
-		return 1
-	}
-	return i
+	return GetConfig().GetInt(MAX_RETRY)
 }
 
 func GetNetwork() (types.Network, bool) {
@@ -229,4 +197,30 @@ func EnableVerbose() bool {
 
 func SkipPullImages() bool {
 	return GetConfig().GetBool(SKIP_PULL_IMAGES)
+}
+
+func DisableTraceMode() bool {
+	return GetConfig().GetBool(DISABLE_TRACE_MODE)
+}
+
+func GetPollInterval() int {
+	return GetConfig().GetInt(POD_MONITOR_INTERVAL)
+}
+
+func GetComposeHttpTimeout() int {
+	return GetConfig().GetInt(COMPOSE_HTTP_TIMEOUT)
+}
+
+func EnableDebugMode() bool {
+	return GetConfig().GetBool(DEBUG_MODE)
+}
+
+func SwitchDebugMode() {
+	if EnableDebugMode() {
+		GetConfig().Set(DEBUG_MODE, false)
+		log.Println("Turn off debug mode")
+	} else {
+		GetConfig().Set(DEBUG_MODE, true)
+		log.Println("Turn on debug mode")
+	}
 }
