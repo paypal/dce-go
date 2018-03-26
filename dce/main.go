@@ -15,37 +15,32 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
-	"strings"
-	"time"
-
 	"os"
-
-	"encoding/json"
-
-	"bytes"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
 
 	exec "github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/dce/monitor"
 	"github.com/paypal/dce-go/plugin"
 	_ "github.com/paypal/dce-go/plugin/example"
 	_ "github.com/paypal/dce-go/plugin/general"
 	"github.com/paypal/dce-go/types"
+	"github.com/paypal/dce-go/utils"
 	fileUtils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
 	"github.com/paypal/dce-go/utils/wait"
-	log "github.com/sirupsen/logrus"
-
-	"context"
-	"errors"
-
-	"os/signal"
-	"syscall"
-
-	"github.com/paypal/dce-go/utils"
 )
 
 var logger *log.Entry
@@ -142,7 +137,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				logger.Errorf("Error executing PreLaunchTask of plugin : %v\n", err)
 				return "", err
 			}
-			if !config.DisableTraceMode() {
+			if config.EnableComposeTrace() {
 				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], i)
 			}
 		}
@@ -378,8 +373,7 @@ func main() {
 			sig := <-sig
 			fmt.Printf("Received signal %s\n", sig.String())
 			if sig == syscall.SIGUSR1 {
-				fmt.Println("switch debug mode")
-				config.SwitchDebugMode()
+				switchDebugMode()
 			}
 		}
 	}()
@@ -402,4 +396,16 @@ func main() {
 	fmt.Println("Executor : Executor process has started and running.")
 	driver.Join()
 
+}
+
+func switchDebugMode() {
+	if config.EnableDebugMode() {
+		config.GetConfig().Set(config.DEBUG_MODE, false)
+		log.Println("###Turn off debug mode###")
+		log.SetLevel(log.InfoLevel)
+	} else {
+		config.GetConfig().Set(config.DEBUG_MODE, true)
+		log.Println("###Turn on debug mode###")
+		log.SetLevel(log.DebugLevel)
+	}
 }

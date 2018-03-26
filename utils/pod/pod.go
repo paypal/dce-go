@@ -17,25 +17,23 @@ package pod
 import (
 	"bufio"
 	"container/list"
+	"context"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
-	"fmt"
-
-	"io/ioutil"
-
-	"context"
-
 	"github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	utils "github.com/paypal/dce-go/utils/wait"
-	log "github.com/sirupsen/logrus"
 )
 
 const (

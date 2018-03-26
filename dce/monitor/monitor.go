@@ -19,7 +19,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"fmt"
-
 	"time"
 
 	"github.com/paypal/dce-go/config"
@@ -41,13 +40,6 @@ func podMonitor(systemProxyId string) string {
 		var healthy string
 		var exitCode int
 		var running bool
-
-		// Set log to debug level when trace mode is turned on
-		if config.EnableDebugMode() {
-			log.SetLevel(log.DebugLevel)
-		} else {
-			log.SetLevel(log.InfoLevel)
-		}
 
 		if hc, ok := pod.HealthCheckListId[pod.PodContainers[i]]; ok && hc {
 			healthy, running, exitCode, err = pod.CheckContainer(pod.PodContainers[i], true)
@@ -88,8 +80,13 @@ func podMonitor(systemProxyId string) string {
 	}
 
 	// Send finished to mesos IF no container running or ONLY system proxy is running in the pod
-	if len(pod.PodContainers) == 0 || len(pod.PodContainers) == 1 && pod.PodContainers[0] == systemProxyId {
-		logger.Println("Pod Monitor : Finished")
+	if len(pod.PodContainers) == 0 {
+		logger.Println("All containers in the pod exit with code 0, sending FINISHED")
+		return types.POD_FINISHED
+	}
+
+	if len(pod.PodContainers) == 1 && pod.PodContainers[0] == systemProxyId {
+		logger.Println("Only infra container is running in the pod, sending FINISHED")
 		return types.POD_FINISHED
 	}
 

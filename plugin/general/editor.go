@@ -16,19 +16,18 @@ package general
 
 import (
 	"container/list"
+	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"fmt"
-
-	"context"
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	utils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
+
 	log "github.com/sirupsen/logrus"
 )
 

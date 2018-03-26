@@ -16,15 +16,12 @@ package wait
 
 import (
 	"errors"
+	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	"os/exec"
-
-	"os"
-
-	"strings"
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"

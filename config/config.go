@@ -18,16 +18,14 @@
 package config
 
 import (
+	"fmt"
 	"io/ioutil"
-
 	"os"
 	"path/filepath"
-
-	"fmt"
-
 	"time"
 
 	"github.com/paypal/dce-go/types"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -52,7 +50,7 @@ const (
 	CLEAN_IMAGE_ON_MESOS_KILL            = "cleanimageonmesoskill"
 	DOCKER_COMPOSE_VERBOSE               = "dockercomposeverbose"
 	SKIP_PULL_IMAGES                     = "launchtask.skippull"
-	DISABLE_TRACE_MODE                   = "launchtask.disabletrace"
+	COMPOSE_TRACE                        = "launchtask.composetrace"
 	DEBUG_MODE                           = "launchtask.debug"
 	COMPOSE_HTTP_TIMEOUT                 = "launchtask.composehttptimeout"
 )
@@ -199,8 +197,8 @@ func SkipPullImages() bool {
 	return GetConfig().GetBool(SKIP_PULL_IMAGES)
 }
 
-func DisableTraceMode() bool {
-	return GetConfig().GetBool(DISABLE_TRACE_MODE)
+func EnableComposeTrace() bool {
+	return GetConfig().GetBool(COMPOSE_TRACE)
 }
 
 func GetPollInterval() int {
@@ -213,14 +211,4 @@ func GetComposeHttpTimeout() int {
 
 func EnableDebugMode() bool {
 	return GetConfig().GetBool(DEBUG_MODE)
-}
-
-func SwitchDebugMode() {
-	if EnableDebugMode() {
-		GetConfig().Set(DEBUG_MODE, false)
-		log.Println("Turn off debug mode")
-	} else {
-		GetConfig().Set(DEBUG_MODE, true)
-		log.Println("Turn on debug mode")
-	}
 }

@@ -18,7 +18,9 @@ import (
 	"bufio"
 	"bytes"
 	"container/list"
+	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -26,15 +28,10 @@ import (
 	"regexp"
 	"strings"
 
-	yaml "gopkg.in/yaml.v2"
-
-	log "github.com/sirupsen/logrus"
-
-	"fmt"
-
-	"context"
-
 	mesos "github.com/mesos/mesos-go/mesosproto"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/pod"
