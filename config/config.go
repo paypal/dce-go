@@ -212,3 +212,7 @@ func GetComposeHttpTimeout() int {
 func EnableDebugMode() bool {
 	return GetConfig().GetBool(DEBUG_MODE)
 }
+
+func IsService() bool {
+	return GetConfig().GetBool(types.IS_SERVICE)
+}

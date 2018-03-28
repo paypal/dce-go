@@ -31,9 +31,11 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	log "github.com/sirupsen/logrus"
 
+	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	utils "github.com/paypal/dce-go/utils/wait"
+	"github.com/paypal/gorealis/gen-go/apache/aurora"
 )
 
 const (
@@ -676,9 +678,7 @@ func SendPodStatus(status string) {
 	case types.POD_RUNNING:
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_RUNNING.Enum())
 	case types.POD_FINISHED:
-		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FINISHED.Enum())
-		// Stop pod after sending status to mesos
-		// To kill system proxy container
+		// Stop pod to kill system proxy container
 		if len(PodContainers) > 0 {
 			logger.Printf("Stop containers still running in the pod: %v", PodContainers)
 			err := StopPod(ComposeFiles)
@@ -686,6 +686,7 @@ func SendPodStatus(status string) {
 				logger.Errorf("Error stop pod: %v", err)
 			}
 		}
+		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FINISHED.Enum())
 	case types.POD_FAILED:
 		err := StopPod(ComposeFiles)
 		if err != nil {
@@ -913,7 +914,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	// Get infra container id
 	var systemProxyId string
 	var hasInfra bool
-	if _, hasInfra := podServices[types.INFRA_CONTAINER]; hasInfra {
+	if _, hasInfra = podServices[types.INFRA_CONTAINER]; hasInfra {
 		systemProxyId, err = GetContainerIdByService(files, types.INFRA_CONTAINER)
 		if err != nil {
 			logger.Errorf("Error getting container id of service %s: %v", types.INFRA_CONTAINER, err)
@@ -922,6 +923,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 			return
 		}
 	}
+	logger.Printf("Pod has infra container: %v", hasInfra)
 
 healthCheck:
 	for len(containers) != healthCount {
@@ -977,12 +979,20 @@ healthCheck:
 	logger.Printf("Health Check List: %v", HealthCheckListId)
 	logger.Printf("Pod Monitor List: %v", PodContainers)
 
-	if len(containers) == 0 {
-		logger.Println("Initial Health Check : send POD_FINISHED")
+	isService := config.IsService()
+	logger.Printf("Task is SERVICE: %v", isService)
+	if len(containers) == 0 && !isService {
+		logger.Println("Task is ADHOC job. Send POD_FINISHED")
 		out <- types.POD_FINISHED
-	} else if hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
-		logger.Println("Initial Health Check : only infra container is running, send POD_FINISHED")
+	} else if len(containers) == 0 && isService {
+		logger.Println("Task is SERVICE. Send POD_FAILED")
+		out <- types.POD_FAILED
+	} else if !isService && hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
+		logger.Println("Task is ADHOC job. Only infra container is running, send POD_FINISHED")
 		out <- types.POD_FINISHED
+	} else if isService && hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
+		logger.Println("Task is SERVICE. Only infra container is running, send POD_FAILED")
+		out <- types.POD_FAILED
 	} else {
 		logger.Println("Initial Health Check : send POD_RUNNING")
 		out <- types.POD_RUNNING
@@ -1009,4 +1019,11 @@ func isHealthCheckConfigured(containerId string) (bool, error) {
 	HealthCheckListId[containerId] = true
 	//log.Debugf("Initial Health Check : Container %s Health check is configured to true", containerId)
 	return true, nil
+}
+
+func IsService(taskInfo *mesos.TaskInfo) bool {
+	d := thrift.NewTDeserializer()
+	assignTask := aurora.NewAssignedTask()
+	d.Read(assignTask, taskInfo.GetData())
+	return assignTask.Task.IsService
 }
