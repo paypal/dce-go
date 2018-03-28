@@ -80,14 +80,25 @@ func podMonitor(systemProxyId string) string {
 	}
 
 	// Send finished to mesos IF no container running or ONLY system proxy is running in the pod
+	isService := config.IsService()
+	if len(pod.PodContainers) == 0 && !isService {
+		logger.Println("Task is ADHOC job. All containers in the pod exit with code 0, sending FINISHED")
+		return types.POD_FINISHED
+	}
+
 	if len(pod.PodContainers) == 0 {
-		logger.Println("All containers in the pod exit with code 0, sending FINISHED")
+		logger.Println("Task is SERVICE. All containers in the pod exit with code 0, sending FAILED")
+		return types.POD_FAILED
+	}
+
+	if len(pod.PodContainers) == 1 && pod.PodContainers[0] == systemProxyId && !isService {
+		logger.Println("Task is ADHOC job. Only infra container is running in the pod, sending FINISHED")
 		return types.POD_FINISHED
 	}
 
 	if len(pod.PodContainers) == 1 && pod.PodContainers[0] == systemProxyId {
-		logger.Println("Only infra container is running in the pod, sending FINISHED")
-		return types.POD_FINISHED
+		logger.Println("Task is SERVICE. Only infra container is running in the pod, sending FAILED")
+		return types.POD_FAILED
 	}
 
 	return ""

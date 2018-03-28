@@ -81,6 +81,10 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	json.Indent(buf, task, "", " ")
 	fmt.Println("taskInfo : ", buf)
 
+	isService := pod.IsService(taskInfo)
+	fmt.Printf("task is service: %v\n", isService)
+	config.GetConfig().Set(types.IS_SERVICE, isService)
+
 	logger = log.WithFields(log.Fields{
 		"requuid":   pod.GetLabel("requuid", taskInfo),
 		"tenant":    pod.GetLabel("tenant", taskInfo),

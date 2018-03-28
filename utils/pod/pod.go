@@ -31,9 +31,11 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	log "github.com/sirupsen/logrus"
 
+	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	utils "github.com/paypal/dce-go/utils/wait"
+	"github.com/paypal/gorealis/gen-go/apache/aurora"
 )
 
 const (
@@ -977,12 +979,20 @@ healthCheck:
 	logger.Printf("Health Check List: %v", HealthCheckListId)
 	logger.Printf("Pod Monitor List: %v", PodContainers)
 
-	if len(containers) == 0 {
-		logger.Println("Initial Health Check : send POD_FINISHED")
+	isService := config.IsService()
+	logger.Printf("Task is SERVICE: %v", isService)
+	if len(containers) == 0 && !isService {
+		logger.Println("Task is ADHOC job. Send POD_FINISHED")
 		out <- types.POD_FINISHED
-	} else if hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
-		logger.Println("Initial Health Check : only infra container is running, send POD_FINISHED")
+	} else if len(containers) == 0 && isService {
+		logger.Println("Task is SERVICE. Send POD_FAILED")
+		out <- types.POD_FAILED
+	} else if !isService && hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
+		logger.Println("Task is ADHOC job. Only infra container is running, send POD_FINISHED")
 		out <- types.POD_FINISHED
+	} else if isService && hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
+		logger.Println("Task is SERVICE. Only infra container is running, send POD_FAILED")
+		out <- types.POD_FAILED
 	} else {
 		logger.Println("Initial Health Check : send POD_RUNNING")
 		out <- types.POD_RUNNING
@@ -1009,4 +1019,11 @@ func isHealthCheckConfigured(containerId string) (bool, error) {
 	HealthCheckListId[containerId] = true
 	//log.Debugf("Initial Health Check : Container %s Health check is configured to true", containerId)
 	return true, nil
+}
+
+func IsService(taskInfo *mesos.TaskInfo) bool {
+	d := thrift.NewTDeserializer()
+	assignTask := aurora.NewAssignedTask()
+	d.Read(assignTask, taskInfo.GetData())
+	return assignTask.Task.IsService
 }

@@ -63,6 +63,7 @@ const (
 	COMPOSE_HTTP_TIMEOUT    = "COMPOSE_HTTP_TIMEOUT"
 	SERVICE_DETAIL          = "serviceDetail"
 	INFRA_CONTAINER         = "networkproxy"
+	IS_SERVICE              = "isService"
 	FOREVER                 = 1<<63 - 1
 )
 
