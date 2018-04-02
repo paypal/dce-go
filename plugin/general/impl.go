@@ -143,6 +143,11 @@ func (gp *generalExt) PostLaunchTask(ctx *context.Context, files []string, taskI
 	return "", nil
 }
 
+func (gp *generalExt) PreStopPod() error {
+	logger.Println("PreStopPod Starting")
+	return nil
+}
+
 func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
 	logger.Println("PreKillTask begin")
 	return nil

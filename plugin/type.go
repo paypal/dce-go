@@ -25,6 +25,7 @@ import (
 type ComposePlugin interface {
 	PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error
 	PostLaunchTask(ctx *context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error)
+	PreStopPod() error
 	PreKillTask(taskInfo *mesos.TaskInfo) error
 	PostKillTask(taskInfo *mesos.TaskInfo) error
 	Shutdown(executor.ExecutorDriver) error

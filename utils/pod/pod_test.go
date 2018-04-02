@@ -15,12 +15,10 @@
 package pod
 
 import (
-	"testing"
-
-	//"github.com/paypal/dce-go/types"
-	"time"
-
 	"fmt"
+	"log"
+	"testing"
+	"time"
 
 	"github.com/mesos/mesos-go/examples/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"github.com/paypal/dce-go/config"
@@ -124,4 +122,25 @@ func TestGetContainerIdByService(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected err isn't nil, but got nil")
 	}
+}
+
+func TestKillContainer(t *testing.T) {
+	err := KillContainer("", "")
+	log.Println(err.Error())
+	assert.Error(t, err, "test kill invalid container")
+
+	files := []string{"testdata/docker-long.yml"}
+	res := LaunchPod(files)
+	if res != types.POD_STARTING {
+		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
+	}
+	id, err := wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
+		return GetContainerIdByService(files, "redis")
+	}))
+	err = KillContainer("SIGUSR1", id)
+	assert.NoError(t, err, "Test sending kill signal to container")
+	err = KillContainer("", id)
+
+	config.GetConfig().Set(types.RM_INFRA_CONTAINER, true)
+	StopPod(files)
 }

@@ -76,6 +76,11 @@ func (ex *exampleExt) PostLaunchTask(ctx *context.Context, composeFiles []string
 	return "", nil
 }
 
+func (ex *exampleExt) PreStopPod() error {
+	logger.Println("PreStopPod Starting")
+	return nil
+}
+
 func (ex *exampleExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
 	logger.Println("PreKillTask begin")
 	return nil

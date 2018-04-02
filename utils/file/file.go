@@ -83,7 +83,8 @@ func GetPluginOrder(taskInfo *mesos.TaskInfo) ([]string, error) {
 		plugins = append(plugins, plugin)
 	}
 
-	log.Println("Plugin Order : ", plugins)
+	pod.PluginOrder = plugins
+	log.Println("Plugin Order : ", pod.PluginOrder)
 	return plugins, nil
 }
 

@@ -124,6 +124,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		logger.Println("Plugin order missing in mesos label, trying to get it from config")
 		pluginOrder = strings.Split(config.GetConfigSection("plugins")[types.PLUGIN_ORDER], ",")
 	}
+	pod.PluginOrder = pluginOrder
 	logger.Println("PluginOrder : ", pluginOrder)
 
 	// Select plugin extension points from plugin pools
