@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mesos/mesos-go/examples/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 )
@@ -106,19 +107,38 @@ func TestReplaceArrayElement(t *testing.T) {
 	if len(res1) != len(res) {
 		t.Fatalf("Expected array doesn't change, but got %v \n", res1)
 	}
+
+	array[0] = "fruit=banana"
+	res2 := ReplaceElement(array, "^fruit=", "fruit=apple").([]interface{})
+	if res2[0] != "fruit=apple" {
+		t.Fatalf("Expected fruit=apple replace fruit=banana, but got %v \n", res2)
+	}
+
+	array[0] = "fruit.banana"
+	res5 := ReplaceElement(array, "^fruit$", "fruit=apple").([]interface{})
+	if res5[0] != "fruit.banana" {
+		t.Fatalf("Expected no changes, but got %v \n", res5)
+	}
+
+	array[0] = "fruitbanana"
+	res6 := ReplaceElement(array, "^fruit$", "fruit=apple").([]interface{})
+	if res6[0] != "fruitbanana" {
+		t.Fatalf("Expected no changes, but got %v \n", res6)
+	}
+
 	//Test map
 	m := make(map[interface{}]interface{})
 	m["key1"] = "val1"
 	m["key2"] = "val2"
-	res2 := ReplaceElement(m, "key2", "val3").(map[interface{}]interface{})
-	if res2["key2"].(string) != "val3" {
-		t.Fatalf("expected first element to be 'val3', but got %s", res2["key3"])
+	res3 := ReplaceElement(m, "key2", "val3").(map[interface{}]interface{})
+	if res3["key2"].(string) != "val3" {
+		t.Fatalf("expected first element to be 'val3', but got %s", res3["key3"])
 	}
 
-	res3 := ReplaceElement(m, "key3", "val3").(map[interface{}]interface{})
-	_, ok := res3["key3"]
+	res4 := ReplaceElement(m, "key3", "val3").(map[interface{}]interface{})
+	_, ok := res4["key3"]
 	if ok {
-		t.Fatalf("expected new element not added, but got", res2["key3"])
+		t.Fatalf("Expected new element not added, but got %s", res4["key3"])
 	}
 }
 
@@ -132,10 +152,23 @@ func TestAppendElement(t *testing.T) {
 	if len(res) != len(array)+1 || res[3] != "monkey" {
 		t.Fatalf("expected first element to be 'monkey', but got %s", res[3])
 	}
+
 	//Test duplicate element won't be appended
 	res = AppendElement(array, "monkey", "monkey").([]interface{})
 	if len(res) != len(array)+1 || res[3] != "monkey" {
 		t.Fatalf("expected first element to be 'monkey', but got %s", res[3])
+	}
+
+	array[0] = "fruit=banana"
+	res2 := AppendElement(array, "^fruit=", "fruit=apple").([]interface{})
+	if res2[0] != "fruit=apple" {
+		t.Fatalf("Expected fruit=apple replace fruit=banana, but got %v \n", res2)
+	}
+
+	array[0] = "fruit.banana"
+	res5 := AppendElement(array, "^fruit$", "fruit=apple1").([]interface{})
+	if res5[len(res5)-1] != "fruit=apple1" {
+		t.Fatalf("Expected fruit=apple will be appended, but got %v \n", res5)
 	}
 
 	//Test map
@@ -176,4 +209,16 @@ func TestSplitYAML(t *testing.T) {
 		t.Errorf("expected file name is testdata/docker-adhoc.yml , but got %v", files[0])
 	}
 	os.Remove(types.DEFAULT_FOLDER)
+}
+
+func TestConvertArrayToMap(t *testing.T) {
+	a := []interface{}{"a=b", "c", "d="}
+	m := ConvertArrayToMap(a)
+	assert.Equal(t, m["a"], "b", "a=b")
+	assert.Equal(t, m["c"], "", "c")
+	assert.Equal(t, m["d"], "", "d=")
+
+	b := []interface{}{}
+	m = ConvertArrayToMap(b)
+	assert.Equal(t, len(m), 0, "empty map")
 }

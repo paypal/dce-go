@@ -38,6 +38,7 @@ const (
 	LINKS                   = "links"
 	PORTS                   = "ports"
 	LABELS                  = "labels"
+	ENVIRONMENT             = "environment"
 	RESTART                 = "restart"
 	SERVICES                = "services"
 	IMAGE                   = "image"
@@ -48,7 +49,6 @@ const (
 	CGROUP_PARENT           = "cgroup_parent"
 	PLUGIN_ORDER            = "pluginorder"
 	INFRA_CONTAINER_YML     = "docker-infra-container.yml"
-	INFRA_CONTAINER_NAME    = "infra"
 	HOST_MODE               = "host"
 	NONE_NETWORK_MODE       = "none"
 	NAME                    = "name"
@@ -62,6 +62,8 @@ const (
 	RM_INFRA_CONTAINER      = "rm_infra_container"
 	COMPOSE_HTTP_TIMEOUT    = "COMPOSE_HTTP_TIMEOUT"
 	SERVICE_DETAIL          = "serviceDetail"
+	INFRA_CONTAINER         = "networkproxy"
+	IS_SERVICE              = "isService"
 	FOREVER                 = 1<<63 - 1
 )
 

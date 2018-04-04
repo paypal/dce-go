@@ -18,7 +18,9 @@ import (
 	"bufio"
 	"bytes"
 	"container/list"
+	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -26,15 +28,10 @@ import (
 	"regexp"
 	"strings"
 
-	yaml "gopkg.in/yaml.v2"
-
-	log "github.com/sirupsen/logrus"
-
-	"fmt"
-
-	"context"
-
 	mesos "github.com/mesos/mesos-go/mesosproto"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/pod"
@@ -46,6 +43,7 @@ const (
 	FILE_POSTFIX   = "-generated.yml"
 	PATH_DELIMITER = "/"
 	MAP_DELIMITER  = "="
+	TraceFolder    = "composetrace"
 )
 
 type EditorFunc func(serviceName string, taskInfo *mesos.TaskInfo, executorId string, taskId string, containerDetails map[interface{}]interface{}, ports *list.Element) (map[interface{}]interface{}, *list.Element, error)
@@ -167,7 +165,7 @@ func IsSubset(first, second []string) bool {
 // check if file exist
 func CheckFileExist(file string) bool {
 	if _, err := os.Stat(file); os.IsNotExist(err) {
-		log.Println("File does not exit")
+		log.Printf("File %s does not exist", file)
 		return false
 	}
 	return true
@@ -187,6 +185,7 @@ func WriteToFile(file string, data []byte) (string, error) {
 		file = FolderPath(strings.Fields(file))[0]
 	}
 
+	log.Printf("Write to file : %s\n", file)
 	f, err := os.Create(file)
 	if err != nil {
 		log.Errorf("Error creating file %v", err)
@@ -220,7 +219,25 @@ func WriteChangeToFiles(ctx context.Context) error {
 	return nil
 }
 
+func DumpPluginModifiedComposeFiles(ctx context.Context, plugin string, pluginOrder int) {
+	filesMap := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	for file := range filesMap {
+		content, _ := yaml.Marshal(filesMap[file])
+		fParts := strings.Split(file.(string), PATH_DELIMITER)
+		if len(fParts) < 2 {
+			log.Printf("Skip dumping modified compose file by plugin %s, since file name is invalid %s", plugin, file)
+			return
+		}
+		_, err := WriteToFile(fmt.Sprintf("%s/%s/%s-%s-%d.yml", fParts[0], TraceFolder, fParts[1], plugin, pluginOrder), content)
+		if err != nil {
+			log.Printf("Failed dumping modified compose file by plugin %s", plugin)
+		}
+	}
+}
+
 func OverwriteFile(file string, data []byte) {
+	log.Printf("Over-write file: %s\n", file)
+
 	os.Remove(file)
 
 	f, err := os.Create(file)
@@ -236,8 +253,15 @@ func OverwriteFile(file string, data []byte) {
 
 //Split a large file into a number of smaller files by file separator
 func SplitYAML(file string) ([]string, error) {
+	logger := log.WithFields(log.Fields{
+		"File": file,
+		"Func": "SplitYAML",
+	})
+
+	logger.Println("Start split downloaded compose file")
 	var names []string
 	if _, err := os.Stat(file); os.IsNotExist(err) {
+		logger.Printf("%s doesn't exit\n", file)
 		return nil, err
 	}
 
@@ -250,20 +274,29 @@ func SplitYAML(file string) ([]string, error) {
 	scanner.Split(SplitFunc)
 	for scanner.Scan() {
 		splitData := scanner.Text()
+		logger.Printf("Split data : %s\n", splitData)
+
+		// Get split compose file name from split data
+		// If name isn't found, skip writing split data into a separate file
 		name := strings.TrimLeft(getYAMLDocumentName(splitData, "#.*yml"), "#")
 		if name == "" {
+			logger.Println("No file name found from split data")
 			continue
 		}
 		fileName, err := WriteToFile(name, []byte(splitData))
 		if err != nil {
+			logger.Errorf("Error writing files %s : %v\n", fileName, err)
 			return nil, err
 		}
 		names = append(names, fileName)
 	}
 
+	// If file doesn't need to be split, just return the file
 	if len(names) == 0 {
 		names = append(names, file)
 	}
+
+	logger.Printf("After split file, get file names: %s\n", names)
 	return FolderPath(names), nil
 }
 
@@ -311,8 +344,8 @@ func getYAMLDocumentName(data, pattern string) string {
 //ReplaceElement does replace element in array/map
 func ReplaceElement(i interface{}, old string, new string) interface{} {
 	if array, ok := i.([]interface{}); ok {
-		index, err := IndexArray(array, old)
-		if err != nil {
+		index, err := IndexArrayRegex(array, old)
+		if err != nil || index == -1 {
 			return array
 		}
 		array[index] = new
@@ -335,10 +368,12 @@ func ReplaceElement(i interface{}, old string, new string) interface{} {
 }
 
 //AppendElement does append element in array/map
+//Element will be overwrite if it already exist
+//Using regular expression to match the element
 func AppendElement(i interface{}, old string, new string) interface{} {
 	if array, ok := i.([]interface{}); ok {
-		index, err := IndexArray(array, old)
-		if err != nil {
+		index, err := IndexArrayRegex(array, old)
+		if err != nil || index == -1 {
 			array = append(array, new)
 			return array
 		} else {
@@ -356,6 +391,20 @@ func AppendElement(i interface{}, old string, new string) interface{} {
 	log.Println("Only support appending elements in array and map")
 
 	return i
+}
+
+func IndexArrayRegex(array []interface{}, expr string) (int, error) {
+	r, err := regexp.Compile(expr)
+	if err != nil {
+		log.Errorf("Error compile expression: %v\n", err)
+		return -1, err
+	}
+	for i, a := range array {
+		if r.MatchString(a.(string)) {
+			return i, nil
+		}
+	}
+	return -1, err
 }
 
 // get index of an element in array
@@ -443,25 +492,26 @@ func ParseYamls(files *[]string) (map[interface{}](map[interface{}]interface{}),
 	return res, nil
 }
 
-// app folder is used to keep all the generated yml files
+// GenerateAppFolder does generate app folder and copy compose files exist in fileName label
+// into folder
 func GenerateAppFolder() error {
-	// if app comes with a folder, then skip creating app folder
-	/*if config.GetConfig().GetBool(types.NO_FOLDER) {
-		return nil
-	}*/
-
 	folder := config.GetAppFolder()
 	if folder == "" {
 		folder = types.DEFAULT_FOLDER
 		config.SetConfig(config.FOLDER_NAME, types.DEFAULT_FOLDER)
 	}
 
+	// Append run id to folder name
 	path, _ := filepath.Abs("")
 	dirs := strings.Split(path, PATH_DELIMITER)
 	folder = strings.TrimSpace(fmt.Sprintf("%s_%s", folder, dirs[len(dirs)-1]))
 
-	_folder := []string{strings.TrimSpace(folder)}
-	err := GenerateFileDirs(_folder)
+	// Folder to keep all compose files generated by plugins
+	traceFolder := fmt.Sprintf("%s/%s", folder, TraceFolder)
+
+	// Generate directory
+	folders := []string{strings.TrimSpace(folder), traceFolder}
+	err := GenerateFileDirs(folders)
 	if err != nil {
 		log.Println("Error generating file dirs: ", err.Error())
 		return err
@@ -469,27 +519,18 @@ func GenerateAppFolder() error {
 
 	config.GetConfig().Set(config.FOLDER_NAME, folder)
 
-	// copy tar folder to poddata folder
-	/*tar := config.GetConfig().GetString(TAR)
-	if tar != "" {
-		err = CopyDir(path+"/"+tar, path+"/"+folder)
-		if err != nil {
-			log.Errorf("Failed copying directory: %v", err)
-			return err
-		}
-	}*/
-
-	// copy compose files into pod folder
+	// Copy compose files into pod folder
 	for i, file := range pod.ComposeFiles {
 		path := strings.Split(file, PATH_DELIMITER)
 		dest := FolderPath(strings.Fields(path[len(path)-1]))[0]
 		err = CopyFile(file, dest)
 		if err != nil {
-			log.Errorf("Failed to copy file into pod folder %v", err)
-			return err
+			log.Printf("Copy file %s into pod folder %v", file, err)
 		}
 		pod.ComposeFiles[i] = dest
 	}
+
+	log.Printf("compose file list: %s\n", pod.ComposeFiles)
 	return nil
 }
 
@@ -558,8 +599,22 @@ func CopyFile(source string, dest string) (err error) {
 		if err != nil {
 			err = os.Chmod(dest, sourceinfo.Mode())
 		}
-
+		log.Printf("Copy file from %s to %s\n", sourcefile.Name(), destfile.Name())
 	}
 
 	return
+}
+
+// Convert array like a=b to map a:b
+func ConvertArrayToMap(arr []interface{}) map[interface{}]interface{} {
+	m := make(map[interface{}]interface{})
+	for _, i := range arr {
+		b := strings.SplitN(i.(string), "=", 2)
+		if len(b) == 2 {
+			m[b[0]] = b[1]
+		} else {
+			m[b[0]] = ""
+		}
+	}
+	return m
 }

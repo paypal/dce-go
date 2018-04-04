@@ -6,6 +6,8 @@ launchtask:
    retryinterval: 10000
    timeout: 500000
    skippull: true
+   composetrace: true
+   debug: false
 plugins:
    pluginorder: general
 cleanpod:

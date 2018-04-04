@@ -16,27 +16,24 @@ package general
 
 import (
 	"container/list"
+	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"fmt"
-
-	"context"
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	utils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
+
 	log "github.com/sirupsen/logrus"
 )
 
 const (
 	PORT_DELIMITER = ":"
 	PATH_DELIMITER = "/"
-	NETWORK_PROXY  = "networkproxy"
-	ENVIRONMENT    = "environment"
 )
 
 func EditComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element) (string, *list.Element, error) {
@@ -69,6 +66,8 @@ func EditComposeFile(ctx *context.Context, file string, executorId string, taskI
 		file = file + utils.FILE_POSTFIX
 	}
 	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
+
+	logger.Printf("Updated compose files, current context: %v\n", filesMap)
 	return file, ports, err
 }
 
@@ -90,11 +89,11 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 
 	// Get env list
 	var envIsArray bool
-	envMap, ok := containerDetails[ENVIRONMENT].(map[interface{}]interface{})
+	envMap, ok := containerDetails[types.ENVIRONMENT].(map[interface{}]interface{})
 	if ok {
 		logger.Printf("ENV is an array %v of %s : %v", envIsArray, serviceName, envMap)
 	}
-	envList, ok := containerDetails[ENVIRONMENT].([]interface{})
+	envList, ok := containerDetails[types.ENVIRONMENT].([]interface{})
 	if ok {
 		logger.Printf("ENV is an array %v of %s : %v", envIsArray, serviceName, envList)
 		envIsArray = true
@@ -105,18 +104,18 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 
 	if envIsArray {
 		envList = append(envList, fmt.Sprintf("%s=%d", "PYTHONUNBUFFERED", 1))
-		containerDetails[ENVIRONMENT] = envList
+		containerDetails[types.ENVIRONMENT] = envList
 	} else {
 		envMap["PYTHONUNBUFFERED"] = 1
-		containerDetails[ENVIRONMENT] = envMap
+		containerDetails[types.ENVIRONMENT] = envMap
 	}
 
 	// Update session of network_mode
-	if serviceName != NETWORK_PROXY {
+	if serviceName != types.INFRA_CONTAINER {
 		if network_mode, ok := containerDetails[types.NETWORK_MODE].(string); !ok ||
 			(network_mode != types.HOST_MODE && network_mode != types.NONE_NETWORK_MODE) {
 
-			containerDetails[types.NETWORK_MODE] = "service:" + NETWORK_PROXY
+			containerDetails[types.NETWORK_MODE] = "service:" + types.INFRA_CONTAINER
 
 		} else {
 			config.GetConfig().SetDefault(types.RM_INFRA_CONTAINER, true)
@@ -129,23 +128,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	if containerName, ok := containerDetails[types.CONTAINER_NAME].(string); ok {
 		containerName = utils.PrefixTaskId(taskId, containerName)
 		containerDetails[types.CONTAINER_NAME] = containerName
-
-		if serviceName == NETWORK_PROXY {
-			config.SetConfig(types.INFRA_CONTAINER_NAME, containerName)
-		}
-
-		if pod.ServiceNameMap[serviceName] == "" {
-			pod.ServiceNameMap[serviceName] = containerName
-		}
-
 		logger.Println("Edit Compose File : Updated container_name as ", containerName)
-	} else {
-
-		if pod.ServiceNameMap[serviceName] == "" {
-			pod.ServiceNameMap[serviceName] = fmt.Sprintf("%s_%s",
-				strings.Replace(strings.Replace(config.GetConfig().GetString(config.FOLDER_NAME), "_", "", -1),
-					"-", "", -1), serviceName)
-		}
 	}
 
 	// Update value of LINKS
@@ -218,8 +201,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	}
 
 	// Add service ports to infra container
-	if serviceName == NETWORK_PROXY {
-
+	if serviceName == types.INFRA_CONTAINER {
 		if portList := config.GetConfig().Get(types.PORTS); portList != nil {
 
 			logger.Println("Add services ports mapping to infra container ", portList)
