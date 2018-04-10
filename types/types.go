@@ -44,6 +44,10 @@ const (
 	IMAGE                   = "image"
 	VERSION                 = "version"
 	NETWORKS                = "networks"
+	HOSTNAME                = "hostname"
+	VOLUMES                 = "volumes"
+	DEPENDS_ON              = "depends_on"
+	EXTRA_HOSTS             = "extra_hosts"
 	TASK_ID                 = "taskId"
 	EXECUTOR_ID             = "executorId"
 	CGROUP_PARENT           = "cgroup_parent"
@@ -104,3 +108,7 @@ func (c *ContainerStatusDetails) SetContainerId(containerId string) {
 func (c *ContainerStatusDetails) SetComposeTaskId(composeTaskId *mesosproto.TaskID) {
 	c.ComposeTaskId = composeTaskId
 }
+
+type err string
+
+const NoComposeFile err = "no compose file specified"

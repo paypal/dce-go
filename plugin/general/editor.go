@@ -27,16 +27,15 @@ import (
 	"github.com/paypal/dce-go/types"
 	utils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
-
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	PORT_DELIMITER = ":"
-	PATH_DELIMITER = "/"
+	portDelimiter = ":"
+	pathDelimiter = "/"
 )
 
-func EditComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element) (string, *list.Element, error) {
+func editComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element) (string, *list.Element, error) {
 	var err error
 
 	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
@@ -52,7 +51,7 @@ func EditComposeFile(ctx *context.Context, file string, executorId string, taskI
 	}
 
 	for serviceName := range servMap {
-		ports, err = UpdateServiceSessions(serviceName.(string), file, executorId, taskId, &filesMap, ports)
+		ports, err = updateServiceSessions(serviceName.(string), file, executorId, taskId, filesMap, ports)
 		if err != nil {
 			log.Printf("Failed updating services: %v \n", err)
 			return file, ports, err
@@ -71,8 +70,8 @@ func EditComposeFile(ctx *context.Context, file string, executorId string, taskI
 	return file, ports, err
 }
 
-func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMap *types.ServiceDetail, ports *list.Element) (*list.Element, error) {
-	containerDetails, ok := (*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName].(map[interface{}]interface{})
+func updateServiceSessions(serviceName, file, executorId, taskId string, filesMap types.ServiceDetail, ports *list.Element) (*list.Element, error) {
+	containerDetails, ok := filesMap[file][types.SERVICES].(map[interface{}]interface{})[serviceName].(map[interface{}]interface{})
 	if !ok {
 		log.Println("POD_UPDATE_YAML_FAIL")
 	}
@@ -112,8 +111,8 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 
 	// Update session of network_mode
 	if serviceName != types.INFRA_CONTAINER {
-		if network_mode, ok := containerDetails[types.NETWORK_MODE].(string); !ok ||
-			(network_mode != types.HOST_MODE && network_mode != types.NONE_NETWORK_MODE) {
+		if networkMode, ok := containerDetails[types.NETWORK_MODE].(string); !ok ||
+			(networkMode != types.HOST_MODE && networkMode != types.NONE_NETWORK_MODE) {
 
 			containerDetails[types.NETWORK_MODE] = "service:" + types.INFRA_CONTAINER
 
@@ -158,7 +157,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 
 	// Add cgroup parent
 	path, _ := filepath.Abs("")
-	dirs := strings.Split(path, PATH_DELIMITER)
+	dirs := strings.Split(path, pathDelimiter)
 	containerDetails[types.CGROUP_PARENT] = "/mesos/" + dirs[len(dirs)-1]
 	logger.Println("Edit Compose File : Add cgroup parent /mesos/", dirs[len(dirs)-1])
 
@@ -170,12 +169,12 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 			if portList, ok := containerDetails[types.PORTS].([]interface{}); ok {
 
 				for i, p := range portList {
-					portMap := strings.Split(p.(string), PORT_DELIMITER)
+					portMap := strings.Split(p.(string), portDelimiter)
 					if len(portMap) > 1 {
 						if ports == nil {
 							return nil, errors.New("No ports available")
 						}
-						p = strconv.FormatUint(ports.Value.(uint64), 10) + PORT_DELIMITER + portMap[1]
+						p = strconv.FormatUint(ports.Value.(uint64), 10) + portDelimiter + portMap[1]
 						portList[i] = p.(string)
 						ports = ports.Next()
 					} else {
@@ -209,12 +208,12 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 		}
 	}
 
-	(*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName] = containerDetails
+	filesMap[file][types.SERVICES].(map[interface{}]interface{})[serviceName] = containerDetails
 
 	return ports, nil
 }
 
-func PostEditComposeFile(ctx *context.Context, file string) error {
+func postEditComposeFile(ctx *context.Context, file string) error {
 	var err error
 	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 	if filesMap[file][types.SERVICES] == nil {
@@ -247,13 +246,13 @@ func updateDynamicPorts(serviceName, file string, filesMap *types.ServiceDetail)
 	}
 	if portList, ok := containerDetails[types.PORTS].([]interface{}); ok {
 		for i, p := range portList {
-			portMap := strings.Split(p.(string), PORT_DELIMITER)
+			portMap := strings.Split(p.(string), portDelimiter)
 			if len(portMap) == 1 {
 				dynamicPort, err := pod.GetDockerPorts(ids[0], portMap[0])
 				if err != nil {
 					log.Errorf("Error retrieving docker dynamic port : %v", err)
 				}
-				p = dynamicPort + PORT_DELIMITER + portMap[0]
+				p = dynamicPort + portDelimiter + portMap[0]
 				portList[i] = p.(string)
 			}
 		}

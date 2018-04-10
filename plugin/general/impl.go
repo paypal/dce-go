@@ -16,21 +16,21 @@ package general
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
-
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
 	utils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 var logger *log.Entry
@@ -55,13 +55,19 @@ func init() {
 }
 
 func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
-	logger.Println("PreLaunchTask begin : ", *composeFiles)
+	logger.Println("PreLaunchTask begin")
+
+	if composeFiles == nil || len(*composeFiles) == 0 {
+		return fmt.Errorf(string(types.NoComposeFile))
+	}
 
 	var editedFiles []string
 	var err error
 
 	logger.Println("====================context in====================")
 	logger.Println((*ctx).Value(types.SERVICE_DETAIL))
+
+	logger.Printf("Current compose files list: %v", *composeFiles)
 
 	if (*ctx).Value(types.SERVICE_DETAIL) == nil {
 		var servDetail types.ServiceDetail
@@ -88,7 +94,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 	for i, file := range *composeFiles {
 		logger.Printf("Starting Edit compose file %s", file)
 		var editedFile string
-		editedFile, currentPort, err = EditComposeFile(ctx, file, executorId, taskInfo.GetTaskId().GetValue(), currentPort)
+		editedFile, currentPort, err = editComposeFile(ctx, file, executorId, taskInfo.GetTaskId().GetValue(), currentPort)
 		if err != nil {
 			logger.Errorln("Error editing compose file : ", err.Error())
 			return err
@@ -134,7 +140,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 func (gp *generalExt) PostLaunchTask(ctx *context.Context, files []string, taskInfo *mesos.TaskInfo) (string, error) {
 	logger.Println("PostLaunchTask begin")
 	if pod.SinglePort {
-		err := PostEditComposeFile(ctx, infraYmlPath)
+		err := postEditComposeFile(ctx, infraYmlPath)
 		if err != nil {
 			log.Errorf("PostLaunchTask: Error editing compose file : %v", err)
 			return types.POD_FAILED, err

@@ -92,7 +92,11 @@ func GetPluginOrder(taskInfo *mesos.TaskInfo) ([]string, error) {
 func GetYAML(taskInfo *mesos.TaskInfo) []string {
 	log.Println("====================Get compose file from URI====================")
 	var files []string
+	if taskInfo == nil || taskInfo.Executor == nil || taskInfo.Executor.Command == nil {
+		return files
+	}
 	uris := taskInfo.Executor.Command.GetUris()
+	fmt.Println("file********:", uris)
 	for _, uri := range uris {
 		arr := strings.Split(uri.GetValue(), "/")
 		name := arr[len(arr)-1]
@@ -107,7 +111,12 @@ func GetYAML(taskInfo *mesos.TaskInfo) []string {
 // In case they have different depth of folders to keep compose files, GetDirFilesRecv help to get the complete path of
 // compose file
 func GetDirFilesRecv(dir string, files *[]string) {
-	if d, _ := os.Stat(dir); !d.IsDir() && (strings.HasSuffix(dir, ".yml") || strings.HasSuffix(dir, ".yaml") || dir == "yaml") {
+	d, _ := os.Stat(dir)
+	if d == nil {
+		log.Warnf("Directory %s not exist", dir)
+		return
+	}
+	if !d.IsDir() && (strings.HasSuffix(dir, ".yml") || strings.HasSuffix(dir, ".yaml") || dir == "yaml") {
 		*files = append(*files, dir)
 		return
 	}
@@ -221,7 +230,14 @@ func WriteChangeToFiles(ctx context.Context) error {
 }
 
 func DumpPluginModifiedComposeFiles(ctx context.Context, plugin string, pluginOrder int) {
-	filesMap := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	if ctx.Value(types.SERVICE_DETAIL) == nil {
+
+	}
+	filesMap, ok := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	if !ok {
+		log.Printf("Skip dumping modified compose file by plugin %s", plugin)
+		return
+	}
 	for file := range filesMap {
 		content, _ := yaml.Marshal(filesMap[file])
 		fParts := strings.Split(file.(string), PATH_DELIMITER)
@@ -260,9 +276,12 @@ func SplitYAML(file string) ([]string, error) {
 	})
 
 	logger.Println("Start split downloaded compose file")
+
 	var names []string
+
+	// Check if file exist
 	if _, err := os.Stat(file); os.IsNotExist(err) {
-		logger.Printf("%s doesn't exit\n", file)
+		logger.Printf("File %s doesn't exist\n", file)
 		return nil, err
 	}
 
@@ -270,7 +289,6 @@ func SplitYAML(file string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	scanner := bufio.NewScanner(strings.NewReader(string(dat)))
 	scanner.Split(SplitFunc)
 	for scanner.Scan() {
@@ -292,9 +310,12 @@ func SplitYAML(file string) ([]string, error) {
 		names = append(names, fileName)
 	}
 
-	// If file doesn't need to be split, just return the file
+	// Copy downloaded file to folder ONLY IF the file doesn't need to be split
 	if len(names) == 0 {
-		names = append(names, file)
+		path := strings.Split(file, PATH_DELIMITER)
+		d := FolderPath(strings.Fields(path[len(path)-1]))[0]
+		CopyFile(file, d)
+		names = append(names, d)
 	}
 
 	logger.Printf("After split file, get file names: %s\n", names)
