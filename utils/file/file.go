@@ -640,3 +640,15 @@ func ConvertArrayToMap(arr []interface{}) map[interface{}]interface{} {
 	}
 	return m
 }
+
+func ConvertMapToArray(m map[interface{}]interface{}) []interface{} {
+	var a []interface{}
+	for k, v := range m {
+		if v != "" {
+			a = append(a, fmt.Sprintf("%s=%v", k, v))
+		} else {
+			a = append(a, k)
+		}
+	}
+	return a
+}
