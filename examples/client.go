@@ -22,7 +22,7 @@ import (
 
 	"github.com/paypal/gorealis"
 	"github.com/paypal/gorealis/gen-go/apache/aurora"
-	_"github.com/paypal/gorealis/response"
+	_ "github.com/paypal/gorealis/response"
 )
 
 func main() {

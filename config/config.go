@@ -53,7 +53,6 @@ const (
 	COMPOSE_TRACE                        = "launchtask.composetrace"
 	DEBUG_MODE                           = "launchtask.debug"
 	COMPOSE_HTTP_TIMEOUT                 = "launchtask.composehttptimeout"
-	WAIT_BEFORE_KILL                     = "cleanpod.waitbeforekill"
 )
 
 // Read from default configuration file and set config as key/values
@@ -216,8 +215,4 @@ func EnableDebugMode() bool {
 
 func IsService() bool {
 	return GetConfig().GetBool(types.IS_SERVICE)
-}
-
-func GetWaitBeforeKill() int {
-	return GetConfig().GetInt(WAIT_BEFORE_KILL)
 }

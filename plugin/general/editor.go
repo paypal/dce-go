@@ -35,7 +35,8 @@ const (
 	pathDelimiter = "/"
 )
 
-func editComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element) (string, *list.Element, error) {
+func editComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element,
+	extraHosts map[interface{}]bool) (string, *list.Element, error) {
 	var err error
 
 	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
@@ -51,7 +52,7 @@ func editComposeFile(ctx *context.Context, file string, executorId string, taskI
 	}
 
 	for serviceName := range servMap {
-		ports, err = updateServiceSessions(serviceName.(string), file, executorId, taskId, filesMap, ports)
+		ports, err = updateServiceSessions(serviceName.(string), file, executorId, taskId, filesMap, ports, extraHosts)
 		if err != nil {
 			log.Printf("Failed updating services: %v \n", err)
 			return file, ports, err
@@ -70,7 +71,8 @@ func editComposeFile(ctx *context.Context, file string, executorId string, taskI
 	return file, ports, err
 }
 
-func updateServiceSessions(serviceName, file, executorId, taskId string, filesMap types.ServiceDetail, ports *list.Element) (*list.Element, error) {
+func updateServiceSessions(serviceName, file, executorId, taskId string, filesMap types.ServiceDetail, ports *list.Element,
+	extraHosts map[interface{}]bool) (*list.Element, error) {
 	containerDetails, ok := filesMap[file][types.SERVICES].(map[interface{}]interface{})[serviceName].(map[interface{}]interface{})
 	if !ok {
 		log.Println("POD_UPDATE_YAML_FAIL")
@@ -85,6 +87,9 @@ func updateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 		delete(containerDetails, types.RESTART)
 		log.Println("Edit Compose File : Remove restart")
 	}
+
+	// save extra host section of all services for moving them to infra container later
+	scanForExtraHostsSection(containerDetails, extraHosts)
 
 	// Get env list
 	var envIsArray bool
@@ -263,4 +268,48 @@ func updateDynamicPorts(serviceName, file string, filesMap *types.ServiceDetail)
 		logger.Println("Edit Compose File : Updated ports as ", portList)
 	}
 	return nil
+}
+
+func scanForExtraHostsSection(containerDetails map[interface{}]interface{}, extraHostsCollection map[interface{}]bool) {
+	// if extra_hosts is defined, extract and store it to inject it later in infra container yaml
+	if val, ok := containerDetails[types.EXTRA_HOSTS].([]interface{}); ok {
+		for _, v := range val {
+			extraHostsCollection[v] = true
+		}
+		// delete extra_hosts section from all services except networkproxy
+		delete(containerDetails, types.EXTRA_HOSTS)
+		log.Println("Found extra_hosts section defined")
+	}
+}
+
+func addExtraHostsSection(ctx *context.Context, file, svcName string, extraHostsCollection map[interface{}]bool) {
+	filesMap, ok := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	if !ok {
+		log.Warnln("Couldn't get service detail")
+		return
+	}
+	servMap, ok := filesMap[file][types.SERVICES].(map[interface{}]interface{})
+	if !ok {
+		log.Warnf("Couldn't get content of compose file %s\n", file)
+		return
+	}
+
+	if containerDetails, ok := servMap[svcName].(map[interface{}]interface{}); ok {
+		// i.e. only if some new extra_hosts were found in the compose files other than the ones already defined in infra container yaml
+		if val, ok := containerDetails[types.EXTRA_HOSTS].([]interface{}); ok {
+			for _, v := range val {
+				extraHostsCollection[v] = true
+			}
+
+			var extraHostsList []interface{}
+			for key := range extraHostsCollection {
+				extraHostsList = append(extraHostsList, key)
+			}
+			containerDetails[types.EXTRA_HOSTS] = extraHostsList
+			filesMap[file][types.SERVICES].(map[interface{}]interface{})[svcName] = containerDetails
+			logger.Printf("Added extra_hosts section to the file %s under service %s", file, svcName)
+		}
+		return
+
+	}
 }

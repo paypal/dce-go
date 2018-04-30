@@ -90,11 +90,13 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 	}
 	*composeFiles = append(utils.FolderPath(*composeFiles), infrayml)
 
+	var extraHosts = make(map[interface{}]bool)
+
 	var indexInfra int
 	for i, file := range *composeFiles {
 		logger.Printf("Starting Edit compose file %s", file)
 		var editedFile string
-		editedFile, currentPort, err = editComposeFile(ctx, file, executorId, taskInfo.GetTaskId().GetValue(), currentPort)
+		editedFile, currentPort, err = editComposeFile(ctx, file, executorId, taskInfo.GetTaskId().GetValue(), currentPort, extraHosts)
 		if err != nil {
 			logger.Errorln("Error editing compose file : ", err.Error())
 			return err
@@ -121,6 +123,9 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 		if err != nil {
 			log.Errorf("Error deleting infra yml file %v", err)
 		}
+	} else {
+		// Move extra_hosts from other compose files to infra container
+		addExtraHostsSection(ctx, infraYmlPath, types.INFRA_CONTAINER, extraHosts)
 	}
 
 	logger.Println("====================context out====================")
