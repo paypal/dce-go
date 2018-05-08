@@ -964,7 +964,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	// Get infra container id
 	var systemProxyId string
 	var hasInfra bool
-	if _, hasInfra := podServices[types.INFRA_CONTAINER]; hasInfra {
+	if _, hasInfra = podServices[types.INFRA_CONTAINER]; hasInfra {
 		systemProxyId, err = GetContainerIdByService(files, types.INFRA_CONTAINER)
 		if err != nil {
 			logger.Errorf("Error getting container id of service %s: %v", types.INFRA_CONTAINER, err)
@@ -973,6 +973,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 			return
 		}
 	}
+	logger.Printf("Pod has infra container: %v", hasInfra)
 
 healthCheck:
 	for len(containers) != healthCount {
