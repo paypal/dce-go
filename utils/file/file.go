@@ -96,7 +96,6 @@ func GetYAML(taskInfo *mesos.TaskInfo) []string {
 		return files
 	}
 	uris := taskInfo.Executor.Command.GetUris()
-	fmt.Println("file********:", uris)
 	for _, uri := range uris {
 		arr := strings.Split(uri.GetValue(), "/")
 		name := arr[len(arr)-1]
@@ -111,11 +110,12 @@ func GetYAML(taskInfo *mesos.TaskInfo) []string {
 // In case they have different depth of folders to keep compose files, GetDirFilesRecv help to get the complete path of
 // compose file
 func GetDirFilesRecv(dir string, files *[]string) {
-	d, _ := os.Stat(dir)
-	if d == nil {
-		log.Warnf("Directory %s not exist", dir)
+	d, err := os.Stat(dir)
+	if err != nil {
+		log.Errorf("Error getting file info of %s:%v\n", dir, err)
 		return
 	}
+
 	if !d.IsDir() && (strings.HasSuffix(dir, ".yml") || strings.HasSuffix(dir, ".yaml") || dir == "yaml") {
 		*files = append(*files, dir)
 		return
