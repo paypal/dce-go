@@ -11,6 +11,7 @@ launchtask:
 plugins:
    pluginorder: general
 cleanpod:
+   cleanfailtask: false
    timeout: 20
    unhealthy: true
    cleanvolumeandcontaineronmesoskill: true

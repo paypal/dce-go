@@ -46,13 +46,15 @@ const (
 	NETWORK_NAME                         = "name"
 	NETWORK_DRIVER                       = "driver"
 	CLEANPOD                             = "cleanpod"
-	CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL = "cleanvolumeandcontaineronmesoskill"
-	CLEAN_IMAGE_ON_MESOS_KILL            = "cleanimageonmesoskill"
+	CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL = "cleanpod.cleanvolumeandcontaineronmesoskill"
+	CLEAN_IMAGE_ON_MESOS_KILL            = "cleanpod.cleanimageonmesoskill"
+	CLEAN_FAIL_TASK                      = "cleanpod.cleanfailtask"
 	DOCKER_COMPOSE_VERBOSE               = "dockercomposeverbose"
 	SKIP_PULL_IMAGES                     = "launchtask.skippull"
 	COMPOSE_TRACE                        = "launchtask.composetrace"
 	DEBUG_MODE                           = "launchtask.debug"
 	COMPOSE_HTTP_TIMEOUT                 = "launchtask.composehttptimeout"
+	COMPOSE_STOP_TIMEOUT                 = "cleanpod.timeout"
 )
 
 // Read from default configuration file and set config as key/values
@@ -121,12 +123,13 @@ func GetConfig() *viper.Viper {
 }
 
 func setDefaultConfig(conf *viper.Viper) {
-	conf.SetDefault("launchtask.podmonitorinterval", 10000)
-	conf.SetDefault("launchtask.composehttptimeout", 300)
-	conf.SetDefault("launchtask.maxretry", 3)
-	conf.SetDefault("launchtask.pullretry", 3)
-	conf.SetDefault("launchtask.retryinterval", 10000)
-	conf.SetDefault("launchtask.timeout", 500000)
+	conf.SetDefault(POD_MONITOR_INTERVAL, 10000)
+	conf.SetDefault(COMPOSE_HTTP_TIMEOUT, 300)
+	conf.SetDefault(MAX_RETRY, 3)
+	conf.SetDefault(PULL_RETRY, 3)
+	conf.SetDefault(RETRY_INTERVAL, 10000)
+	conf.SetDefault(TIMEOUT, 500000)
+	conf.SetDefault(COMPOSE_STOP_TIMEOUT, 10)
 }
 
 func GetAppFolder() string {
@@ -145,13 +148,8 @@ func GetLaunchTimeout() time.Duration {
 	return time.Duration(GetConfig().GetInt(TIMEOUT))
 }
 
-func GetStopTimeout() string {
-	timeout := GetConfigSection(CLEANPOD)[TIMEOUT]
-	if timeout == "" {
-		log.Warningln("pod timeout doesn't set in config...timeout will be set as 10s")
-		return "10"
-	}
-	return timeout
+func GetStopTimeout() int {
+	return GetConfig().GetInt(COMPOSE_STOP_TIMEOUT)
 }
 
 func GetRetryInterval() time.Duration {
@@ -165,7 +163,7 @@ func GetMaxRetry() int {
 func GetNetwork() (types.Network, bool) {
 	nmap, ok := GetConfig().GetStringMap(INFRA_CONTAINER)[NETWORKS].(map[string]interface{})
 	if !ok {
-		log.Println("networks section missing in configration file")
+		log.Println("networks section missing in config")
 		return types.Network{}, false
 	}
 

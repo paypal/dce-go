@@ -317,28 +317,29 @@ func StopPod(files []string) error {
 	})
 	logger.Println("====================Stop Pod====================")
 	GetPodDetail(files, "", false)
+
 	// Select plugin extension points from plugin pools
 	plugins := plugin.GetOrderedExtpoints(PluginOrder)
 	logger.Printf("Plugin order: %s", PluginOrder)
 
-	// Executing PreLaunchTask in order
+	// Executing PreKillTask in order
 	_, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
 		for i, ext := range plugins {
-			if err := ext.PreStopPod(); err != nil {
-				logger.Errorf("Error executing PreStopPod in %dth plugin: %v", i, err)
+			if err := ext.PreKillTask(ComposeTaskInfo); err != nil {
+				logger.Errorf("Error executing PreKillTask in %dth plugin: %v", i, err)
 			}
 		}
 		return "", nil
 	}))
 	if err != nil {
-		logger.Errorf("Error executing PreStopPod in plugins:%v", err)
+		logger.Errorf("Error executing PreKillTask in plugins:%v", err)
 	}
 
 	//get stop timeout from config
 	timeout := config.GetStopTimeout()
-	parts, err := GenerateCmdParts(files, " stop -t "+timeout)
+	parts, err := GenerateCmdParts(files, " stop -t "+strconv.Itoa(timeout))
 	if err != nil {
-		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
+		logger.Errorf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
 		return err
 	}
 
@@ -346,45 +347,32 @@ func StopPod(files []string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	log.Printf("Stop Pod : Command to stop task : %s", cmd.Args)
+	logger.Printf("Stop Pod : Command to stop task : %s", cmd.Args)
 
 	err = cmd.Run()
 	if err != nil {
-		log.Printf("POD_STOP_FAIL --", err.Error())
+		logger.Errorf("POD_STOP_FAIL --", err.Error())
 		err = ForceKill(files)
 		if err != nil {
-			log.Printf("POD_STOP_FORCE_FAIL -- Error in force pod kill : %v", err)
+			logger.Errorf("POD_STOP_FORCE_FAIL -- Error in force pod kill : %v", err)
 			return err
 		}
 	}
 
-	if network, ok := config.GetNetwork(); ok {
-		if network.PreExist {
-			return nil
+	// Executing PostKillTask plugin extensions in order
+	_, err = utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+		for _, ext := range plugins {
+			err = ext.PostKillTask(ComposeTaskInfo)
+			if err != nil {
+				logger.Errorf("Error executing PostKillTask of plugin : %v", err)
+			}
 		}
+		return "", nil
+	}))
+	if err != nil {
+		logger.Errorf("Error executing PostKillTask in plugins:%v", err)
 	}
 
-	// skip removing network if network mode is host
-	// RM_INFRA_CONTAINER is set as true if network mode is true during yml parsing
-	if config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
-		return nil
-	}
-
-	// Get infra container id
-	infraContainerId, err := GetContainerIdByService(ComposeFiles, types.INFRA_CONTAINER)
-	if err != nil {
-		log.Errorf("Error getting container id of service %s: %v", types.INFRA_CONTAINER, err)
-		return nil
-	}
-
-	networkName, err := GetContainerNetwork(infraContainerId)
-	if err != nil {
-		log.Errorf("Failed to clean up network :%v", err)
-	}
-	err = RemoveNetwork(networkName)
-	if err != nil {
-		log.Printf("POD_CLEAN_NETWORK_FAIL -- %v", err)
-	}
 	return nil
 }
 

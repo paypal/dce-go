@@ -242,50 +242,28 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *mesos.TaskID) {
 	log.Println("====================Mesos KillTask====================")
 
-	logkill := log.WithFields(log.Fields{
+	logKill := log.WithFields(log.Fields{
 		"taskId": taskId,
 	})
 
-	curntPodStatus := pod.GetPodStatus()
-	switch curntPodStatus {
+	status := pod.GetPodStatus()
+	switch status {
 	case types.POD_FAILED:
-		logkill.Printf("Mesos Kill Task : Current task status is %s , ignore killTask", curntPodStatus)
+		logKill.Printf("Mesos Kill Task : Current task status is %s , ignore killTask", status)
 
 	case types.POD_RUNNING:
-		logkill.Printf("Mesos Kill Task : Current task status is %s , continue killTask", curntPodStatus)
+		logKill.Printf("Mesos Kill Task : Current task status is %s , continue killTask", status)
 		pod.SetPodStatus(types.POD_KILLED)
-
-		// Execute prekilltask plugin extensions in order
-		utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
-			for _, ext := range extpoints {
-				err := ext.PreKillTask(pod.ComposeTaskInfo)
-				if err != nil {
-					logkill.Errorf("Error executing PreKillTask of plugin : %v", err)
-				}
-			}
-			return "", nil
-		}))
 
 		err := pod.StopPod(pod.ComposeFiles)
 		if err != nil {
-			logkill.Errorf("Error cleaning up pod : %v", err.Error())
+			logKill.Errorf("Error cleaning up pod : %v", err.Error())
 		}
 
 		err = pod.SendMesosStatus(driver, taskId, mesos.TaskState_TASK_KILLED.Enum())
 		if err != nil {
-			logkill.Errorf("Error during kill Task : %v", err.Error())
+			logKill.Errorf("Error during kill Task : %v", err.Error())
 		}
-
-		// Execute postkilltask plugin extensions in order
-		utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
-			for _, ext := range extpoints {
-				err = ext.PostKillTask(pod.ComposeTaskInfo)
-				if err != nil {
-					logkill.Errorf("Error executing PostKillTask of plugin : %v", err)
-				}
-			}
-			return "", nil
-		}))
 
 		log.Println("====================Stop ExecutorDriver====================")
 		time.Sleep(200 * time.Millisecond)
@@ -293,7 +271,7 @@ func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *
 
 	}
 
-	logkill.Println("====================Mesos KillTask Stopped====================")
+	logKill.Println("====================Mesos KillTask Stopped====================")
 }
 
 func (exec *dockerComposeExecutor) FrameworkMessage(driver exec.ExecutorDriver, msg string) {

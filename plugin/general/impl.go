@@ -154,35 +154,61 @@ func (gp *generalExt) PostLaunchTask(ctx *context.Context, files []string, taskI
 	return "", nil
 }
 
-func (gp *generalExt) PreStopPod() error {
-	logger.Println("PreStopPod Starting")
-	return nil
-}
-
 func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
 	logger.Println("PreKillTask begin")
 	return nil
 }
 
+// PostKillTask cleans up containers, volumes, images if task is killed by mesos
+// Failed tasks will be cleaned up based on config cleanpod.cleanvolumeandcontaineronmesoskill and cleanpod.cleanimageonmesoskill
+// Non pre-existing networks will always be removed
 func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
 	logger.Println("PostKillTask begin")
 	var err error
-
-	// clean pod volume and container if clean_container_volume_on_kill is true
-	cleanVolumeAndContainer := config.GetConfigSection(config.CLEANPOD)[config.CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL]
-	if cleanVolumeAndContainer == "true" {
-		err = pod.RemovePodVolume(pod.ComposeFiles)
-		if err != nil {
-			log.Errorf("Error cleaning volumes: %v", err)
+	if pod.GetPodStatus() != types.POD_FAILED || (pod.GetPodStatus() == types.POD_FAILED && config.GetConfig().GetBool(config.CLEAN_FAIL_TASK)) {
+		// clean pod volume and container if clean_container_volume_on_kill is true
+		cleanVolumeAndContainer := config.GetConfig().GetBool(config.CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL)
+		if cleanVolumeAndContainer{
+			err = pod.RemovePodVolume(pod.ComposeFiles)
+			if err != nil {
+				logger.Errorf("Error cleaning volumes: %v", err)
+			}
 		}
-	}
 
-	// clean pod images if clean_image_on_kill is true
-	cleanImage := config.GetConfigSection(config.CLEANPOD)[config.CLEAN_IMAGE_ON_MESOS_KILL]
-	if cleanImage == "true" {
-		err = pod.RemovePodImage(pod.ComposeFiles)
+		// clean pod images if clean_image_on_kill is true
+		cleanImage := config.GetConfig().GetBool(config.CLEAN_IMAGE_ON_MESOS_KILL)
+		if cleanImage {
+			err = pod.RemovePodImage(pod.ComposeFiles)
+			if err != nil {
+				logger.Errorf("Error cleaning images: %v", err)
+			}
+		}
+	} else {
+		if network, ok := config.GetNetwork(); ok {
+			if network.PreExist {
+				return nil
+			}
+		}
+		// skip removing network if network mode is host
+		// RM_INFRA_CONTAINER is set as true if network mode is true during yml parsing
+		if config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
+			return nil
+		}
+
+		// Get infra container id
+		infraContainerId, err := pod.GetContainerIdByService(pod.ComposeFiles, types.INFRA_CONTAINER)
 		if err != nil {
-			log.Errorf("Error cleaning images: %v", err)
+			logger.Errorf("Error getting container id of service %s: %v", types.INFRA_CONTAINER, err)
+			return nil
+		}
+
+		networkName, err := pod.GetContainerNetwork(infraContainerId)
+		if err != nil {
+			logger.Errorf("Failed to clean up network :%v", err)
+		}
+		err = pod.RemoveNetwork(networkName)
+		if err != nil {
+			logger.Errorf("POD_CLEAN_NETWORK_FAIL -- %v", err)
 		}
 	}
 	return err
