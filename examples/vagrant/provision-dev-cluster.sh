@@ -121,7 +121,7 @@ function build_docker_compose_executor {
   sudo ln -sf /vagrant $GOPATH/src/github.com/paypal/dce-go
   sudo chmod 777 $GOPATH/src/github.com/paypal/dce-go
   cd $GOPATH/src/github.com/paypal/dce-go
-  glide install
+  glide install --strip-vendor
   go build -o executor $GOPATH/src/github.com/paypal/dce-go/dce/main.go
   mv executor /home/vagrant
   sed -i.bkp '$a export GOROOT=/usr/local/go;export GOPATH=/home/vagrant/go;export PATH=$PATH:$GOPATH/bin:$GOROOT/bin' /home/vagrant/.bashrc
