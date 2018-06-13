@@ -21,6 +21,8 @@ import (
 	"strings"
 	"testing"
 
+	"reflect"
+
 	"github.com/mesos/mesos-go/examples/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
@@ -182,33 +184,34 @@ func TestAppendElement(t *testing.T) {
 }
 
 func TestSplitYAML(t *testing.T) {
-	expected_files := [6]string{"docker-compose-base.yml", "docker-compose-qa.yml", "docker-compose-production.yml", "docker-compose-sandbox.yml", "docker-compose-debug.yml", "docker-compose-healthcheck.yml"}
-	files, err := SplitYAML("testdata/yaml")
+	config.GetConfig().Set(types.NO_FOLDER, true)
+
+	expectedFile1 := []string{"docker-compose-base.yml", "docker-compose-qa.yml", "docker-compose-production.yml", "docker-compose-sandbox.yml", "docker-compose-debug.yml", "docker-compose-healthcheck.yml"}
+	files1, err := SplitYAML("testdata/yaml")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	var files_arr [6]string
-	copy(files_arr[:], files[0:6])
-	if files_arr != expected_files {
-		t.Fatalf("expected files to be %v, but got %v", expected_files, files)
+
+	if !reflect.DeepEqual(files1, expectedFile1) {
+		t.Errorf("expected files to be %v, but got %v", expectedFile1, files1)
 	}
 
-	files = FolderPath(files)
-	for _, file := range files {
+	for _, file := range files1 {
 		os.Remove(file)
 	}
 
-	files, err = SplitYAML("testdata/docker-adhoc.yml")
+	expectedFile2 := []string{"docker-adhoc.yml"}
+	files2, err := SplitYAML("testdata/docker-adhoc.yml")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("Error split file %s\n", err.Error())
 	}
-	if len(files) != 1 {
-		t.Errorf("expected length of file list is 1 , but got %v", len(files))
+	if files2[0] != expectedFile2[0] {
+		t.Errorf("expected files to be %s , but got %v", expectedFile2, files2)
 	}
-	if len(files) == 0 || files[0] != "testdata/docker-adhoc.yml" {
-		t.Errorf("expected file name is testdata/docker-adhoc.yml , but got %v", files[0])
+
+	for _, file := range files2 {
+		os.Remove(file)
 	}
-	os.Remove(types.DEFAULT_FOLDER)
 }
 
 func TestConvertArrayToMap(t *testing.T) {

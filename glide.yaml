@@ -15,3 +15,11 @@ import:
 - package: gopkg.in/yaml.v2
 - package: github.com/paypal/gorealis
   version: v1.1.0
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
+- package: github.com/davecgh/go-spew
+- package: git.apache.org/thrift.git
+  version: 0.10.0
+  subpackages:
+  - lib/go/thrift

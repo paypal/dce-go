@@ -33,8 +33,10 @@ import (
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/paypal/dce-go/config"
+	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
-	utils "github.com/paypal/dce-go/utils/wait"
+	"github.com/paypal/dce-go/utils"
+	waitUtil "github.com/paypal/dce-go/utils/wait"
 	"github.com/paypal/gorealis/gen-go/apache/aurora"
 )
 
@@ -51,6 +53,7 @@ var PodStatus = &types.PodStatus{
 }
 var ComposeFiles []string
 var ComposeTaskInfo *mesos.TaskInfo
+var PluginOrder []string
 
 var HealthCheckListId = make(map[string]bool)
 var PodContainers []string
@@ -129,7 +132,7 @@ func GetPodContainerIds(files []string) ([]string, error) {
 		return nil, err
 	}
 
-	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("docker-compose", parts...))
+	out, err := waitUtil.RetryCmd(config.GetMaxRetry(), exec.Command("docker-compose", parts...))
 	if err != nil {
 		log.Errorf("GetContainerIds : Error executing cmd docker-compose ps %#v", err)
 		return nil, err
@@ -183,7 +186,7 @@ func GetContainerIdByService(files []string, service string) (string, error) {
 	cmd := exec.Command("docker-compose", parts...)
 	logger.Printf("Command to get container id by service name: %s", cmd.Args)
 
-	out, err := utils.RetryCmd(config.GetMaxRetry(), cmd)
+	out, err := waitUtil.RetryCmd(config.GetMaxRetry(), cmd)
 	if err != nil {
 		logger.Errorf("Error getting container id by service: %v", err)
 		return "", err
@@ -212,7 +215,7 @@ func GetPodDetail(files []string, primaryContainerId string, healthcheck bool) {
 	}
 
 	//out, err := exec.Command("docker-compose", parts...).Output()
-	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("docker-compose", parts...))
+	out, err := waitUtil.RetryCmd(config.GetMaxRetry(), exec.Command("docker-compose", parts...))
 	if err != nil {
 		log.Errorf("GetPodDetail : Error executing cmd docker-compose ps %#v", err)
 	}
@@ -299,7 +302,7 @@ func dockerLogToStdout(files []string) {
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	_, err = utils.RetryCmdLogs(cmd)
+	_, err = waitUtil.RetryCmdLogs(cmd)
 	if err != nil {
 		log.Printf("POD_LAUNCH_LOG_FAIL -- Error running cmd %s\n", cmd.Args)
 	}
@@ -308,13 +311,35 @@ func dockerLogToStdout(files []string) {
 // Stop pod
 // docker-compose stop
 func StopPod(files []string) error {
-	log.Println("====================Stop Pod====================")
+	logger := log.WithFields(log.Fields{
+		"files": files,
+		"func":  "pod.StopPod",
+	})
+	logger.Println("====================Stop Pod====================")
+	GetPodDetail(files, "", false)
+
+	// Select plugin extension points from plugin pools
+	plugins := plugin.GetOrderedExtpoints(PluginOrder)
+	logger.Printf("Plugin order: %s", PluginOrder)
+
+	// Executing PreKillTask in order
+	_, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+		for i, ext := range plugins {
+			if err := ext.PreKillTask(ComposeTaskInfo); err != nil {
+				logger.Errorf("Error executing PreKillTask in %dth plugin: %v", i, err)
+			}
+		}
+		return "", nil
+	}))
+	if err != nil {
+		logger.Errorf("Error executing PreKillTask in plugins:%v", err)
+	}
 
 	//get stop timeout from config
 	timeout := config.GetStopTimeout()
-	parts, err := GenerateCmdParts(files, " stop -t "+timeout)
+	parts, err := GenerateCmdParts(files, " stop -t "+strconv.Itoa(timeout))
 	if err != nil {
-		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
+		logger.Errorf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
 		return err
 	}
 
@@ -322,45 +347,32 @@ func StopPod(files []string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	log.Printf("Stop Pod : Command to stop task : %s", cmd.Args)
+	logger.Printf("Stop Pod : Command to stop task : %s", cmd.Args)
 
 	err = cmd.Run()
 	if err != nil {
-		log.Printf("POD_STOP_FAIL --", err.Error())
+		logger.Errorf("POD_STOP_FAIL --", err.Error())
 		err = ForceKill(files)
 		if err != nil {
-			log.Printf("POD_STOP_FORCE_FAIL -- Error in force pod kill : %v", err)
+			logger.Errorf("POD_STOP_FORCE_FAIL -- Error in force pod kill : %v", err)
 			return err
 		}
 	}
 
-	if network, ok := config.GetNetwork(); ok {
-		if network.PreExist {
-			return nil
+	// Executing PostKillTask plugin extensions in order
+	_, err = utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+		for _, ext := range plugins {
+			err = ext.PostKillTask(ComposeTaskInfo)
+			if err != nil {
+				logger.Errorf("Error executing PostKillTask of plugin : %v", err)
+			}
 		}
+		return "", nil
+	}))
+	if err != nil {
+		logger.Errorf("Error executing PostKillTask in plugins:%v", err)
 	}
 
-	// skip removing network if network mode is host
-	// RM_INFRA_CONTAINER is set as true if network mode is true during yml parsing
-	if config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
-		return nil
-	}
-
-	// Get infra container id
-	infraContainerId, err := GetContainerIdByService(ComposeFiles, types.INFRA_CONTAINER)
-	if err != nil {
-		log.Errorf("Error getting container id of service %s: %v", types.INFRA_CONTAINER, err)
-		return nil
-	}
-
-	networkName, err := GetContainerNetwork(infraContainerId)
-	if err != nil {
-		log.Errorf("Failed to clean up network :%v", err)
-	}
-	err = RemoveNetwork(networkName)
-	if err != nil {
-		log.Printf("POD_CLEAN_NETWORK_FAIL -- %v", err)
-	}
 	return nil
 }
 
@@ -414,7 +426,7 @@ func RemovePodImage(files []string) error {
 
 func GetContainerNetwork(id string) (string, error) {
 	//cmd := exec.Command("docker", "inspect", "--format='{{.HostConfig.NetworkMode}}'", name)
-	//out, err := utils.RetryCmd(config.GetMaxRetry(), cmd)
+	//out, err := waitUtil.RetryCmd(config.GetMaxRetry(), cmd)
 
 	out, err := exec.Command("docker", "inspect", "--format='{{.HostConfig.NetworkMode}}'", id).Output()
 	if err != nil {
@@ -485,7 +497,7 @@ func PullImage(files []string) error {
 		return err
 	}
 
-	err = utils.WaitCmd(config.GetLaunchTimeout()*time.Millisecond, &types.CmdResult{
+	err = waitUtil.WaitCmd(config.GetLaunchTimeout()*time.Millisecond, &types.CmdResult{
 		Command: cmd,
 	})
 	if err != nil {
@@ -524,8 +536,33 @@ func CheckContainer(containerId string, healthCheck bool) (string, bool, int, er
 	return types.HEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
 }
 
+func KillContainer(sig string, containerId string) error {
+	logger := log.WithFields(log.Fields{
+		"containerId": containerId,
+		"signal":      sig,
+		"func":        "pod.KillContainer",
+	})
+
+	var err error
+	var cmd *exec.Cmd
+	if sig != "" {
+		cmd = exec.Command("docker", "kill", fmt.Sprintf("--signal=%s", sig), containerId)
+	} else {
+		cmd = exec.Command("docker", "kill", containerId)
+	}
+	logger.Printf("Command to kill container: %v", cmd.Args)
+
+	_, err = waitUtil.RetryCmd(config.GetMaxRetry(), cmd)
+	if err != nil {
+		log.Printf("Error kill container %s : %v", containerId, err)
+		return err
+	}
+
+	return nil
+}
+
 func GetDockerPorts(containerId string, privatePort string) (string, error) {
-	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "port", containerId, privatePort))
+	out, err := waitUtil.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "port", containerId, privatePort))
 	if err != nil {
 		log.Printf("Error inspecting container dynamic ports : %v", err)
 		return "", err
@@ -543,11 +580,11 @@ func InspectContainerDetails(containerId string, healthcheck bool) (types.Contai
 	var out []byte
 	var err error
 	if healthcheck {
-		out, err = utils.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "inspect",
+		out, err = waitUtil.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "inspect",
 			"--format='{{.State.Pid}},{{.State.Running}},{{.State.ExitCode}},{{.State.Health.Status}},{{.RestartCount}},{{.HostConfig.RestartPolicy.MaximumRetryCount}},{{.Name}}'",
 			containerId))
 	} else {
-		out, err = utils.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "inspect",
+		out, err = waitUtil.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "inspect",
 			"--format='{{.State.Pid}},{{.State.Running}},{{.State.ExitCode}},{{.RestartCount}},{{.HostConfig.RestartPolicy.MaximumRetryCount}},{{.Name}}'",
 			containerId))
 	}
@@ -582,7 +619,7 @@ func ParseToContainerDetail(output string, healthcheck bool) (types.ContainerSta
 	array := strings.Split(output, OUTPUT_DELIMITER)
 	if healthcheck {
 		if len(array) != PRIM_INSPECT_RESULT_LEN {
-			err := errors.New("Mismatch with expected inspect result")
+			err := errors.New("mismatch with expected inspect result")
 			return containerStatusDetails, err
 		}
 		pid, _ := strconv.Atoi(array[0])
@@ -678,7 +715,8 @@ func SendPodStatus(status string) {
 	case types.POD_RUNNING:
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_RUNNING.Enum())
 	case types.POD_FINISHED:
-		// Stop pod to kill system proxy container
+		// Stop pod after sending status to mesos
+		// To kill system proxy container
 		if len(PodContainers) > 0 {
 			logger.Printf("Stop containers still running in the pod: %v", PodContainers)
 			err := StopPod(ComposeFiles)
@@ -732,7 +770,7 @@ func WaitOnPod(ctx *context.Context) {
 			}
 			SendPodStatus(types.POD_FAILED)
 		} else if (*ctx).Err() == context.Canceled {
-			log.Println("Stop wait on pod, since pod is running/finished/failed")
+			log.Println("Stop waitUtil on pod, since pod is running/finished/failed")
 		}
 	}
 }
@@ -1005,7 +1043,7 @@ healthCheck:
 
 // check if primary container unable health check or not
 func isHealthCheckConfigured(containerId string) (bool, error) {
-	out, err := utils.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "inspect", "--format='{{if .State.Health }}{{.State.Health.Status}}{{ end }}'", containerId))
+	out, err := waitUtil.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "inspect", "--format='{{if .State.Health }}{{.State.Health.Status}}{{ end }}'", containerId))
 	if err != nil {
 		log.Errorf("Error executing cmd to check if healtcheck configured: %v", err)
 		return false, err

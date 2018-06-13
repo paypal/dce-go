@@ -1,0 +1,7 @@
+ services:
+    redis:
+       image: redis:latest
+       container_name: redis_20170310102123445
+       extra_hosts:
+          - "redisip:0.0.0.0"
+          - "redisip1:0.0.0.1"
