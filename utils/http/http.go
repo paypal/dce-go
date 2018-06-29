@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
+	"crypto/tls"
 )
 
 // generate body for http request
@@ -38,7 +39,10 @@ func GenBody(t interface{}) io.Reader {
 
 // http post
 func PostRequest(url string, body io.Reader) ([]byte, error) {
-	client := &http.Client{}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		log.Println("Error creating http request : ", err.Error())
