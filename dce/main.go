@@ -73,11 +73,13 @@ func (exec *dockerComposeExecutor) Disconnected(exec.ExecutorDriver) {
 func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
 	fmt.Println("====================Mesos LaunchTask====================")
 	pod.ComposeExcutorDriver = driver
-	log.Infof("Task DataByte: %v", taskInfo.Executor.Data)
-	log.Infof("Task DataByte2: %v", taskInfo.Data)
+
+	log.Infof("Task DataByte: %v", taskInfo.Data)
+	n := len(taskInfo.Data)
+	log.Infof("Task Data: %v",string(taskInfo.Data[:n]))
 	var taskData map[string]interface{}
-	if err := json.Unmarshal(taskInfo.Executor.Data,&taskData); err != nil{
-		log.Infof("Task Data: Can not read task data")
+	if err := json.Unmarshal(taskInfo.Data,&taskData); err != nil{
+		log.Infof("Task Data: Can not read task data %v",err)
 	}else{
 		log.Infof("Task Data: %v", taskData)
 	}
