@@ -74,6 +74,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	fmt.Println("====================Mesos LaunchTask====================")
 	pod.ComposeExcutorDriver = driver
 	log.Infof("Task DataByte: %v", taskInfo.Executor.Data)
+	log.Infof("Task DataByte2: %v", taskInfo.Data)
 	var taskData map[string]interface{}
 	if err := json.Unmarshal(taskInfo.Executor.Data,&taskData); err != nil{
 		log.Infof("Task Data: Can not read task data")
