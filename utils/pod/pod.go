@@ -683,6 +683,27 @@ func GetLabel(key string, taskInfo *mesos.TaskInfo) string {
 	return ""
 }
 
+// GetAndRemoveLabel will fetch the value for the key and removes it from the list
+func GetAndRemoveLabel(key string, taskInfo *mesos.TaskInfo) string {
+	var labelsList []*mesos.Label
+	taskLabels := taskInfo.GetLabels()
+	labelsList = taskLabels.GetLabels()
+	for i, label := range labelsList {
+		if label.GetKey() == key {
+			taskLabels.Labels = append(labelsList[:i], labelsList[i+1:]...)
+			return label.GetValue()
+		}
+		if strings.Contains(label.GetKey(), key) && strings.Contains(label.GetKey(), ".") {
+			arr := strings.Split(label.GetKey(), ".")
+			if arr[len(arr)-1] == key {
+				taskLabels.Labels = append(labelsList[:i], labelsList[i+1:]...)
+				return label.GetValue()
+			}
+		}
+	}
+	return ""
+}
+
 // Read pod status
 func GetPodStatus() string {
 	PodStatus.RLock()

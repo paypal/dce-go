@@ -17,13 +17,15 @@ package pod
 import (
 	"fmt"
 	"log"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/mesos/mesos-go/examples/Godeps/_workspace/src/github.com/stretchr/testify/assert"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/wait"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLaunchPod(t *testing.T) {
@@ -143,4 +145,69 @@ func TestKillContainer(t *testing.T) {
 
 	config.GetConfig().Set(types.RM_INFRA_CONTAINER, true)
 	StopPod(files)
+}
+
+func TestGetAndRemoveLabel(t *testing.T) {
+	key1 := "org.apache.aurora.metadata.nsvip"
+	value1 := "1.1.1.1"
+	key2 := "org.apache.aurora.metadata.com.paypal.apirouter.namespace"
+	value2 := "namespace"
+	var labels []*mesos.Label
+	labels = append(labels, &mesos.Label{
+		Key:   &key1,
+		Value: &value1,
+	})
+	labels = append(labels, &mesos.Label{
+		Key:   &key2,
+		Value: &value2,
+	})
+
+	taskInfo := &mesos.TaskInfo{
+		Labels: &mesos.Labels{
+			Labels: labels,
+		},
+	}
+	type args struct {
+		key      string
+		taskInfo *mesos.TaskInfo
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "testremovelabel",
+			args: args{
+				key:      key1,
+				taskInfo: taskInfo,
+			},
+			want: value1,
+		},
+		{
+			name: "testremovenonexistentlabel",
+			args: args{
+				key:      "invalidkey",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetAndRemoveLabel(tt.args.key, tt.args.taskInfo); got != tt.want {
+				t.Errorf("GetAndRemoveLabel() = %v, want %v", got, tt.want)
+
+				labelsList := taskInfo.GetLabels().GetLabels()
+				for _, label := range labelsList {
+					if label.GetKey() == tt.args.key {
+						t.Errorf("key %s not removed from tge taskInfo", tt.args.key)
+					}
+					if strings.Contains(label.GetKey(), tt.args.key) && strings.Contains(label.GetKey(), ".") {
+						t.Errorf("key %s not removed from tge taskInfo", tt.args.key)
+					}
+				}
+			}
+		})
+	}
 }

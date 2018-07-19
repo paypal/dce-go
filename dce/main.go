@@ -73,24 +73,24 @@ func (exec *dockerComposeExecutor) Disconnected(exec.ExecutorDriver) {
 func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
 	fmt.Println("====================Mesos LaunchTask====================")
 	pod.ComposeExcutorDriver = driver
-	task, err := json.Marshal(taskInfo)
-	if err != nil {
-		log.Println("Error marshalling taskInfo", err.Error())
-	}
-	buf := new(bytes.Buffer)
-	json.Indent(buf, task, "", " ")
-	fmt.Println("taskInfo : ", buf)
-
-	isService := pod.IsService(taskInfo)
-	fmt.Printf("task is service: %v\n", isService)
-	config.GetConfig().Set(types.IS_SERVICE, isService)
-
 	logger = log.WithFields(log.Fields{
 		"requuid":   pod.GetLabel("requuid", taskInfo),
 		"tenant":    pod.GetLabel("tenant", taskInfo),
 		"namespace": pod.GetLabel("namespace", taskInfo),
 		"pool":      pod.GetLabel("pool", taskInfo),
 	})
+
+	task, err := json.Marshal(taskInfo)
+	if err != nil {
+		log.Println("Error marshalling taskInfo", err.Error())
+	}
+	buf := new(bytes.Buffer)
+	json.Indent(buf, task, "", " ")
+	logger.Debugln("taskInfo : ", buf)
+
+	isService := pod.IsService(taskInfo)
+	fmt.Printf("task is service: %v\n", isService)
+	config.GetConfig().Set(types.IS_SERVICE, isService)
 
 	pod.ComposeTaskInfo = taskInfo
 	executorId := taskInfo.GetExecutor().GetExecutorId().GetValue()
