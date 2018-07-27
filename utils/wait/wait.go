@@ -181,20 +181,35 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 // Retry command forever
 func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 	var err error
-	var out []byte
 
 	retryInterval := config.GetRetryInterval()
 	for {
 		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
 		log.Printf("Run cmd %s", _cmd.Args)
 
-		if cmd.Stdout == nil {
+		if _cmd.Stdout == nil {
 			_cmd.Stderr = os.Stderr
-			out, err = _cmd.Output()
 		} else {
-			_cmd.Stdout = cmd.Stdout
-			_cmd.Stderr = cmd.Stderr
+			//Start vipra
+			folder := config.GetAppFolder()
+			filename := folder + "/pod.log"
+			file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				log.Fatal(err)
+			}
+			//defer to close when you're done with it.
+			defer file.Close()
+
+			log.SetOutput(file)			//do I need this?
+
+			_cmd.Stdout = file
+			_cmd.Stderr = file
+			//End
+
+			//_cmd.Stdout = cmd.Stdout
+			//_cmd.Stderr = cmd.Stderr
 			err = _cmd.Run()
+
 			if err != nil {
 				log.Printf("Error running cmd: %v", err)
 			}
@@ -203,5 +218,10 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 		log.Printf("cmd %s exits, retry...", _cmd.Args)
 		time.Sleep(retryInterval * time.Millisecond)
 	}
-	return out, err
+	return nil, err
 }
+
+/*
+1. have separate logs for pod and dce. For pod just make a file and put the logs there.
+2. for monitor- failed, finish --> call the logs func of pod.error
+ */

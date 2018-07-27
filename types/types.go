@@ -69,9 +69,15 @@ const (
 	INFRA_CONTAINER         = "networkproxy"
 	IS_SERVICE              = "isService"
 	FOREVER                 = 1<<63 - 1
+	LOGS_EMPTY				= "LOGS_EMPTY"
 )
 
 type PodStatus struct {
+	sync.RWMutex
+	Status string
+}
+
+type LogStatus struct {
 	sync.RWMutex
 	Status string
 }

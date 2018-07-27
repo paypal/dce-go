@@ -51,6 +51,11 @@ var ComposeExcutorDriver executor.ExecutorDriver
 var PodStatus = &types.PodStatus{
 	Status: types.POD_STAGING,
 }
+
+var LogStatus = &types.LogStatus{
+	Status: types.LOGS_EMPTY,
+}
+
 var ComposeFiles []string
 var ComposeTaskInfo *mesos.TaskInfo
 var PluginOrder []string
@@ -291,6 +296,7 @@ func LaunchPod(files []string) string {
 	return types.POD_STARTING
 }
 
+//vipra: these logs should be written in a file now, instead of stdout.
 func dockerLogToStdout(files []string) {
 	parts, err := GenerateCmdParts(files, " logs --follow --no-color")
 	if err != nil {
@@ -702,6 +708,21 @@ func GetAndRemoveLabel(key string, taskInfo *mesos.TaskInfo) string {
 		}
 	}
 	return ""
+}
+
+// Read log status
+func GetLogStatus() string {
+	LogStatus.RLock()
+	defer LogStatus.RUnlock()
+	return LogStatus.Status
+}
+
+// Set log status
+func SetLogStatus(status string) {
+	LogStatus.Lock()
+	LogStatus.Status = status
+	LogStatus.Unlock()
+	log.Printf("Update Log Status : Update LogStatus as %s", status)
 }
 
 // Read pod status

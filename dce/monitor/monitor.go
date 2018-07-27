@@ -28,7 +28,7 @@ import (
 )
 
 // Watching pod status and notifying executor if any container in the pod goes wrong
-
+//vipra: this is what tells the status of the pod. MAybe the right place.
 func podMonitor(systemProxyId string) string {
 	logger := log.WithFields(log.Fields{
 		"func": "monitor.podMonitor",
@@ -127,7 +127,13 @@ func MonitorPoller() {
 	}
 
 	res, err := wait.PollForever(time.Duration(config.GetPollInterval())*time.Millisecond, nil, wait.ConditionFunc(func() (string, error) {
-		return podMonitor(infraContainerId), nil
+		podStatus := podMonitor(infraContainerId)
+		if podStatus == types.POD_FAILED || podStatus == types.POD_FINISHED {
+			if pod.GetLogStatus() == types.LOGS_EMPTY {
+				// Call waitUtil.RetryCmdLogs(cmd)
+			}
+		}
+		return podStatus, nil
 	}))
 
 	logger.Printf("Pod Monitor Receiver : Received  message %s", res)
