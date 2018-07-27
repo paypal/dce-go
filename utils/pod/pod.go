@@ -53,7 +53,7 @@ var PodStatus = &types.PodStatus{
 }
 
 var LogStatus = &types.LogStatus{
-	Status: types.LOGS_EMPTY,
+	IsEmpty: true,
 }
 
 var ComposeFiles []string
@@ -285,7 +285,7 @@ func LaunchPod(files []string) string {
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", types.COMPOSE_HTTP_TIMEOUT, config.GetComposeHttpTimeout()))
 
-	go dockerLogToStdout(files)
+	go dockerLogToPodLogFile(files)
 
 	err = cmd.Run()
 	if err != nil {
@@ -297,7 +297,7 @@ func LaunchPod(files []string) string {
 }
 
 //vipra: these logs should be written in a file now, instead of stdout.
-func dockerLogToStdout(files []string) {
+func dockerLogToPodLogFile(files []string) {
 	parts, err := GenerateCmdParts(files, " logs --follow --no-color")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
@@ -711,18 +711,20 @@ func GetAndRemoveLabel(key string, taskInfo *mesos.TaskInfo) string {
 }
 
 // Read log status
-func GetLogStatus() string {
+func GetLogStatus() bool {
 	LogStatus.RLock()
 	defer LogStatus.RUnlock()
-	return LogStatus.Status
+	log.Printf("Returning log status : %v", LogStatus.IsEmpty)
+	return LogStatus.IsEmpty
 }
 
 // Set log status
-func SetLogStatus(status string) {
+func SetLogStatus(isEmpty bool) {
 	LogStatus.Lock()
-	LogStatus.Status = status
+	LogStatus.IsEmpty = isEmpty
 	LogStatus.Unlock()
-	log.Printf("Update Log Status : Update LogStatus as %s", status)
+	log.Printf("Set log status to : %v", isEmpty)
+	log.Printf("Update Log Status : Is LogStatus Empty: %s", isEmpty)
 }
 
 // Read pod status
@@ -784,6 +786,19 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 		TaskId: taskId,
 		State:  state,
 	}
+	//Start Vipra
+	logStatus := GetLogStatus()
+	log.Printf("Log status is : %v", logStatus)
+
+	if logStatus == true {
+		log.Printf("calling dockerLogToPodLogFile func on ComposeFiles: ")
+		for _, file := range ComposeFiles {
+			log.Printf(file)
+		}
+		log.Printf("calling log function again.")
+		dockerLogToPodLogFile(ComposeFiles)
+	}
+	//End
 	_, err := driver.SendStatusUpdate(runStatus)
 	if err != nil {
 		log.Errorf("Error updating mesos task status : %v", err.Error())

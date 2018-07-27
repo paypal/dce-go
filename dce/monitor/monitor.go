@@ -127,13 +127,7 @@ func MonitorPoller() {
 	}
 
 	res, err := wait.PollForever(time.Duration(config.GetPollInterval())*time.Millisecond, nil, wait.ConditionFunc(func() (string, error) {
-		podStatus := podMonitor(infraContainerId)
-		if podStatus == types.POD_FAILED || podStatus == types.POD_FINISHED {
-			if pod.GetLogStatus() == types.LOGS_EMPTY {
-				// Call waitUtil.RetryCmdLogs(cmd)
-			}
-		}
-		return podStatus, nil
+		return podMonitor(infraContainerId), nil
 	}))
 
 	logger.Printf("Pod Monitor Receiver : Received  message %s", res)

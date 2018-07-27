@@ -25,6 +25,7 @@ import (
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
+	"github.com/paypal/dce-go/utils/pod"
 )
 
 type ConditionCHFunc func(done chan string)
@@ -206,10 +207,8 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 			_cmd.Stderr = file
 			//End
 
-			//_cmd.Stdout = cmd.Stdout
-			//_cmd.Stderr = cmd.Stderr
 			err = _cmd.Run()
-
+			pod.SetLogStatus(false)
 			if err != nil {
 				log.Printf("Error running cmd: %v", err)
 			}
