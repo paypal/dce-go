@@ -25,11 +25,14 @@ import (
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
-	"github.com/paypal/dce-go/utils/pod"
 )
 
 type ConditionCHFunc func(done chan string)
 type ConditionFunc func() (string, error)
+
+var LogStatus = &types.LogStatus{
+	IsEmpty: true,
+}
 
 var ErrTimeOut = errors.New("timed out waiting for the condition")
 
@@ -208,7 +211,7 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 			//End
 
 			err = _cmd.Run()
-			pod.SetLogStatus(false)
+			SetLogStatus(false)
 			if err != nil {
 				log.Printf("Error running cmd: %v", err)
 			}
@@ -220,7 +223,19 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 	return nil, err
 }
 
-/*
-1. have separate logs for pod and dce. For pod just make a file and put the logs there.
-2. for monitor- failed, finish --> call the logs func of pod.error
- */
+// Read log status
+func GetLogStatus() bool {
+	LogStatus.RLock()
+	defer LogStatus.RUnlock()
+	log.Printf("Returning log status : %v", LogStatus.IsEmpty)
+	return LogStatus.IsEmpty
+}
+
+// Set log status
+func SetLogStatus(isEmpty bool) {
+	LogStatus.Lock()
+	LogStatus.IsEmpty = isEmpty
+	LogStatus.Unlock()
+	log.Printf("Set log status to : %v", isEmpty)
+	log.Printf("Update Log Status : Is LogStatus Empty: %s", isEmpty)
+}

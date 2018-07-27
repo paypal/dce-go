@@ -52,10 +52,6 @@ var PodStatus = &types.PodStatus{
 	Status: types.POD_STAGING,
 }
 
-var LogStatus = &types.LogStatus{
-	IsEmpty: true,
-}
-
 var ComposeFiles []string
 var ComposeTaskInfo *mesos.TaskInfo
 var PluginOrder []string
@@ -710,23 +706,6 @@ func GetAndRemoveLabel(key string, taskInfo *mesos.TaskInfo) string {
 	return ""
 }
 
-// Read log status
-func GetLogStatus() bool {
-	LogStatus.RLock()
-	defer LogStatus.RUnlock()
-	log.Printf("Returning log status : %v", LogStatus.IsEmpty)
-	return LogStatus.IsEmpty
-}
-
-// Set log status
-func SetLogStatus(isEmpty bool) {
-	LogStatus.Lock()
-	LogStatus.IsEmpty = isEmpty
-	LogStatus.Unlock()
-	log.Printf("Set log status to : %v", isEmpty)
-	log.Printf("Update Log Status : Is LogStatus Empty: %s", isEmpty)
-}
-
 // Read pod status
 func GetPodStatus() string {
 	PodStatus.RLock()
@@ -787,7 +766,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 		State:  state,
 	}
 	//Start Vipra
-	logStatus := GetLogStatus()
+	logStatus := waitUtil.GetLogStatus()
 	log.Printf("Log status is : %v", logStatus)
 
 	if logStatus == true {
