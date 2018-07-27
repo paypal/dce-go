@@ -770,12 +770,17 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 	log.Printf("Log status is : %v", logStatus)
 
 	if logStatus == true {
-		log.Printf("calling dockerLogToPodLogFile func on ComposeFiles: ")
-		for _, file := range ComposeFiles {
-			log.Printf(file)
-		}
-		log.Printf("calling log function again.")
-		dockerLogToPodLogFile(ComposeFiles)
+		if state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() ||
+			state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
+			 state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() {
+
+			 	log.Printf("calling dockerLogToPodLogFile func on ComposeFiles: ")
+				for _, file := range ComposeFiles {
+					log.Printf(file)
+				}
+				log.Printf("calling log function again.")
+				dockerLogToPodLogFile(ComposeFiles)
+			}
 	}
 	//End
 	_, err := driver.SendStatusUpdate(runStatus)
