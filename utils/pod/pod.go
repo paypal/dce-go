@@ -768,6 +768,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 	//Start Vipra
 	logStatus := waitUtil.GetLogStatus()
 	log.Printf("Log status is : %v", logStatus)
+	log.Printf("Task status is : %v", state.Enum().String())
 
 	if logStatus == true {
 		if state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() ||
@@ -778,7 +779,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 				for _, file := range ComposeFiles {
 					log.Printf(file)
 				}
-				log.Printf("calling log function again.")
+				log.Printf("calling log write function again.")
 				dockerLogToPodLogFile(ComposeFiles)
 			}
 	}
