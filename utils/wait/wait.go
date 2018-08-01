@@ -25,6 +25,7 @@ import (
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
+	"path/filepath"
 )
 
 type ConditionCHFunc func(done chan string)
@@ -196,18 +197,15 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 		} else {
 			//Start vipra
 			folder := config.GetAppFolder()
-			filename := folder + "/pod.log"
-			file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				log.Fatal(err)
-			}
-			//defer to close when you're done with it.
-			defer file.Close()
+			filename := filepath.Join(folder, "/container.log")
+			target := filepath.Join(folder, "/stdout")
+			log.Println("Creating symlink for path: ", filename)
 
-			log.SetOutput(file)			//do I need this?
+			os.Symlink(target, filename)
 
-			_cmd.Stdout = file
-			_cmd.Stderr = file
+			log.Println("Symlink Created.")
+			_cmd.Stdout = os.Stdout
+			_cmd.Stderr = os.Stderr
 			//End
 
 			err = _cmd.Run()
