@@ -197,6 +197,7 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 		} else {
 			//Start vipra
 			folder := config.GetAppFolder()
+
 			filename := filepath.Join(folder, "/container.log")
 			target := filepath.Join(folder, "/stdout")
 			log.Println("Creating symlink for path: ", filename)
@@ -204,6 +205,7 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 			os.Symlink(target, filename)
 
 			log.Println("Symlink Created.")
+
 			_cmd.Stdout = os.Stdout
 			_cmd.Stderr = os.Stderr
 			//End
