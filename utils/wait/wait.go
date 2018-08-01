@@ -25,6 +25,8 @@ import (
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
+	"github.com/paypal/dce-go/utils"
+	"path/filepath"
 )
 
 type ConditionCHFunc func(done chan string)
@@ -196,18 +198,25 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 		} else {
 			//Start vipra
 			folder := config.GetAppFolder()
-			filename := folder + "/pod.log"
-			file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			filename := folder + "/container.log"
+			target := filepath.Join(folder, "/stdout")
+			log.Println("Creating file with path and name: ", filename)
+			file, err := utils.GetFileDescriptorAppendMode(filename)
+
 			if err != nil {
-				log.Fatal(err)
+				log.Println("Error occurred while creating container.log file: ", err)
 			}
+
 			//defer to close when you're done with it.
 			defer file.Close()
 
-			log.SetOutput(file)			//do I need this?
+			log.SetOutput(file)
+			log.Println("container log file created")
 
-			_cmd.Stdout = file
-			_cmd.Stderr = file
+			os.Symlink(filename, target)
+
+			_cmd.Stdout = os.Stdout
+			_cmd.Stderr = os.Stderr
 			//End
 
 			err = _cmd.Run()
