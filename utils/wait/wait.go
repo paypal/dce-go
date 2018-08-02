@@ -209,6 +209,7 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 
 		if cmd.Stdout == nil {
 			log.Println("RetryCmdLogs: _cmd.Stdout is nil")
+			_cmd.Stdout = os.Stdout
 			_cmd.Stderr = os.Stderr
 			out, err = _cmd.Output()
 		} else {
