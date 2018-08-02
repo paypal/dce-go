@@ -193,6 +193,8 @@ func createSymlink(oldPath string, newPath string) {
 // Retry command forever
 func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 	var err error
+	var out []byte
+
 	retryInterval := config.GetRetryInterval()
 	log.Println("Hello from Vipra, retryInterval: ", retryInterval)
 
@@ -205,13 +207,14 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
 		log.Printf("RetryCmdLogs: Run cmd is: %s", _cmd.Args)
 
-		if _cmd.Stdout == nil {
+		if cmd.Stdout == nil {
 			log.Println("RetryCmdLogs: _cmd.Stdout is nil")
 			_cmd.Stderr = os.Stderr
+			out, err = _cmd.Output()
 		} else {
 
-			_cmd.Stdout = os.Stdout
-			_cmd.Stderr = os.Stderr
+			_cmd.Stdout = cmd.Stdout
+			_cmd.Stderr = cmd.Stderr
 
 			err = _cmd.Run()
 			SetLogStatus(false)
@@ -222,7 +225,7 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 		log.Printf("RetryCmdLogs: cmd %s exits, retry...", _cmd.Args)
 		time.Sleep(retryInterval * time.Millisecond)
 	}
-	return nil, err
+	return out, err
 }
 
 // Read log status
