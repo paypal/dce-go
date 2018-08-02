@@ -205,13 +205,14 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
 		log.Printf("RetryCmdLogs: Run cmd is: %s", _cmd.Args)
 
-		if _cmd.Stdout == nil {
+		if cmd.Stdout == nil {
 			log.Println("RetryCmdLogs: _cmd.Stdout is nil")
+			_cmd.Stdout = os.Stdout
 			_cmd.Stderr = os.Stderr
 		} else {
 
-			_cmd.Stdout = os.Stdout
-			_cmd.Stderr = os.Stderr
+			_cmd.Stdout = cmd.Stdout
+			_cmd.Stderr = cmd.Stderr
 
 			err = _cmd.Run()
 			SetLogStatus(false)
