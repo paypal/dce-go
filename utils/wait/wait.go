@@ -184,7 +184,11 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 
 func createSymlink(oldPath string, newPath string) {
 	log.Printf("Creating symlink for path %v to path %v ", newPath, oldPath)
-	os.Symlink(oldPath, newPath)
+	err := os.Symlink(oldPath, newPath)
+
+	if err != nil {
+		log.Println("Error in creating symlink: ", err)
+	}
 	log.Println("Symlink Created.")
 }
 
