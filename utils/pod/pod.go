@@ -294,7 +294,7 @@ func LaunchPod(files []string) string {
 
 //vipra: these logs should be written in a file now, instead of stdout.
 func dockerLogToPodLogFile(files []string) {
-	parts, err := GenerateCmdParts(files, " logs --follow --no-color")
+	parts, err := GenerateCmdParts(files, " logs --follow --no-color --tail=all")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
 	}

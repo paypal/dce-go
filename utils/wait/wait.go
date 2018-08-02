@@ -153,7 +153,7 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	var err error
 	var out []byte
 	log.Println("Hello from RetryCmd")
-	log.Debugf("Run cmd: %s\n", cmd.Args)
+	log.Debugf("RetryCmd: Run cmd: %s\n", cmd.Args)
 
 	retryInterval := config.GetRetryInterval()
 	factor := 1
@@ -161,6 +161,7 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
 
 		if cmd.Stdout == nil {
+			log.Println("RetryCmd: _cmd.Stdout is nil")
 			_cmd.Stderr = os.Stderr
 			out, err = _cmd.Output()
 		} else {
@@ -170,7 +171,7 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 		}
 
 		if err != nil {
-			log.Warnf("Error to exec cmd %v with count %d : %v, retry after %v Millisecond", _cmd.Args, i, err, retryInterval)
+			log.Warnf("RetryCmd: Error to exec cmd %v with count %d : %v, retry after %v Millisecond", _cmd.Args, i, err, retryInterval)
 			if strings.Contains(err.Error(), "already started") {
 				return out, nil
 			}
@@ -193,7 +194,7 @@ func createSymlink(oldPath string, newPath string) {
 func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 	var err error
 	retryInterval := config.GetRetryInterval()
-	log.Println("Hello from RetryCmdLogs, retryInterval: ", retryInterval)
+	log.Println("Hello from Vipra, retryInterval: ", retryInterval)
 
 	folder := config.GetAppFolder()
 	filename := filepath.Join(folder, "/container.log")
@@ -202,10 +203,10 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 
 	for {
 		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
-		log.Printf("Run cmd is: %s", _cmd.Args)
+		log.Printf("RetryCmdLogs: Run cmd is: %s", _cmd.Args)
 
 		if _cmd.Stdout == nil {
-			log.Println("_cmd.Stdout is nil")
+			log.Println("RetryCmdLogs: _cmd.Stdout is nil")
 			_cmd.Stderr = os.Stderr
 		} else {
 
@@ -215,10 +216,10 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 			err = _cmd.Run()
 			SetLogStatus(false)
 			if err != nil {
-				log.Printf("Error while running cmd: %v", err)
+				log.Printf("RetryCmdLogs: Error while running cmd: %v", err)
 			}
 		}
-		log.Printf("cmd %s exits, retry...", _cmd.Args)
+		log.Printf("RetryCmdLogs: cmd %s exits, retry...", _cmd.Args)
 		time.Sleep(retryInterval * time.Millisecond)
 	}
 	return nil, err
