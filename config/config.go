@@ -137,6 +137,7 @@ func GetAppFolder() string {
 	if folder == "" {
 		return types.DEFAULT_FOLDER
 	}
+	log.Println("getAppFolder: ", folder)
 	return folder
 }
 

@@ -197,6 +197,7 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 	log.Println("Hello from Vipra, retryInterval: ", retryInterval)
 
 	folder := config.GetAppFolder()
+	log.Println("RetryCmdLogs folder path: ", folder)
 	filename := filepath.Join(folder, "/container.log")
 	target := filepath.Join(folder, "/stdout")
 	createSymlink (target, filename)
