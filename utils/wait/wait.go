@@ -193,9 +193,10 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 		log.Printf("Run cmd %s", _cmd.Args)
 
 		if _cmd.Stdout == nil {
+			log.Println("_cmd.Stdout is nil")
 			_cmd.Stderr = os.Stderr
 		} else {
-			//Start vipra
+
 			folder := config.GetAppFolder()
 
 			filename := filepath.Join(folder, "/container.log")
@@ -208,12 +209,11 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 
 			_cmd.Stdout = os.Stdout
 			_cmd.Stderr = os.Stderr
-			//End
 
 			err = _cmd.Run()
 			SetLogStatus(false)
 			if err != nil {
-				log.Printf("Error running cmd: %v", err)
+				log.Printf("Error while running cmd: %v", err)
 			}
 		}
 
@@ -236,6 +236,5 @@ func SetLogStatus(isEmpty bool) {
 	LogStatus.Lock()
 	LogStatus.IsEmpty = isEmpty
 	LogStatus.Unlock()
-	log.Printf("Set log status to : %v", isEmpty)
 	log.Printf("Update Log Status : Is LogStatus Empty: %s", isEmpty)
 }

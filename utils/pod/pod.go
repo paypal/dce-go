@@ -765,7 +765,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 		TaskId: taskId,
 		State:  state,
 	}
-	//Start Vipra
+
 	logStatus := waitUtil.GetLogStatus()
 	log.Printf("Log status is : %v", logStatus)
 	log.Printf("Task status is : %v", state.Enum().String())
@@ -783,7 +783,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 				dockerLogToPodLogFile(ComposeFiles)
 			}
 	}
-	//End
+
 	_, err := driver.SendStatusUpdate(runStatus)
 	if err != nil {
 		log.Errorf("Error updating mesos task status : %v", err.Error())
