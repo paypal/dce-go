@@ -152,7 +152,7 @@ func WaitCmd(timeout time.Duration, cmd_result *types.CmdResult) error {
 func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	var err error
 	var out []byte
-
+	log.Println("Hello from RetryCmd")
 	log.Debugf("Run cmd: %s\n", cmd.Args)
 
 	retryInterval := config.GetRetryInterval()
@@ -183,29 +183,31 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	return nil, err
 }
 
+func createSymlink(oldPath string, newPath string) {
+	log.Printf("Creating symlink for path %v to path %v ", newPath, oldPath)
+	os.Symlink(oldPath, newPath)
+	log.Println("Symlink Created.")
+}
+
 // Retry command forever
 func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 	var err error
-
 	retryInterval := config.GetRetryInterval()
+	log.Println("Hello from RetryCmdLogs, retryInterval: ", retryInterval)
+
+	folder := config.GetAppFolder()
+	filename := filepath.Join(folder, "/container.log")
+	target := filepath.Join(folder, "/stdout")
+	createSymlink (target, filename)
+
 	for {
 		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
-		log.Printf("Run cmd %s", _cmd.Args)
+		log.Printf("Run cmd is: %s", _cmd.Args)
 
 		if _cmd.Stdout == nil {
 			log.Println("_cmd.Stdout is nil")
 			_cmd.Stderr = os.Stderr
 		} else {
-
-			folder := config.GetAppFolder()
-
-			filename := filepath.Join(folder, "/container.log")
-			target := filepath.Join(folder, "/stdout")
-			log.Println("Creating symlink for path: ", filename)
-
-			os.Symlink(target, filename)
-
-			log.Println("Symlink Created.")
 
 			_cmd.Stdout = os.Stdout
 			_cmd.Stderr = os.Stderr
@@ -216,7 +218,6 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 				log.Printf("Error while running cmd: %v", err)
 			}
 		}
-
 		log.Printf("cmd %s exits, retry...", _cmd.Args)
 		time.Sleep(retryInterval * time.Millisecond)
 	}

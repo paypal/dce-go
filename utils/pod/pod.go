@@ -304,10 +304,12 @@ func dockerLogToPodLogFile(files []string) {
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	log.Println("Calling RetryCmdLogs func")
 	_, err = waitUtil.RetryCmdLogs(cmd)
 	if err != nil {
 		log.Printf("POD_LAUNCH_LOG_FAIL -- Error running cmd %s\n", cmd.Args)
 	}
+	log.Println("dockerLogToPodLogFile complete.")
 }
 
 // Stop pod
@@ -771,8 +773,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 	log.Printf("Task status is : %v", state.Enum().String())
 
 	if logStatus == true {
-		if state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() ||
-			state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
+		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
 			 state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() {
 
 			 	log.Printf("calling dockerLogToPodLogFile func on ComposeFiles: ")
