@@ -25,7 +25,6 @@ import (
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
-	"path/filepath"
 )
 
 type ConditionCHFunc func(done chan string)
@@ -182,26 +181,6 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	return nil, err
 }
 
-func createSymlink(cmd *exec.Cmd) {
-	folder := config.GetAppFolder()
-
-	log.Println("RetryCmdLogs folder path: ", folder)
-	filename := filepath.Join(folder, "/log/container.log")
-	path, err := os.Getwd()
-	target := filepath.Join(path, "/stdout")
-	log.Println("Current path is: ", path)
-
-	log.Printf("Creating symlink for path %v to path %v", filename, target)
-	err = os.Symlink(target, filename)
-
-	if err != nil {
-		log.Println("Error in creating symlink: ", err)
-	}
-
-	os.Chmod(filename, 0777)
-	log.Println("Symlink Created.")
-}
-
 // Retry command forever
 func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 	var err error
@@ -223,10 +202,11 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 			_cmd.Stderr = cmd.Stderr
 
 			err = _cmd.Run()
-			createSymlink(cmd)
-			SetLogStatus(false)
+
 			if err != nil {
 				log.Printf("Error while running cmd: %v", err)
+			} else {
+				SetLogStatus(false)
 			}
 		}
 		log.Printf("cmd %s exits, retry...", _cmd.Args)

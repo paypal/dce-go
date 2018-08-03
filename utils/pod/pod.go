@@ -38,6 +38,7 @@ import (
 	"github.com/paypal/dce-go/utils"
 	waitUtil "github.com/paypal/dce-go/utils/wait"
 	"github.com/paypal/gorealis/gen-go/apache/aurora"
+	"path/filepath"
 )
 
 const (
@@ -261,6 +262,26 @@ func GetPorts(taskInfo *mesos.TaskInfo) *list.Element {
 	return ports.Front()
 }
 
+func createSymlink() {
+	folder := config.GetAppFolder()
+
+	log.Println("RetryCmdLogs folder path: ", folder)
+	filename := filepath.Join(folder, "/log/container.log")
+	path, err := os.Getwd()
+	target := filepath.Join(path, "/stdout")
+	log.Println("Current path is: ", path)
+
+	log.Printf("Creating symlink for path %v to path %v", filename, target)
+	err = os.Symlink(target, filename)
+
+	if err != nil {
+		log.Println("Error in creating symlink: ", err)
+	}
+
+	os.Chmod(filename, 0777)
+	log.Println("Symlink Created.")
+}
+
 // Launch pod
 // docker-compose up
 func LaunchPod(files []string) string {
@@ -281,6 +302,7 @@ func LaunchPod(files []string) string {
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", types.COMPOSE_HTTP_TIMEOUT, config.GetComposeHttpTimeout()))
 
+	createSymlink()
 	go dockerLogToPodLogFile(files)
 
 	err = cmd.Run()
@@ -292,9 +314,9 @@ func LaunchPod(files []string) string {
 	return types.POD_STARTING
 }
 
-//vipra: these logs should be written in a file now, instead of stdout.
+//these logs should be written in a file also along with stdout.
 func dockerLogToPodLogFile(files []string) {
-	parts, err := GenerateCmdParts(files, " logs --follow --no-color --tail=all")
+	parts, err := GenerateCmdParts(files, " logs --follow --no-color")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
 	}
@@ -768,12 +790,12 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 		State:  state,
 	}
 
-	count := 0
+	retryCount := 0
 	logStatus := waitUtil.GetLogStatus()
 	log.Printf("Log status is : %v", logStatus)
 	log.Printf("Task status is : %v", state.Enum().String())
 
-	if count < 3 && logStatus == true {
+	if retryCount < 3 && logStatus == true {
 		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
 			 state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
 			state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() {
@@ -782,9 +804,9 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 				for _, file := range ComposeFiles {
 					log.Printf(file)
 				}
-				log.Printf("calling log write function again, count:", count)
+				log.Printf("calling log write function again, count:", retryCount)
 				dockerLogToPodLogFile(ComposeFiles)
-				count++
+				retryCount++
 			}
 	}
 
