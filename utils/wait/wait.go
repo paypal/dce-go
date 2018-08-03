@@ -207,7 +207,7 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 				log.Printf("Error while running cmd: %v", err)
 			} else {
 				log.Printf("command returned: %v \n setting the log status", _cmd.Args)
-				SetLogStatus(false)
+				SetLogStatus(true)
 			}
 		}
 		log.Printf("cmd %s exits, retry...", _cmd.Args)
