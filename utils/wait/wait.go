@@ -206,6 +206,7 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 			if err != nil {
 				log.Printf("Error while running cmd: %v", err)
 			} else {
+				log.Printf("command returned: %v \n setting the log status", _cmd.Args)
 				SetLogStatus(false)
 			}
 		}
@@ -219,7 +220,7 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 func GetLogStatus() bool {
 	LogStatus.RLock()
 	defer LogStatus.RUnlock()
-	log.Printf("Returning log status : %v", LogStatus.IsEmpty)
+	log.Printf("Returning log status, container log file is empty : %v", LogStatus.IsEmpty)
 	return LogStatus.IsEmpty
 }
 
@@ -228,5 +229,5 @@ func SetLogStatus(isEmpty bool) {
 	LogStatus.Lock()
 	LogStatus.IsEmpty = isEmpty
 	LogStatus.Unlock()
-	log.Printf("Update Log Status : Is LogStatus Empty: %v", isEmpty)
+	log.Printf("Updated Log Status, now container log file is empty : %v", isEmpty)
 }
