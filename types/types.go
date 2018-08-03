@@ -79,7 +79,7 @@ type PodStatus struct {
 
 type LogStatus struct {
 	sync.RWMutex
-	logCommandSuccess bool
+	LogCommandSuccess bool
 }
 
 type ServiceDetail map[interface{}](map[interface{}]interface{})

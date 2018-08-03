@@ -31,7 +31,7 @@ type ConditionCHFunc func(done chan string)
 type ConditionFunc func() (string, error)
 
 var LogStatus = &types.LogStatus{
-	logCommandSuccess: false,
+	LogCommandSuccess: false,
 }
 
 var ErrTimeOut = errors.New("timed out waiting for the condition")
@@ -224,14 +224,14 @@ func RetryCmdLogs(cmd *exec.Cmd, retry bool) ([]byte, error) {
 func GetLogStatus() bool {
 	LogStatus.RLock()
 	defer LogStatus.RUnlock()
-	log.Printf("Returning log status, container log file is empty : %v", LogStatus.logCommandSuccess)
-	return LogStatus.logCommandSuccess
+	log.Printf("Returning log status, container log file is empty : %v", LogStatus.LogCommandSuccess)
+	return LogStatus.LogCommandSuccess
 }
 
 // Set log status
 func SetLogStatus(logCommandRunSuccess bool) {
 	LogStatus.Lock()
-	LogStatus.logCommandSuccess = logCommandRunSuccess
+	LogStatus.LogCommandSuccess = logCommandRunSuccess
 	LogStatus.Unlock()
-	log.Printf("Updated Log Status, now container log file is empty : %v", isEmpty)
+	log.Printf("Updated Log Status, now container log file is empty : %v", logCommandRunSuccess)
 }
