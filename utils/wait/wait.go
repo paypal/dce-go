@@ -182,9 +182,14 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	return nil, err
 }
 
-func createSymlink(oldPath string, newPath string) {
-	log.Printf("Creating symlink for path %v to path %v ", newPath, oldPath)
-	err := os.Symlink(oldPath, newPath)
+func createSymlink(cmd *exec.Cmd) {
+	folder := config.GetAppFolder()
+	log.Println("RetryCmdLogs folder path: ", folder)
+	filename := filepath.Join(folder, "/log/container.log")
+	target := "stdout"
+
+	log.Printf("Creating symlink for path %v to path %v ", filename, target)
+	err := os.Symlink(target, filename)
 
 	if err != nil {
 		log.Println("Error in creating symlink: ", err)
@@ -198,20 +203,12 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 	var out []byte
 
 	retryInterval := config.GetRetryInterval()
-	log.Println("Hello from Vipra, retryInterval: ", retryInterval)
-
-	folder := config.GetAppFolder()
-	log.Println("RetryCmdLogs folder path: ", folder)
-	filename := filepath.Join(folder, "/container.log")
-	target := filepath.Join(folder, "/stdout")
-	createSymlink (target, filename)
 
 	for {
 		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
-		log.Printf("RetryCmdLogs: Run cmd is: %s", _cmd.Args)
+		log.Printf("Run cmd is: %s", _cmd.Args)
 
 		if cmd.Stdout == nil {
-			log.Println("RetryCmdLogs: _cmd.Stdout is nil")
 			_cmd.Stdout = os.Stdout
 			_cmd.Stderr = os.Stderr
 			out, err = _cmd.Output()
@@ -221,12 +218,13 @@ func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
 			_cmd.Stderr = cmd.Stderr
 
 			err = _cmd.Run()
+			createSymlink(cmd)
 			SetLogStatus(false)
 			if err != nil {
-				log.Printf("RetryCmdLogs: Error while running cmd: %v", err)
+				log.Printf("Error while running cmd: %v", err)
 			}
 		}
-		log.Printf("RetryCmdLogs: cmd %s exits, retry...", _cmd.Args)
+		log.Printf("cmd %s exits, retry...", _cmd.Args)
 		time.Sleep(retryInterval * time.Millisecond)
 	}
 	return out, err
@@ -245,5 +243,5 @@ func SetLogStatus(isEmpty bool) {
 	LogStatus.Lock()
 	LogStatus.IsEmpty = isEmpty
 	LogStatus.Unlock()
-	log.Printf("Update Log Status : Is LogStatus Empty: %s", isEmpty)
+	log.Printf("Update Log Status : Is LogStatus Empty: %v", isEmpty)
 }
