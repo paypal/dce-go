@@ -184,12 +184,15 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 
 func createSymlink(cmd *exec.Cmd) {
 	folder := config.GetAppFolder()
+
 	log.Println("RetryCmdLogs folder path: ", folder)
 	filename := filepath.Join(folder, "/log/container.log")
-	target := "../stdout"
+	path, err := os.Getwd()
+	target := filepath.Join(path, "/stdout")
+	log.Println("Current path is: ", path)
 
 	log.Printf("Creating symlink for path %v to path %v", filename, target)
-	err := os.Symlink(target, filename)
+	err = os.Symlink(target, filename)
 
 	if err != nil {
 		log.Println("Error in creating symlink: ", err)
