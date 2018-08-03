@@ -303,7 +303,7 @@ func LaunchPod(files []string) string {
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", types.COMPOSE_HTTP_TIMEOUT, config.GetComposeHttpTimeout()))
 
 	createSymlink()
-	go dockerLogToPodLogFile(files)
+	go dockerLogToPodLogFile(files, true)
 
 	err = cmd.Run()
 	if err != nil {
@@ -315,7 +315,7 @@ func LaunchPod(files []string) string {
 }
 
 //these logs should be written in a file also along with stdout.
-func dockerLogToPodLogFile(files []string) {
+func dockerLogToPodLogFile(files []string, retry bool) {
 	parts, err := GenerateCmdParts(files, " logs --follow --no-color")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
@@ -327,7 +327,7 @@ func dockerLogToPodLogFile(files []string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	log.Println("Calling RetryCmdLogs func")
-	_, err = waitUtil.RetryCmdLogs(cmd)
+	_, err = waitUtil.RetryCmdLogs(cmd, retry)
 	if err != nil {
 		log.Printf("POD_LAUNCH_LOG_FAIL -- Error running cmd %s\n", cmd.Args)
 	}
@@ -790,12 +790,12 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 		State:  state,
 	}
 
-	retryCount := 0
+	retryCount  := 0
 	logStatus := waitUtil.GetLogStatus()
 	log.Printf("Log status is : %v", logStatus)
 	log.Printf("Task status is : %v", state.Enum().String())
 
-	if retryCount < 3 && logStatus == true {
+	if retryCount < 3 && logStatus == false {
 		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
 			 state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
 			state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() {
@@ -805,7 +805,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 					log.Printf(file)
 				}
 				log.Printf("calling log write function again, count:", retryCount)
-				dockerLogToPodLogFile(ComposeFiles)
+				dockerLogToPodLogFile(ComposeFiles, false)
 				retryCount++
 			}
 	}
