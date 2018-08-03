@@ -194,6 +194,8 @@ func createSymlink(cmd *exec.Cmd) {
 	if err != nil {
 		log.Println("Error in creating symlink: ", err)
 	}
+
+	os.Chmod(filename, 0777)
 	log.Println("Symlink Created.")
 }
 
