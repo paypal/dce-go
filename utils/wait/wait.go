@@ -189,7 +189,7 @@ func createSymlink(cmd *exec.Cmd) {
 	target := "/dev/stdout"
 
 	log.Printf("Creating symlink for path %v to path %v", filename, target)
-	err := os.Symlink(target, filename)
+	err := os.Symlink(filename, target)
 
 	if err != nil {
 		log.Println("Error in creating symlink: ", err)
