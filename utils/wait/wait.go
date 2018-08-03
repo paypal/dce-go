@@ -186,9 +186,9 @@ func createSymlink(cmd *exec.Cmd) {
 	folder := config.GetAppFolder()
 	log.Println("RetryCmdLogs folder path: ", folder)
 	filename := filepath.Join(folder, "/log/container.log")
-	target := "stdout"
+	target := "/dev/stdout"
 
-	log.Printf("Creating symlink for path %v to path %v ", filename, target)
+	log.Printf("Creating symlink for path %v to path %v", filename, target)
 	err := os.Symlink(target, filename)
 
 	if err != nil {
