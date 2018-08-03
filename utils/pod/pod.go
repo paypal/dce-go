@@ -782,7 +782,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 				for _, file := range ComposeFiles {
 					log.Printf(file)
 				}
-				log.Printf("calling log write function again.")
+				log.Printf("calling log write function again, count:", count)
 				dockerLogToPodLogFile(ComposeFiles)
 				count++
 			}
