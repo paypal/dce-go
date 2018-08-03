@@ -768,13 +768,15 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 		State:  state,
 	}
 
+	count := 0
 	logStatus := waitUtil.GetLogStatus()
 	log.Printf("Log status is : %v", logStatus)
 	log.Printf("Task status is : %v", state.Enum().String())
 
-	if logStatus == true {
+	if count < 3 && logStatus == true {
 		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
-			 state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() {
+			 state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
+			state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() {
 
 			 	log.Printf("calling dockerLogToPodLogFile func on ComposeFiles: ")
 				for _, file := range ComposeFiles {
@@ -782,6 +784,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 				}
 				log.Printf("calling log write function again.")
 				dockerLogToPodLogFile(ComposeFiles)
+				count++
 			}
 	}
 
