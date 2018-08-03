@@ -265,7 +265,6 @@ func GetPorts(taskInfo *mesos.TaskInfo) *list.Element {
 func createSymlink() {
 	folder := config.GetAppFolder()
 
-	log.Println("RetryCmdLogs folder path: ", folder)
 	filename := filepath.Join(folder, "/log/container.log")
 	path, err := os.Getwd()
 	target := filepath.Join(path, "/stdout")
