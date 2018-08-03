@@ -28,7 +28,7 @@ import (
 )
 
 // Watching pod status and notifying executor if any container in the pod goes wrong
-//vipra: this is what tells the status of the pod. MAybe the right place.
+//this is what tells the status of the pod.
 func podMonitor(systemProxyId string) string {
 	logger := log.WithFields(log.Fields{
 		"func": "monitor.podMonitor",

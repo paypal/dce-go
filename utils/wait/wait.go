@@ -201,15 +201,20 @@ func RetryCmdLogs(cmd *exec.Cmd, retry bool) ([]byte, error) {
 			_cmd.Stdout = cmd.Stdout
 			_cmd.Stderr = cmd.Stderr
 
+			//assuming that the log command will run successfully.
+			SetLogStatus(true)
 			err = _cmd.Run()
 
+			//if this line executes, that means that either the log command returned which means something went wrong,
+			//or there is an error. So either way, the logs are not getting logged. so reset it to false.
+			SetLogStatus(false)
 			if err != nil {
 				log.Printf("Error while running cmd: %v", err)
-			} else {
-				log.Printf("command returned: %v \n setting the log status", _cmd.Args)
-				SetLogStatus(false)
 			}
 
+			//So that we only retry and log all the container logs ones before fully killing/finishing the pod.
+			//If we remove this, then this loop will print the container logs infinitely.
+			//This is imp for small apps that complete before we start logging their logs.
 			if !retry {
 				return out, err
 			}
@@ -224,7 +229,6 @@ func RetryCmdLogs(cmd *exec.Cmd, retry bool) ([]byte, error) {
 func GetLogStatus() bool {
 	LogStatus.RLock()
 	defer LogStatus.RUnlock()
-	log.Printf("Returning log status, container log file is empty : %v", LogStatus.LogCommandSuccess)
 	return LogStatus.LogCommandSuccess
 }
 
@@ -233,5 +237,5 @@ func SetLogStatus(logCommandRunSuccess bool) {
 	LogStatus.Lock()
 	LogStatus.LogCommandSuccess = logCommandRunSuccess
 	LogStatus.Unlock()
-	log.Printf("Updated Log Status, now container log file is empty : %v", logCommandRunSuccess)
+	log.Printf("Updated Log Status, Log command was successful? : %v", logCommandRunSuccess)
 }
