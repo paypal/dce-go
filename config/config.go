@@ -18,7 +18,6 @@
 package config
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -110,7 +109,7 @@ func getConfigFromFile(cfgFile string) error {
 }
 
 func SetConfig(key string, value interface{}) {
-	log.Println(fmt.Sprintf("Set config : %s = %v", key, value))
+	log.Printf("Set config : %s = %v", key, value)
 	GetConfig().Set(key, value)
 }
 

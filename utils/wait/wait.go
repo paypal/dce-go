@@ -30,6 +30,10 @@ import (
 type ConditionCHFunc func(done chan string)
 type ConditionFunc func() (string, error)
 
+var LogStatus = &types.LogStatus{
+	LogCommandSuccess: false,
+}
+
 var ErrTimeOut = errors.New("timed out waiting for the condition")
 
 // Keep polling a condition func until it return a message or an error
@@ -147,8 +151,7 @@ func WaitCmd(timeout time.Duration, cmd_result *types.CmdResult) error {
 func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 	var err error
 	var out []byte
-
-	log.Debugf("Run cmd: %s\n", cmd.Args)
+	//log.Debugf("RetryCmd: Run cmd: %s\n", cmd.Args)
 
 	retryInterval := config.GetRetryInterval()
 	factor := 1
@@ -179,29 +182,60 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 }
 
 // Retry command forever
-func RetryCmdLogs(cmd *exec.Cmd) ([]byte, error) {
+func RetryCmdLogs(cmd *exec.Cmd, retry bool) ([]byte, error) {
 	var err error
 	var out []byte
 
 	retryInterval := config.GetRetryInterval()
+
 	for {
 		_cmd := exec.Command(cmd.Args[0], cmd.Args[1:]...)
-		log.Printf("Run cmd %s", _cmd.Args)
+		log.Printf("Run cmd is: %s", _cmd.Args)
 
 		if cmd.Stdout == nil {
+			_cmd.Stdout = os.Stdout
 			_cmd.Stderr = os.Stderr
 			out, err = _cmd.Output()
 		} else {
+
 			_cmd.Stdout = cmd.Stdout
 			_cmd.Stderr = cmd.Stderr
+
+			//assuming that the log command will run successfully.
+			SetLogStatus(true)
 			err = _cmd.Run()
+
+			//if this line executes, that means that either the log command returned which means something went wrong,
+			//or there is an error. So either way, the logs are not getting logged. so reset it to false.
+			SetLogStatus(false)
 			if err != nil {
-				log.Printf("Error running cmd: %v", err)
+				log.Printf("Error while running cmd: %v", err)
+			}
+
+			//So that we only retry and log all the container logs ones before fully killing/finishing the pod.
+			//If we remove this, then this loop will print the container logs infinitely.
+			//This is imp for small apps that complete before we start logging their logs.
+			if !retry {
+				return out, err
 			}
 		}
-
 		log.Printf("cmd %s exits, retry...", _cmd.Args)
 		time.Sleep(retryInterval * time.Millisecond)
 	}
 	return out, err
+}
+
+// Read log status
+func GetLogStatus() bool {
+	LogStatus.RLock()
+	defer LogStatus.RUnlock()
+	return LogStatus.LogCommandSuccess
+}
+
+// Set log status
+func SetLogStatus(logCommandRunSuccess bool) {
+	LogStatus.Lock()
+	LogStatus.LogCommandSuccess = logCommandRunSuccess
+	LogStatus.Unlock()
+	log.Printf("Updated Log Status, Log command was successful? : %v", logCommandRunSuccess)
 }

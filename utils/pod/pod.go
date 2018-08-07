@@ -38,6 +38,7 @@ import (
 	"github.com/paypal/dce-go/utils"
 	waitUtil "github.com/paypal/dce-go/utils/wait"
 	"github.com/paypal/gorealis/gen-go/apache/aurora"
+	"path/filepath"
 )
 
 const (
@@ -51,6 +52,7 @@ var ComposeExcutorDriver executor.ExecutorDriver
 var PodStatus = &types.PodStatus{
 	Status: types.POD_STAGING,
 }
+
 var ComposeFiles []string
 var ComposeTaskInfo *mesos.TaskInfo
 var PluginOrder []string
@@ -260,6 +262,25 @@ func GetPorts(taskInfo *mesos.TaskInfo) *list.Element {
 	return ports.Front()
 }
 
+func createSymlink() {
+	folder := config.GetAppFolder()
+
+	filename := filepath.Join(folder, "/log/container.log")
+	path, err := os.Getwd()
+	target := filepath.Join(path, "/stdout")
+	log.Println("Current path is: ", path)
+
+	log.Printf("Creating symlink for path %v to path %v", filename, target)
+	err = os.Symlink(target, filename)
+
+	if err != nil {
+		log.Println("Error in creating symlink: ", err)
+	}
+
+	os.Chmod(filename, 0777)
+	log.Println("Symlink Created.")
+}
+
 // Launch pod
 // docker-compose up
 func LaunchPod(files []string) string {
@@ -280,7 +301,8 @@ func LaunchPod(files []string) string {
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", types.COMPOSE_HTTP_TIMEOUT, config.GetComposeHttpTimeout()))
 
-	go dockerLogToStdout(files)
+	createSymlink()
+	go dockerLogToPodLogFile(files, true)
 
 	err = cmd.Run()
 	if err != nil {
@@ -291,7 +313,8 @@ func LaunchPod(files []string) string {
 	return types.POD_STARTING
 }
 
-func dockerLogToStdout(files []string) {
+//these logs should be written in a file also along with stdout.
+func dockerLogToPodLogFile(files []string, retry bool) {
 	parts, err := GenerateCmdParts(files, " logs --follow --no-color")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
@@ -302,7 +325,7 @@ func dockerLogToStdout(files []string) {
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	_, err = waitUtil.RetryCmdLogs(cmd)
+	_, err = waitUtil.RetryCmdLogs(cmd, retry)
 	if err != nil {
 		log.Printf("POD_LAUNCH_LOG_FAIL -- Error running cmd %s\n", cmd.Args)
 	}
@@ -763,6 +786,25 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 		TaskId: taskId,
 		State:  state,
 	}
+
+	logStatus := waitUtil.GetLogStatus()
+	log.Printf("Log status is : %v", logStatus)
+	log.Printf("Task status is : %v", state.Enum().String())
+
+	if logStatus == false {
+		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
+			 state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
+			state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() {
+
+			 	log.Printf("calling dockerLogToPodLogFile func on ComposeFiles: ")
+				for _, file := range ComposeFiles {
+					log.Printf(file)
+				}
+				log.Printf("calling log write function again for container logs")
+				dockerLogToPodLogFile(ComposeFiles, false)
+			}
+	}
+
 	_, err := driver.SendStatusUpdate(runStatus)
 	if err != nil {
 		log.Errorf("Error updating mesos task status : %v", err.Error())
