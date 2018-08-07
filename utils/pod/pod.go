@@ -38,6 +38,7 @@ import (
 	"github.com/paypal/dce-go/utils"
 	waitUtil "github.com/paypal/dce-go/utils/wait"
 	"github.com/paypal/gorealis/gen-go/apache/aurora"
+	"path/filepath"
 )
 
 const (
@@ -51,6 +52,7 @@ var ComposeExcutorDriver executor.ExecutorDriver
 var PodStatus = &types.PodStatus{
 	Status: types.POD_STAGING,
 }
+
 var ComposeFiles []string
 var ComposeTaskInfo *mesos.TaskInfo
 var PluginOrder []string
@@ -260,9 +262,29 @@ func GetPorts(taskInfo *mesos.TaskInfo) *list.Element {
 	return ports.Front()
 }
 
+func createSymlink() {
+	folder := config.GetAppFolder()
+
+	filename := filepath.Join(folder, "/log/container.log")
+	path, err := os.Getwd()
+	target := filepath.Join(path, "/stdout")
+	log.Println("Current path is: ", path)
+
+	log.Printf("Creating symlink for path %v to path %v", filename, target)
+	err = os.Symlink(target, filename)
+
+	if err != nil {
+		log.Println("Error in creating symlink: ", err)
+	}
+
+	os.Chmod(filename, 0777)
+	log.Println("Symlink Created.")
+}
+
 // Launch pod
 // docker-compose up
 func LaunchPod(files []string) string {
+	//log.SetOutput(os.Stdout)
 	log.Println("====================Launch Pod====================")
 
 	parts, err := GenerateCmdParts(files, " up -d")
@@ -274,13 +296,16 @@ func LaunchPod(files []string) string {
 	cmd := exec.Command("docker-compose", parts...)
 	log.Printf("Launch Pod : Command to launch task : %v", cmd.Args)
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	Dcelog := config.CreateFileAppendMode(types.DCE_OUT)
+	Dceerr := config.CreateFileAppendMode(types.DCE_ERR)
+	cmd.Stdout = Dcelog
+	cmd.Stderr = Dceerr
 
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", types.COMPOSE_HTTP_TIMEOUT, config.GetComposeHttpTimeout()))
 
-	go dockerLogToStdout(files)
+	createSymlink()
+	go dockerLogToPodLogFile(files, true)
 
 	err = cmd.Run()
 	if err != nil {
@@ -291,7 +316,10 @@ func LaunchPod(files []string) string {
 	return types.POD_STARTING
 }
 
-func dockerLogToStdout(files []string) {
+//these logs should be written in a file also along with stdout.
+// 'retry' parameter is to indicate if RetryCmdLogs func should keep retrying if logs cmd fails or just exit.
+//This is to make sure that we don't go in an infinite loop in RetryCmdLogs func when pod is killed, finished or fails.
+func dockerLogToPodLogFile(files []string, retry bool) {
 	parts, err := GenerateCmdParts(files, " logs --follow --no-color")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
@@ -302,7 +330,7 @@ func dockerLogToStdout(files []string) {
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	_, err = waitUtil.RetryCmdLogs(cmd)
+	_, err = waitUtil.RetryCmdLogs(cmd, retry)
 	if err != nil {
 		log.Printf("POD_LAUNCH_LOG_FAIL -- Error running cmd %s\n", cmd.Args)
 	}
@@ -344,8 +372,10 @@ func StopPod(files []string) error {
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	Dcelog := config.CreateFileAppendMode(types.DCE_OUT)
+	Dceerr := config.CreateFileAppendMode(types.DCE_ERR)
+	cmd.Stdout = Dcelog
+	cmd.Stderr = Dceerr
 
 	logger.Printf("Stop Pod : Command to stop task : %s", cmd.Args)
 
@@ -387,8 +417,10 @@ func RemovePodVolume(files []string) error {
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	Dcelog := config.CreateFileAppendMode(types.DCE_OUT)
+	Dceerr := config.CreateFileAppendMode(types.DCE_ERR)
+	cmd.Stdout = Dcelog
+	cmd.Stderr = Dceerr
 	log.Println("Remove Pod Volume: Command to rm volume : docker-compose ", parts)
 
 	err = cmd.Run()
@@ -411,8 +443,10 @@ func RemovePodImage(files []string) error {
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	Dcelog := config.CreateFileAppendMode(types.DCE_OUT)
+	Dceerr := config.CreateFileAppendMode(types.DCE_ERR)
+	cmd.Stdout = Dcelog
+	cmd.Stderr = Dceerr
 
 	log.Println("Remove Pod Image: Command to rm images : docker-compose ", parts)
 
@@ -442,8 +476,10 @@ func GetContainerNetwork(id string) (string, error) {
 func RemoveNetwork(name string) error {
 	log.Println("====================Remove network====================")
 	cmd := exec.Command("docker", "network", "rm", name)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	Dcelog := config.CreateFileAppendMode(types.DCE_OUT)
+	Dceerr := config.CreateFileAppendMode(types.DCE_ERR)
+	cmd.Stdout = Dcelog
+	cmd.Stderr = Dceerr
 	err := cmd.Run()
 	if err != nil {
 		log.Errorf("Error in rm network : %s , %s\n", name, err.Error())
@@ -462,8 +498,10 @@ func ForceKill(files []string) error {
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	Dcelog := config.CreateFileAppendMode(types.DCE_OUT)
+	Dceerr := config.CreateFileAppendMode(types.DCE_ERR)
+	cmd.Stdout = Dcelog
+	cmd.Stderr = Dceerr
 
 	log.Println("Kill Pod : Command to kill task : docker-compose ", parts)
 
@@ -487,8 +525,10 @@ func PullImage(files []string) error {
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	Dcelog := config.CreateFileAppendMode(types.DCE_OUT)
+	Dceerr := config.CreateFileAppendMode(types.DCE_ERR)
+	cmd.Stdout = Dcelog
+	cmd.Stderr = Dceerr
 	log.Println("Pull Image : Command to pull images : docker-compose ", parts)
 
 	err = cmd.Start()
@@ -763,6 +803,21 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 		TaskId: taskId,
 		State:  state,
 	}
+
+	logStatus := waitUtil.GetLogStatus()
+	log.Debugf("Log status is : %v", logStatus)
+	log.Debugf("Task status is : %v", state.Enum().String())
+
+	if logStatus == false {
+		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
+			 state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
+			state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() {
+
+				log.Printf("Calling log write function again for container logs.")
+				dockerLogToPodLogFile(ComposeFiles, false)
+			}
+	}
+
 	_, err := driver.SendStatusUpdate(runStatus)
 	if err != nil {
 		log.Errorf("Error updating mesos task status : %v", err.Error())
@@ -835,8 +890,12 @@ func DockerDump() {
 
 		cmdDocker := exec.Command("kill", "-USR1", pid)
 		log.Printf("Cmd to kill docker pid: %s", cmdDocker.Path)
-		cmdDocker.Stdout = os.Stdout
-		cmdDocker.Stderr = os.Stderr
+
+		Dcelog := config.CreateFileAppendMode(types.DCE_OUT)
+		Dceerr := config.CreateFileAppendMode(types.DCE_ERR)
+		cmdDocker.Stdout = Dcelog
+		cmdDocker.Stderr = Dceerr
+
 		err = cmdDocker.Run()
 		if err != nil {
 			log.Errorf("Error running cmd to kill -USR1 dockerPid: %v", err)
@@ -856,8 +915,11 @@ func DockerDump() {
 		log.Println(" DockerContainerdPid: ", dockerContainerdPid)
 		cmdContainerd := exec.Command("kill", "-USR1", dockerContainerdPid)
 		log.Printf("Cmd to kill containerd pid: %s", cmdContainerd.Path)
-		cmdContainerd.Stdout = os.Stdout
-		cmdContainerd.Stderr = os.Stderr
+		Dcelog := config.CreateFileAppendMode(types.DCE_OUT)
+		Dceerr := config.CreateFileAppendMode(types.DCE_ERR)
+		cmdContainerd.Stdout = Dcelog
+		cmdContainerd.Stderr = Dceerr
+
 		err = cmdContainerd.Run()
 		if err != nil {
 			log.Errorf("Error running cmd to kill containerd pid: %v", err)

@@ -28,7 +28,6 @@ import (
 )
 
 // Watching pod status and notifying executor if any container in the pod goes wrong
-
 func podMonitor(systemProxyId string) string {
 	logger := log.WithFields(log.Fields{
 		"func": "monitor.podMonitor",
