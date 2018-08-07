@@ -15,8 +15,6 @@
 package example
 
 import (
-	"os"
-
 	"context"
 
 	"github.com/mesos/mesos-go/executor"
@@ -24,6 +22,7 @@ import (
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
 	log "github.com/sirupsen/logrus"
+	"github.com/paypal/dce-go/config"
 )
 
 var logger *log.Entry
@@ -32,10 +31,10 @@ type exampleExt struct {
 }
 
 func init() {
+	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
 	logger = log.WithFields(log.Fields{
 		"plugin": "example",
 	})
-	log.SetOutput(os.Stdout)
 
 	logger.Println("Plugin Registering")
 

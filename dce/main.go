@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -55,23 +54,25 @@ func newDockerComposeExecutor() *dockerComposeExecutor {
 }
 
 func (exec *dockerComposeExecutor) Registered(driver exec.ExecutorDriver, execInfo *mesos.ExecutorInfo, fwinfo *mesos.FrameworkInfo, slaveInfo *mesos.SlaveInfo) {
-	fmt.Println("====================Mesos Registered====================")
-	fmt.Println("Mesos Register : Registered Executor on slave ", slaveInfo.GetHostname())
+	log.Println("====================Mesos Registered====================")
+	log.Println("Mesos Register : Registered Executor on slave ", slaveInfo.GetHostname())
 	pod.ComposeExcutorDriver = driver
 }
 
 func (exec *dockerComposeExecutor) Reregistered(driver exec.ExecutorDriver, slaveInfo *mesos.SlaveInfo) {
-	fmt.Println("====================Mesos Reregistered====================")
-	fmt.Println("Mesos Re-registered Re-registered : Executor on slave ", slaveInfo.GetHostname())
+	log.Println("====================Mesos Reregistered====================")
+	log.Println("Mesos Re-registered Re-registered : Executor on slave ", slaveInfo.GetHostname())
 }
 
 func (exec *dockerComposeExecutor) Disconnected(exec.ExecutorDriver) {
-	fmt.Println("====================Mesos Disconnected====================")
-	fmt.Println("Mesos Disconnected : Mesos Executordisconnected.")
+	log.Println("====================Mesos Disconnected====================")
+	log.Println("Mesos Disconnected : Mesos Executordisconnected.")
 }
 
 func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
-	fmt.Println("====================Mesos LaunchTask====================")
+	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
+
+	log.Println("====================Mesos LaunchTask====================")
 	pod.ComposeExcutorDriver = driver
 	logger = log.WithFields(log.Fields{
 		"requuid":   pod.GetLabel("requuid", taskInfo),
@@ -89,7 +90,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	logger.Debugln("taskInfo : ", buf)
 
 	isService := pod.IsService(taskInfo)
-	fmt.Printf("task is service: %v\n", isService)
+	log.Printf("task is service: %v\n", isService)
 	config.GetConfig().Set(types.IS_SERVICE, isService)
 
 	pod.ComposeTaskInfo = taskInfo
@@ -275,7 +276,7 @@ func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *
 }
 
 func (exec *dockerComposeExecutor) FrameworkMessage(driver exec.ExecutorDriver, msg string) {
-	fmt.Printf("Got framework message: %v\n", msg)
+	log.Printf("Got framework message: %v\n", msg)
 }
 
 func (exec *dockerComposeExecutor) Shutdown(driver exec.ExecutorDriver) {
@@ -283,12 +284,12 @@ func (exec *dockerComposeExecutor) Shutdown(driver exec.ExecutorDriver) {
 	for _, ext := range extpoints {
 		ext.Shutdown(pod.ComposeExcutorDriver)
 	}
-	fmt.Println("====================Stop ExecutorDriver====================")
+	log.Println("====================Stop ExecutorDriver====================")
 	driver.Stop()
 }
 
 func (exec *dockerComposeExecutor) Error(driver exec.ExecutorDriver, err string) {
-	fmt.Printf("Got error message : %v\n", err)
+	log.Printf("Got error message : %v\n", err)
 }
 
 func pullAndLaunchPod() string {
@@ -347,14 +348,16 @@ func init() {
 }
 
 func main() {
-	fmt.Println("====================Genesis Executor (Go)====================")
+	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
 
+	log.Println("====================Genesis Executor (Go)====================")
+	log.Println("created dce log file.")
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGUSR1)
 	go func() {
 		for {
 			sig := <-sig
-			fmt.Printf("Received signal %s\n", sig.String())
+			log.Printf("Received signal %s\n", sig.String())
 			if sig == syscall.SIGUSR1 {
 				switchDebugMode()
 			}
@@ -367,16 +370,16 @@ func main() {
 
 	driver, err := exec.NewMesosExecutorDriver(dConfig)
 	if err != nil {
-		fmt.Errorf("Unable to create a ExecutorDriver : %v\n", err.Error())
+		log.Errorf("Unable to create a ExecutorDriver : %v\n", err.Error())
 	}
 
 	_, err = driver.Start()
 	if err != nil {
-		fmt.Errorf("Got error: %v\n", err.Error())
+		log.Errorf("Got error: %v\n", err.Error())
 		return
 	}
 
-	fmt.Println("Executor : Executor process has started and running.")
+	log.Println("Executor : Executor process has started and running.")
 	driver.Join()
 
 }

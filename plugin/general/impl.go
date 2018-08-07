@@ -17,7 +17,6 @@ package general
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -41,10 +40,11 @@ type generalExt struct {
 var infraYmlPath string
 
 func init() {
+	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
+
 	logger = log.WithFields(log.Fields{
 		"plugin": "general",
 	})
-	log.SetOutput(os.Stdout)
 	logger.Println("Plugin Registering")
 
 	//Register plugin with name
