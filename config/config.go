@@ -218,7 +218,8 @@ func CreateFileAppendMode(filename string) *os.File {
 
 	File, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		log.Fatalf("Error in creating %v file", filename, err)
+		log.Errorf("Error in creating %v file", filename, err)
+		return os.Stdout
 	}
 	return File
 }

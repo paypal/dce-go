@@ -787,10 +787,10 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 	log.Debugf("Log status is : %v", logStatus)
 	log.Debugf("Task status is : %v", state.Enum().String())
 
-	if logStatus == false {
-		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
-			 state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
-			state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() {
+	if !logStatus {
+		if state.Enum() == mesos.TaskState_TASK_FINISHED.Enum() ||
+			 state.Enum() == mesos.TaskState_TASK_KILLED.Enum() ||
+			state.Enum() == mesos.TaskState_TASK_FAILED.Enum() {
 
 				log.Printf("Calling log write function again for container logs.")
 				dockerLogToPodLogFile(ComposeFiles, false)
@@ -806,8 +806,8 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 	log.Printf("Update Status : Update Mesos task state as %s", state.String())
 
 	time.Sleep(200 * time.Millisecond)
-	if state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() ||
-		state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() {
+	if state.Enum() == mesos.TaskState_TASK_FAILED.Enum() ||
+		state.Enum() == mesos.TaskState_TASK_FINISHED.Enum() {
 		log.Println("====================Stop ExecutorDriver====================")
 		driver.Stop()
 	}

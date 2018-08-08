@@ -30,8 +30,8 @@ import (
 type ConditionCHFunc func(done chan string)
 type ConditionFunc func() (string, error)
 
-var LogStatus = &types.LogStatus{
-	LogCommandSuccess: false,
+var LogStatus = &types.LogCommandStatus{
+	IsRunning: false,
 }
 
 var ErrTimeOut = errors.New("timed out waiting for the condition")
@@ -230,12 +230,12 @@ func RetryCmdLogs(cmd *exec.Cmd, retry bool) ([]byte, error) {
 func GetLogStatus() bool {
 	LogStatus.RLock()
 	defer LogStatus.RUnlock()
-	return LogStatus.LogCommandSuccess
+	return LogStatus.IsRunning
 }
 
 // Set log status
 func SetLogStatus(logCommandRunSuccess bool) {
 	LogStatus.Lock()
-	LogStatus.LogCommandSuccess = logCommandRunSuccess
-	LogStatus.Unlock()
+	defer LogStatus.Unlock()
+	LogStatus.IsRunning = logCommandRunSuccess
 }
