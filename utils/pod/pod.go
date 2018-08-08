@@ -38,6 +38,7 @@ import (
 	"github.com/paypal/dce-go/utils"
 	waitUtil "github.com/paypal/dce-go/utils/wait"
 	"github.com/paypal/gorealis/gen-go/apache/aurora"
+	"path/filepath"
 )
 
 const (
@@ -259,6 +260,25 @@ func GetPorts(taskInfo *mesos.TaskInfo) *list.Element {
 		}
 	}
 	return ports.Front()
+}
+
+func createSymlink() {
+	folder := config.GetAppFolder()
+
+	filename := filepath.Join(folder, "/log/container.log")
+	path, err := os.Getwd()
+	target := filepath.Join(path, "/stdout")
+	log.Println("Current path is: ", path)
+
+	log.Printf("Creating symlink for path %v to path %v", filename, target)
+	err = os.Symlink(target, filename)
+
+	if err != nil {
+		log.Println("Error in creating symlink: ", err)
+	}
+
+	os.Chmod(filename, 0777)
+	log.Println("Symlink Created.")
 }
 
 // Launch pod
