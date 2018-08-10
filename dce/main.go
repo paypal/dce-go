@@ -111,6 +111,9 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		logger.Errorln("Error creating app folder")
 	}
 
+	// Override config
+	config.OverrideConfig(taskInfo)
+
 	// Create context with timeout
 	// Wait for pod launching until timeout
 	var ctx context.Context
