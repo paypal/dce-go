@@ -18,7 +18,6 @@
 package config
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -110,7 +109,7 @@ func getConfigFromFile(cfgFile string) error {
 }
 
 func SetConfig(key string, value interface{}) {
-	log.Println(fmt.Sprintf("Set config : %s = %v", key, value))
+	log.Printf("Set config : %s = %v", key, value)
 	GetConfig().Set(key, value)
 }
 
@@ -213,4 +212,14 @@ func EnableDebugMode() bool {
 
 func IsService() bool {
 	return GetConfig().GetBool(types.IS_SERVICE)
+}
+
+func CreateFileAppendMode(filename string) *os.File {
+
+	File, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Errorf("Error in creating %v file", filename, err)
+		return os.Stdout
+	}
+	return File
 }

@@ -15,7 +15,6 @@
 package pod
 
 import (
-	"fmt"
 	"log"
 	"strings"
 	"testing"
@@ -116,7 +115,7 @@ func TestGetContainerIdByService(t *testing.T) {
 		return GetContainerIdByService(files, "redis")
 	}))
 	assert.NoError(t, err, "Test get container id should success")
-	fmt.Println("Container id:", res)
+	log.Println("Container id:", res)
 
 	res, err = wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
 		return GetContainerIdByService(files, "fake")

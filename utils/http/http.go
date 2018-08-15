@@ -17,7 +17,6 @@ package http
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -32,7 +31,7 @@ func GenBody(t interface{}) io.Reader {
 	if err != nil {
 		log.Panic("Error marshalling : ", err.Error())
 	}
-	fmt.Println("Request Body : ", string(tjson))
+	log.Println("Request Body : ", string(tjson))
 	return bytes.NewReader(tjson)
 }
 
