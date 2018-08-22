@@ -21,12 +21,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
-	"github.com/paypal/dce-go/types"
-
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+
+	"github.com/paypal/dce-go/types"
 )
 
 // Define default values
@@ -54,6 +56,7 @@ const (
 	DEBUG_MODE                           = "launchtask.debug"
 	COMPOSE_HTTP_TIMEOUT                 = "launchtask.composehttptimeout"
 	COMPOSE_STOP_TIMEOUT                 = "cleanpod.timeout"
+	CONFIG_OVERRIDE_PREFIX               = "config."
 )
 
 // Read from default configuration file and set config as key/values
@@ -222,4 +225,20 @@ func CreateFileAppendMode(filename string) *os.File {
 		return os.Stdout
 	}
 	return File
+}
+
+// OverrideConfig gets labels with override prefix "config." and override configs with value of label
+// Checking labels contain key word "config." instead of prefix since different framework will add different prefix for labels
+func OverrideConfig(taskInfo *mesos.TaskInfo) {
+	labelsList := taskInfo.GetLabels().GetLabels()
+
+	for _, label := range labelsList {
+		if strings.Contains(label.GetKey(), CONFIG_OVERRIDE_PREFIX) {
+			parts := strings.SplitAfterN(label.GetKey(), CONFIG_OVERRIDE_PREFIX, 2)
+			if len(parts) == 2 && GetConfig().IsSet(parts[1]) {
+				GetConfig().Set(parts[1], label.GetValue())
+				log.Infof("override config %s with %s", parts[1], label.GetValue())
+			}
+		}
+	}
 }
