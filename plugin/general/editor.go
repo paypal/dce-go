@@ -61,7 +61,8 @@ func editComposeFile(ctx *context.Context, file string, executorId string, taskI
 		}
 	}
 
-	filesMap[file][types.VERSION] = "2.1"
+	filesMap[file][types.VERSION] = getVersion(filesMap, file)
+
 	if !strings.Contains(file, utils.FILE_POSTFIX) {
 		filesMap[file+utils.FILE_POSTFIX] = filesMap[file]
 		delete(filesMap, file)
@@ -71,6 +72,20 @@ func editComposeFile(ctx *context.Context, file string, executorId string, taskI
 
 	logger.Printf("Updated compose files, current context: %v\n", filesMap)
 	return file, ports, err
+}
+
+func getVersion(filesMap types.ServiceDetail, file string) string {
+	if currentVersion, ok := filesMap[file][types.VERSION].(string); ok {
+		currentVersionFloat, err := strconv.ParseFloat(currentVersion, 64)
+		if err != nil {
+			log.Printf("Error trying to change version from str to float. Defaulting it to 2.1")
+		} else {
+			if currentVersionFloat > 2.1 && currentVersionFloat < 3.0 {
+				return fmt.Sprintf("%.1f", currentVersionFloat)
+			}
+		}
+	}
+	return "2.1"
 }
 
 func updateServiceSessions(serviceName, file, executorId, taskId string, filesMap types.ServiceDetail, ports *list.Element,
