@@ -758,7 +758,7 @@ func SendPodStatus(status string) {
 	}
 
 	SetPodStatus(status)
-
+	logger.Println("Pod status:", status)
 	switch status {
 	case types.POD_RUNNING:
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_RUNNING.Enum())
