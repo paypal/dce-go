@@ -174,9 +174,9 @@ func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
 				logger.Errorf("Error cleaning volumes: %v", err)
 			}
 		}
-
+		logger.Println("Starting to clean image.")
 		// clean pod images if clean_image_on_kill is true
-		cleanImage := config.GetConfig().GetBool(config.CLEAN_IMAGE_ON_MESOS_KILL)
+		cleanImage := true //config.GetConfig().GetBool(config.CLEAN_IMAGE_ON_MESOS_KILL)
 		if cleanImage {
 			err = pod.RemovePodImage(pod.ComposeFiles)
 			if err != nil {
