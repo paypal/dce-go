@@ -59,6 +59,7 @@ var PluginOrder []string
 var HealthCheckListId = make(map[string]bool)
 var PodContainers []string
 var SinglePort bool
+var PodLaunched bool = false
 
 // Check exit code of all the containers in the pod.
 // If all the exit codes are zero, then assign zero as pod's exit code,
@@ -287,10 +288,12 @@ func LaunchPod(files []string) string {
 	go dockerLogToPodLogFile(files, true)
 
 	err = cmd.Run()
+
 	if err != nil {
 		log.Printf("POD_LAUNCH_FAIL -- Error running launch task command : %v", err)
 		return types.POD_FAILED
 	}
+	PodLaunched = true
 
 	return types.POD_STARTING
 }

@@ -165,6 +165,11 @@ func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
 func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
 	logger.Println("PostKillTask begin, pod status:", pod.GetPodStatus())
 	var err error
+	if !pod.PodLaunched {
+		logger.Println("Pod hasn't started, no postKill work needed.")
+		return nil
+	}
+
 	if pod.GetPodStatus() != types.POD_FAILED || (pod.GetPodStatus() == types.POD_FAILED && config.GetConfig().GetBool(config.CLEAN_FAIL_TASK)) {
 		// clean pod volume and container if clean_container_volume_on_kill is true
 		cleanVolumeAndContainer := config.GetConfig().GetBool(config.CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL)
