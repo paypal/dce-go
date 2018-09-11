@@ -294,6 +294,7 @@ func LaunchPod(files []string) string {
 		return types.POD_FAILED
 	}
 	PodLaunched = true
+	log.Println("Updated the state of PodLaunched to true.")
 
 	return types.POD_STARTING
 }
