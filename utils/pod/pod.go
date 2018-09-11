@@ -371,18 +371,22 @@ func StopPod(files []string) error {
 		}
 	}
 
-	callAllPluginsPostKillTask()
+	err = callAllPluginsPostKillTask()
+
+	if err != nil {
+		logger.Error(err)
+	}
 
 	return nil
 }
 
-func callAllPluginsPostKillTask() {
+func callAllPluginsPostKillTask() error {
 	// Select plugin extension points from plugin pools
 	plugins := plugin.GetOrderedExtpoints(PluginOrder)
 	log.Printf("Plugin order: %s", PluginOrder)
 
 	// Executing PostKillTask plugin extensions in order
-	_, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+	utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
 		for _, ext := range plugins {
 			err := ext.PostKillTask(ComposeTaskInfo)
 			if err != nil {
@@ -391,9 +395,7 @@ func callAllPluginsPostKillTask() {
 		}
 		return "", nil
 	}))
-	if err != nil {
-		log.Errorf("Error executing PostKillTask in plugins:%v", err)
-	}
+	return nil
 }
 
 // remove pod volume
