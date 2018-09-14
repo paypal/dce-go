@@ -780,9 +780,11 @@ func SendPodStatus(status string) {
 		}
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FINISHED.Enum())
 	case types.POD_FAILED:
-		err := StopPod(ComposeFiles)
-		if err != nil {
-			logger.Errorf("Error cleaning up pod : %v\n", err.Error())
+		if PodLaunched {
+			err := StopPod(ComposeFiles)
+			if err != nil {
+				logger.Errorf("Error cleaning up pod : %v\n", err.Error())
+			}
 		}
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	case types.POD_PULL_FAILED:
@@ -804,12 +806,12 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 
 	if !logStatus {
 		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
-			 state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
+			state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
 			state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() {
 
-				log.Printf("Calling log write function again for container logs.")
-				dockerLogToPodLogFile(ComposeFiles, false)
-			}
+			log.Printf("Calling log write function again for container logs.")
+			dockerLogToPodLogFile(ComposeFiles, false)
+		}
 	}
 
 	_, err := driver.SendStatusUpdate(runStatus)
