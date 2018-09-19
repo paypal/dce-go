@@ -3,3 +3,4 @@ services:
   redis:
     image: redis
     container_name: redis_test
+    network_mode: none

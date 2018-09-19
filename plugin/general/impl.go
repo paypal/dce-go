@@ -163,8 +163,13 @@ func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
 // Failed tasks will be cleaned up based on config cleanpod.cleanvolumeandcontaineronmesoskill and cleanpod.cleanimageonmesoskill
 // Non pre-existing networks will always be removed
 func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
-	logger.Println("PostKillTask begin")
+	logger.Println("PostKillTask begin, pod status:", pod.GetPodStatus())
 	var err error
+	if !pod.PodLaunched {
+		logger.Println("Pod hasn't started, no postKill work needed.")
+		return nil
+	}
+
 	if pod.GetPodStatus() != types.POD_FAILED || (pod.GetPodStatus() == types.POD_FAILED && config.GetConfig().GetBool(config.CLEAN_FAIL_TASK)) {
 		// clean pod volume and container if clean_container_volume_on_kill is true
 		cleanVolumeAndContainer := config.GetConfig().GetBool(config.CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL)
@@ -174,7 +179,7 @@ func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
 				logger.Errorf("Error cleaning volumes: %v", err)
 			}
 		}
-
+		logger.Println("Starting to clean image.")
 		// clean pod images if clean_image_on_kill is true
 		cleanImage := config.GetConfig().GetBool(config.CLEAN_IMAGE_ON_MESOS_KILL)
 		if cleanImage {
