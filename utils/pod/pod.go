@@ -59,6 +59,7 @@ var PluginOrder []string
 var HealthCheckListId = make(map[string]bool)
 var PodContainers []string
 var SinglePort bool
+var PodLaunched bool = false
 
 // Check exit code of all the containers in the pod.
 // If all the exit codes are zero, then assign zero as pod's exit code,
@@ -287,10 +288,13 @@ func LaunchPod(files []string) string {
 	go dockerLogToPodLogFile(files, true)
 
 	err = cmd.Run()
+
 	if err != nil {
 		log.Printf("POD_LAUNCH_FAIL -- Error running launch task command : %v", err)
 		return types.POD_FAILED
 	}
+	PodLaunched = true
+	log.Println("Updated the state of PodLaunched to true.")
 
 	return types.POD_STARTING
 }
@@ -368,20 +372,30 @@ func StopPod(files []string) error {
 		}
 	}
 
+	err = callAllPluginsPostKillTask()
+
+	if err != nil {
+		logger.Error(err)
+	}
+
+	return nil
+}
+
+func callAllPluginsPostKillTask() error {
+	// Select plugin extension points from plugin pools
+	plugins := plugin.GetOrderedExtpoints(PluginOrder)
+	log.Printf("Plugin order: %s", PluginOrder)
+
 	// Executing PostKillTask plugin extensions in order
-	_, err = utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+	utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
 		for _, ext := range plugins {
-			err = ext.PostKillTask(ComposeTaskInfo)
+			err := ext.PostKillTask(ComposeTaskInfo)
 			if err != nil {
-				logger.Errorf("Error executing PostKillTask of plugin : %v", err)
+				log.Errorf("Error executing PostKillTask of plugin : %v", err)
 			}
 		}
 		return "", nil
 	}))
-	if err != nil {
-		logger.Errorf("Error executing PostKillTask in plugins:%v", err)
-	}
-
 	return nil
 }
 
@@ -750,7 +764,7 @@ func SendPodStatus(status string) {
 	}
 
 	SetPodStatus(status)
-
+	logger.Println("Pod status:", status)
 	switch status {
 	case types.POD_RUNNING:
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_RUNNING.Enum())
@@ -766,12 +780,15 @@ func SendPodStatus(status string) {
 		}
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FINISHED.Enum())
 	case types.POD_FAILED:
-		err := StopPod(ComposeFiles)
-		if err != nil {
-			logger.Errorf("Error cleaning up pod : %v\n", err.Error())
+		if PodLaunched {
+			err := StopPod(ComposeFiles)
+			if err != nil {
+				logger.Errorf("Error cleaning up pod : %v\n", err.Error())
+			}
 		}
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	case types.POD_PULL_FAILED:
+		callAllPluginsPostKillTask()
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 }
@@ -789,12 +806,12 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 
 	if !logStatus {
 		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
-			 state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
+			state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
 			state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() {
 
-				log.Printf("Calling log write function again for container logs.")
-				dockerLogToPodLogFile(ComposeFiles, false)
-			}
+			log.Printf("Calling log write function again for container logs.")
+			dockerLogToPodLogFile(ComposeFiles, false)
+		}
 	}
 
 	_, err := driver.SendStatusUpdate(runStatus)
