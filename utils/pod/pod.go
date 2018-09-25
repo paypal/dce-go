@@ -288,13 +288,12 @@ func LaunchPod(files []string) string {
 	go dockerLogToPodLogFile(files, true)
 
 	err = cmd.Run()
-
+	PodLaunched = true
+	log.Println("Updated the state of PodLaunched to true.")
 	if err != nil {
 		log.Printf("POD_LAUNCH_FAIL -- Error running launch task command : %v", err)
 		return types.POD_FAILED
 	}
-	PodLaunched = true
-	log.Println("Updated the state of PodLaunched to true.")
 
 	return types.POD_STARTING
 }
@@ -791,19 +790,24 @@ func SendPodStatus(status string) {
 		callAllPluginsPostKillTask()
 		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
+
+	logger.Printf("MesosStatus %s completed", status)
 }
 
 //Update mesos and pod status
 func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state *mesos.TaskState) error {
+	logger := log.WithFields(log.Fields{
+		"state": state.Enum().String(),
+		"func":   "pod.SendMesosStatus",
+	})
+
 	runStatus := &mesos.TaskStatus{
 		TaskId: taskId,
 		State:  state,
 	}
 
 	logStatus := waitUtil.GetLogStatus()
-	log.Debugf("Log status is : %v", logStatus)
-	log.Debugf("Task status is : %v", state.Enum().String())
-
+	logger.Printf("LogStatus: %v", logStatus)
 	if !logStatus {
 		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
 			state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
@@ -814,20 +818,23 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 		}
 	}
 
+	logger.Printf("start sending status %s to mesos", state.Enum().String())
 	_, err := driver.SendStatusUpdate(runStatus)
 	if err != nil {
-		log.Errorf("Error updating mesos task status : %v", err.Error())
+		logger.Errorf("Error updating mesos task status : %v", err.Error())
 		return err
 	}
 
-	log.Printf("Update Status : Update Mesos task state as %s", state.String())
+	logger.Printf("Updated Status to mesos: %s", state.String())
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	if state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() ||
 		state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() {
 		log.Println("====================Stop ExecutorDriver====================")
 		driver.Stop()
 	}
+
+	logger.Printf(" SendMesosStatus complete.")
 	return nil
 }
 
