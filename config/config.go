@@ -55,6 +55,7 @@ const (
 	COMPOSE_TRACE                        = "launchtask.composetrace"
 	DEBUG_MODE                           = "launchtask.debug"
 	COMPOSE_HTTP_TIMEOUT                 = "launchtask.composehttptimeout"
+	HTTP_TIMEOUT                         = "launchtask.httptimeout"
 	COMPOSE_STOP_TIMEOUT                 = "cleanpod.timeout"
 	CONFIG_OVERRIDE_PREFIX               = "config."
 )
@@ -132,6 +133,7 @@ func setDefaultConfig(conf *viper.Viper) {
 	conf.SetDefault(RETRY_INTERVAL, 10000)
 	conf.SetDefault(TIMEOUT, 500000)
 	conf.SetDefault(COMPOSE_STOP_TIMEOUT, 10)
+	conf.SetDefault(HTTP_TIMEOUT, 20000)
 }
 
 func GetAppFolder() string {
@@ -203,6 +205,10 @@ func EnableComposeTrace() bool {
 
 func GetPollInterval() int {
 	return GetConfig().GetInt(POD_MONITOR_INTERVAL)
+}
+
+func GetHttpTimeout() time.Duration {
+	return time.Duration(GetConfig().GetInt(HTTP_TIMEOUT)) * time.Millisecond
 }
 
 func GetComposeHttpTimeout() int {
