@@ -383,8 +383,11 @@ func main() {
 	}
 
 	log.Println("Executor : Executor process has started and running.")
-	driver.Join()
-
+	status, err :=driver.Join()
+	if err != nil {
+		log.Errorf("error from driver.Join(): %v",err)
+	}
+	log.Printf("driver.Join() exits with status %s",status.String())
 }
 
 func switchDebugMode() {

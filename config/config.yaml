@@ -8,6 +8,7 @@ launchtask:
    skippull: true
    composetrace: true
    debug: false
+   httptimeout: 20000
 plugins:
    pluginorder: general
 cleanpod:
