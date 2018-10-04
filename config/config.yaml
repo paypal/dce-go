@@ -1,9 +1,26 @@
 launchtask:
    podmonitorinterval: 10000
+   composehttptimeout: 300
    pullretry: 3
    maxretry: 3
+   retryinterval: 10000
    timeout: 500000
+   skippull: true
+   composetrace: true
+   debug: false
+   httptimeout: 20000
 plugins:
    pluginorder: general
 cleanpod:
+   cleanfailtask: false
+   timeout: 20
    unhealthy: true
+   cleanvolumeandcontaineronmesoskill: true
+   cleanimageonmesoskill: false
+dockerdump:
+   enable: false
+   dumppath: /home/ubuntu
+   dockerpidfile: /var/run/docker.pid
+   containerpidfile: /run/docker/libcontainerd/docker-containerd.pid
+   dockerlogpath: /var/log/upstart/docker.log
+dockercomposeverbose: false

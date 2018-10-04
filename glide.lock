@@ -1,6 +1,10 @@
-hash: 61e63c389c2a58be0e90bcb12ba4e6895d593da56082e645223ba5cd6b04e0d3
-updated: 2017-04-26T14:31:16.544638389-07:00
+hash: 72cb9cb5eb31c0d845197c178e2794dbb769fdefaccf8eb7b4bf751c3e2dc396
+updated: 2018-04-12T15:10:47.61909011-07:00
 imports:
+- name: github.com/davecgh/go-spew
+  version: ecdeabc65495df2dec95d7c4a4c3e021903035e5
+  subpackages:
+  - spew
 - name: github.com/fsnotify/fsnotify
   version: fd9ec7deca8bf46ecd2a795baaacf2b3a9be1197
 - name: github.com/gogo/protobuf
@@ -27,6 +31,7 @@ imports:
 - name: github.com/mesos/mesos-go
   version: 7228b13084ce3ea645dbf7c8ecb5704301a6eadf
   subpackages:
+  - examples/Godeps/_workspace/src/github.com/stretchr/testify/assert
   - executor
   - mesosproto
   - mesosproto/scheduler
@@ -37,6 +42,11 @@ imports:
   - upid
 - name: github.com/mitchellh/mapstructure
   version: f3009df150dadf309fdee4a54ed65c124afad715
+- name: github.com/paypal/gorealis
+  version: 9631aa3aab9964631946814fa0d8b99a133c982f
+  subpackages:
+  - gen-go/apache/aurora
+  - response
 - name: github.com/pborman/uuid
   version: 1b00554d822231195d1babd97ff4a781231955c9
 - name: github.com/pelletier/go-buffruneio
@@ -47,6 +57,10 @@ imports:
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/pkg/sftp
   version: 4d0e916071f68db74f8a73926335f809396d6b42
+- name: github.com/samuel/go-zookeeper
+  version: 471cd4e61d7a78ece1791fa5faa0345dc8c7d5a5
+  subpackages:
+  - zk
 - name: github.com/sirupsen/logrus
   version: c078b1e43f58d563c74cebe63c85789e76ddb627
 - name: github.com/spf13/afero
@@ -62,6 +76,12 @@ imports:
   version: 5ccb023bc27df288a957c5e994cd44fd19619465
 - name: github.com/spf13/viper
   version: 651d9d916abc3c3d6a91a12549495caba5edffd2
+  subpackages:
+  - remote
+- name: github.com/stretchr/testify
+  version: 87b1dfb5b2fa649f52695dd9eae19abe404a4308
+  subpackages:
+  - assert
 - name: golang.org/x/crypto
   version: 9477e0b78b9ac3d0b03822fd95422e2fe07627cd
   subpackages:
@@ -70,7 +90,7 @@ imports:
   - ed25519/internal/edwards25519
   - ssh
 - name: golang.org/x/net
-  version: 6c4ac8bdbf06a105c4baf3dcda28bd9b0fb15588
+  version: 5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec
   subpackages:
   - context
 - name: golang.org/x/sys
@@ -82,8 +102,14 @@ imports:
   subpackages:
   - transform
   - unicode/norm
+- name: git.apache.org/thrift.git
+  version: b2a4d4ae21c789b689dd162deb819665567f481c
+  subpackages:
+  - lib/go/thrift
 - name: gopkg.in/yaml.v2
   version: a5b47d31c556af34a302ce5d659e6fea44d90de0
-- name: github.com/rdelval/gorealis
-  version: e12370ffbbb5208cc522ebf544ab270098a65e37
-testImports: []
+testImports:
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib

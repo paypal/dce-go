@@ -17,12 +17,12 @@ package http
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/paypal/dce-go/config"
 )
 
 // generate body for http request
@@ -32,13 +32,13 @@ func GenBody(t interface{}) io.Reader {
 	if err != nil {
 		log.Panic("Error marshalling : ", err.Error())
 	}
-	fmt.Println("Allocate IP Request Body : ", string(tjson))
+	log.Println("Request Body : ", string(tjson))
 	return bytes.NewReader(tjson)
 }
 
 // http post
 func PostRequest(url string, body io.Reader) ([]byte, error) {
-	client := &http.Client{}
+	client := &http.Client{Timeout: config.GetHttpTimeout()}
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		log.Println("Error creating http request : ", err.Error())
@@ -65,7 +65,7 @@ func PostRequest(url string, body io.Reader) ([]byte, error) {
 
 // http get
 func GetRequest(url string) ([]byte, error) {
-	client := &http.Client{}
+	client := &http.Client{Timeout: config.GetHttpTimeout()}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println("Error creating http request : ", err.Error())

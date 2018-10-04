@@ -2,6 +2,7 @@ version: '2.1'
 services:
  mysql:  
   image: mysql
+  restart: always
   container_name: mysql
   ports:
    - "81:3306"
@@ -10,6 +11,8 @@ services:
    - MYSQL_DATABASE=ghost
    - MYSQL_USER=ghost
    - MYSQL_PASSWORD=password
+  extra_hosts:
+   - ip:0.0.0.0
  ghost:  
   image: dockerhub.paypalcorp.com/kkrishna/ghostlocal:1.0
   container_name: ghostlocal

@@ -17,57 +17,71 @@ package types
 import (
 	exec_cmd "os/exec"
 	"sync"
-	"time"
 
 	"github.com/mesos/mesos-go/mesosproto"
 )
 
 const (
-	HEALTHY                               = "healthy"
-	UNHEALTHY                             = "unhealthy"
-	POD_STAGING                           = "POD_STAGING"
-	POD_STARTING                          = "POD_STARTING"
-	POD_RUNNING                           = "POD_RUNNING"
-	POD_FAILED                            = "POD_FAILED"
-	POD_KILLED                            = "POD_KILLED"
-	POD_FINISHED                          = "POD_FINISHED"
-	POD_PULL_FAILED                       = "PULL_IMAGE_FAILED"
-	HEALTHCHECK                           = "healthcheck"
-	CONTAINER_NAME                        = "container_name"
-	NETWORK_MODE                          = "network_mode"
-	LINKS                                 = "links"
-	PORTS                                 = "ports"
-	LABELS                                = "labels"
-	RESTART                               = "restart"
-	SERVICES                              = "services"
-	IMAGE                                 = "image"
-	VERSION                               = "version"
-	NETWORKS                              = "networks"
-	TASK_ID                               = "taskId"
-	EXECUTOR_ID                           = "executorId"
-	CGROUP_PARENT                         = "cgroup_parent"
-	PLUGIN_ORDER                          = "pluginorder"
-	INFRA_CONTAINER_YML                   = "docker-infra-container.yml"
-	INFRA_CONTAINER_NAME                  = "infra"
-	HOST_MODE                             = "host"
-	NONE_NETWORK_MODE                     = "none"
-	NAME                                  = "name"
-	NETWORK_DRIVER                        = "driver"
-	NETWORK_DEFAULT_DRIVER                = "bridge"
-	NETWORK_DEFAULT_NAME                  = "default"
-	NETWORK_EXTERNAL                      = "external"
-	INFRA_CONTAINER_GEN_YML               = "docker-infra-container.yml-generated.yml"
-	DEFAULT_FOLDER                        = "poddata"
-	NO_FOLDER                             = "dontcreatefolder"
-	RM_INFRA_CONTAINER                    = "rm_infra_container"
-	COMPOSE_HTTP_TIMEOUT                  = "COMPOSE_HTTP_TIMEOUT"
-	SERVICE_DETAIL                        = "serviceDetail"
-	MAX_DURATION            time.Duration = 1<<63 - 1
+	HEALTHY                 = "healthy"
+	UNHEALTHY               = "unhealthy"
+	STARTING                = "starting"
+	POD_STAGING             = "POD_STAGING"
+	POD_STARTING            = "POD_STARTING"
+	POD_RUNNING             = "POD_RUNNING"
+	POD_FAILED              = "POD_FAILED"
+	POD_KILLED              = "POD_KILLED"
+	POD_FINISHED            = "POD_FINISHED"
+	POD_PULL_FAILED         = "PULL_IMAGE_FAILED"
+	HEALTHCHECK             = "healthcheck"
+	CONTAINER_NAME          = "container_name"
+	NETWORK_MODE            = "network_mode"
+	LINKS                   = "links"
+	PORTS                   = "ports"
+	LABELS                  = "labels"
+	ENVIRONMENT             = "environment"
+	RESTART                 = "restart"
+	SERVICES                = "services"
+	IMAGE                   = "image"
+	VERSION                 = "version"
+	NETWORKS                = "networks"
+	HOSTNAME                = "hostname"
+	VOLUMES                 = "volumes"
+	DEPENDS_ON              = "depends_on"
+	EXTRA_HOSTS             = "extra_hosts"
+	TASK_ID                 = "taskId"
+	EXECUTOR_ID             = "executorId"
+	CGROUP_PARENT           = "cgroup_parent"
+	PLUGIN_ORDER            = "pluginorder"
+	INFRA_CONTAINER_YML     = "docker-infra-container.yml"
+	HOST_MODE               = "host"
+	NONE_NETWORK_MODE       = "none"
+	NAME                    = "name"
+	NETWORK_DRIVER          = "driver"
+	NETWORK_DEFAULT_DRIVER  = "bridge"
+	NETWORK_DEFAULT_NAME    = "default"
+	NETWORK_EXTERNAL        = "external"
+	INFRA_CONTAINER_GEN_YML = "docker-infra-container.yml-generated.yml"
+	DEFAULT_FOLDER          = "poddata"
+	NO_FOLDER               = "dontcreatefolder"
+	RM_INFRA_CONTAINER      = "rm_infra_container"
+	COMPOSE_HTTP_TIMEOUT    = "COMPOSE_HTTP_TIMEOUT"
+	SERVICE_DETAIL          = "serviceDetail"
+	INFRA_CONTAINER         = "networkproxy"
+	IS_SERVICE              = "isService"
+	FOREVER                 = 1<<63 - 1
+	DCE_OUT					= "dce.out"
+	DCE_ERR					= "dce.err"
+
 )
 
 type PodStatus struct {
 	sync.RWMutex
 	Status string
+}
+
+type LogCommandStatus struct {
+	sync.RWMutex
+	IsRunning bool
 }
 
 type ServiceDetail map[interface{}](map[interface{}]interface{})
@@ -102,3 +116,7 @@ func (c *ContainerStatusDetails) SetContainerId(containerId string) {
 func (c *ContainerStatusDetails) SetComposeTaskId(composeTaskId *mesosproto.TaskID) {
 	c.ComposeTaskId = composeTaskId
 }
+
+type err string
+
+const NoComposeFile err = "no compose file specified"

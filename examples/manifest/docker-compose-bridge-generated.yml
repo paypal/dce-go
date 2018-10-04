@@ -1,0 +1,46 @@
+# docker-compose-bridge.yml-generated.yml
+services:
+  nginx:
+    cgroup_parent: /mesos/9dfb4f24-cdd9-42c1-8324-c0bb3fc470d6
+    image: dcego/nginx:1.0
+    labels:
+      com.company.label: awesome
+      executorId: marathon-docker-compose-demo.fa8db2e8-4639-11e7-b4d3-866758312cc8
+      taskId: docker-compose-demo.fa8db2e8-4639-11e7-b4d3-866758312cc8
+    network_mode: service:networkproxy
+    volumes:
+    - /www/public
+    volumes_from:
+    - web
+  web:
+    cgroup_parent: /mesos/9dfb4f24-cdd9-42c1-8324-c0bb3fc470d6
+    image: dcego/web:1.0
+    labels:
+      com.company.label: awesome
+      executorId: marathon-docker-compose-demo.fa8db2e8-4639-11e7-b4d3-866758312cc8
+      taskId: docker-compose-demo.fa8db2e8-4639-11e7-b4d3-866758312cc8
+    network_mode: service:networkproxy
+    volumes:
+    - ./app:/src/app
+version: "2.1"
+
+# docker-infra-container.yml-generated.yml
+networks:
+  default:
+    driver: bridge
+services:
+  networkproxy:
+    cgroup_parent: /mesos/9dfb4f24-cdd9-42c1-8324-c0bb3fc470d6
+    container_name: docker-compose-demo.fa8db2e8-4639-11e7-b4d3-866758312cc8_networkproxy_0.1
+    image: dcego/networkproxy:1.2
+    labels:
+      com.company.label: awesome
+      executorId: marathon-docker-compose-demo.fa8db2e8-4639-11e7-b4d3-866758312cc8
+      taskId: docker-compose-demo.fa8db2e8-4639-11e7-b4d3-866758312cc8
+    networks:
+    - default
+    ports:
+    - 32783:8081
+    - 31545:80
+    - 31546:443
+version: "2.1"

@@ -6,3 +6,5 @@ dce-go.iml
 .DS_Store
 dce/executor
 executor
+.gitmodules
+paypal-plugins/

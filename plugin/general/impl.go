@@ -15,11 +15,10 @@
 package general
 
 import (
-	"os"
+	"context"
+	"fmt"
 	"strconv"
 	"strings"
-
-	"golang.org/x/net/context"
 
 	"github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
@@ -38,11 +37,14 @@ var logger *log.Entry
 type generalExt struct {
 }
 
+var infraYmlPath string
+
 func init() {
+	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
+
 	logger = log.WithFields(log.Fields{
 		"plugin": "general",
 	})
-	log.SetOutput(os.Stdout)
 	logger.Println("Plugin Registering")
 
 	//Register plugin with name
@@ -53,7 +55,11 @@ func init() {
 }
 
 func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
-	logger.Println("PreLaunchTask begin : ", *composeFiles)
+	logger.Println("PreLaunchTask begin")
+
+	if composeFiles == nil || len(*composeFiles) == 0 {
+		return fmt.Errorf(string(types.NoComposeFile))
+	}
 
 	var editedFiles []string
 	var err error
@@ -61,9 +67,11 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 	logger.Println("====================context in====================")
 	logger.Println((*ctx).Value(types.SERVICE_DETAIL))
 
+	logger.Printf("Current compose files list: %v", *composeFiles)
+
 	if (*ctx).Value(types.SERVICE_DETAIL) == nil {
 		var servDetail types.ServiceDetail
-		servDetail, err = utils.ParseYamls(*composeFiles)
+		servDetail, err = utils.ParseYamls(composeFiles)
 		if err != nil {
 			log.Errorf("Error parsing yaml files : %v", err)
 			return err
@@ -74,6 +82,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 
 	currentPort := pod.GetPorts(taskInfo)
 
+	// Create infra container yml file
 	infrayml, err := CreateInfraContainer(ctx, types.INFRA_CONTAINER_YML)
 	if err != nil {
 		logger.Errorln("Error creating infra container : ", err.Error())
@@ -81,11 +90,13 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 	}
 	*composeFiles = append(utils.FolderPath(*composeFiles), infrayml)
 
+	var extraHosts = make(map[interface{}]bool)
+
 	var indexInfra int
 	for i, file := range *composeFiles {
 		logger.Printf("Starting Edit compose file %s", file)
 		var editedFile string
-		editedFile, currentPort, err = EditComposeFile(ctx, file, executorId, taskInfo.GetTaskId().GetValue(), currentPort)
+		editedFile, currentPort, err = editComposeFile(ctx, file, executorId, taskInfo.GetTaskId().GetValue(), currentPort, extraHosts)
 		if err != nil {
 			logger.Errorln("Error editing compose file : ", err.Error())
 			return err
@@ -93,6 +104,7 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 
 		if strings.Contains(editedFile, types.INFRA_CONTAINER_GEN_YML) {
 			indexInfra = i
+			infraYmlPath = editedFile
 		}
 
 		if editedFile != "" {
@@ -100,12 +112,20 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 		}
 	}
 
+	// Remove infra container yml file if network mode is host
 	if config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
-		logger.Println("Reomve infra container")
+		logger.Printf("Remove file: %s\n", types.INFRA_CONTAINER_GEN_YML)
 		filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 		delete(filesMap, editedFiles[indexInfra])
 		*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
 		editedFiles = append(editedFiles[:indexInfra], editedFiles[indexInfra+1:]...)
+		err = utils.DeleteFile(types.INFRA_CONTAINER_YML)
+		if err != nil {
+			log.Errorf("Error deleting infra yml file %v", err)
+		}
+	} else {
+		// Move extra_hosts from other compose files to infra container
+		addExtraHostsSection(ctx, infraYmlPath, types.INFRA_CONTAINER, extraHosts)
 	}
 
 	logger.Println("====================context out====================")
@@ -123,7 +143,14 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 }
 
 func (gp *generalExt) PostLaunchTask(ctx *context.Context, files []string, taskInfo *mesos.TaskInfo) (string, error) {
-	logger.Println("PostLaunchTask Starting")
+	logger.Println("PostLaunchTask begin")
+	if pod.SinglePort {
+		err := postEditComposeFile(ctx, infraYmlPath)
+		if err != nil {
+			log.Errorf("PostLaunchTask: Error editing compose file : %v", err)
+			return types.POD_FAILED, err
+		}
+	}
 	return "", nil
 }
 
@@ -132,9 +159,64 @@ func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
 	return nil
 }
 
+// PostKillTask cleans up containers, volumes, images if task is killed by mesos
+// Failed tasks will be cleaned up based on config cleanpod.cleanvolumeandcontaineronmesoskill and cleanpod.cleanimageonmesoskill
+// Non pre-existing networks will always be removed
 func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
-	logger.Println("PostKillTask begin")
-	return nil
+	logger.Println("PostKillTask begin, pod status:", pod.GetPodStatus())
+	var err error
+	if !pod.PodLaunched {
+		logger.Println("Pod hasn't started, no postKill work needed.")
+		return nil
+	}
+
+	if pod.GetPodStatus() != types.POD_FAILED || (pod.GetPodStatus() == types.POD_FAILED && config.GetConfig().GetBool(config.CLEAN_FAIL_TASK)) {
+		// clean pod volume and container if clean_container_volume_on_kill is true
+		cleanVolumeAndContainer := config.GetConfig().GetBool(config.CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL)
+		if cleanVolumeAndContainer{
+			err = pod.RemovePodVolume(pod.ComposeFiles)
+			if err != nil {
+				logger.Errorf("Error cleaning volumes: %v", err)
+			}
+		}
+		logger.Println("Starting to clean image.")
+		// clean pod images if clean_image_on_kill is true
+		cleanImage := config.GetConfig().GetBool(config.CLEAN_IMAGE_ON_MESOS_KILL)
+		if cleanImage {
+			err = pod.RemovePodImage(pod.ComposeFiles)
+			if err != nil {
+				logger.Errorf("Error cleaning images: %v", err)
+			}
+		}
+	} else {
+		if network, ok := config.GetNetwork(); ok {
+			if network.PreExist {
+				return nil
+			}
+		}
+		// skip removing network if network mode is host
+		// RM_INFRA_CONTAINER is set as true if network mode is true during yml parsing
+		if config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
+			return nil
+		}
+
+		// Get infra container id
+		infraContainerId, err := pod.GetContainerIdByService(pod.ComposeFiles, types.INFRA_CONTAINER)
+		if err != nil {
+			logger.Errorf("Error getting container id of service %s: %v", types.INFRA_CONTAINER, err)
+			return nil
+		}
+
+		networkName, err := pod.GetContainerNetwork(infraContainerId)
+		if err != nil {
+			logger.Errorf("Failed to clean up network :%v", err)
+		}
+		err = pod.RemoveNetwork(networkName)
+		if err != nil {
+			logger.Errorf("POD_CLEAN_NETWORK_FAIL -- %v", err)
+		}
+	}
+	return err
 }
 
 func (gp *generalExt) Shutdown(executor.ExecutorDriver) error {
@@ -181,7 +263,7 @@ func CreateInfraContainer(ctx *context.Context, path string) (string, error) {
 		}
 	}
 
-	service[NETWORK_PROXY] = containerDetail
+	service[types.INFRA_CONTAINER] = containerDetail
 	_yaml[types.SERVICES] = service
 	_yaml[types.VERSION] = "2.1"
 	log.Println(_yaml)
@@ -189,7 +271,7 @@ func CreateInfraContainer(ctx *context.Context, path string) (string, error) {
 	content, _ := yaml.Marshal(_yaml)
 	fileName, err := utils.WriteToFile(path, content)
 	if err != nil {
-		log.Errorf("Error writing infra container details to file %v", err)
+		log.Errorf("Error writing infra container details into fils %v", err)
 		return "", err
 	}
 

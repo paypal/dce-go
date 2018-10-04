@@ -1,0 +1,29 @@
+services:
+  ghost:
+    cgroup_parent: /mesos/general
+    container_name: taskId_ghostlocal
+    depends_on:
+    - mysql
+    environment:
+      PYTHONUNBUFFERED: 1
+    image: dockerhub.paypalcorp.com/kkrishna/ghostlocal:1.0
+    labels:
+    - primary.container=true
+    - executorId=executorId
+    - taskId=taskId
+    network_mode: service:networkproxy
+  mysql:
+    cgroup_parent: /mesos/general
+    container_name: taskId_mysql
+    environment:
+    - MYSQL_ROOT_PASSWORD=root
+    - MYSQL_DATABASE=ghost
+    - MYSQL_USER=ghost
+    - MYSQL_PASSWORD=password
+    - PYTHONUNBUFFERED=1
+    image: mysql
+    labels:
+      executorId: executorId
+      taskId: taskId
+    network_mode: service:networkproxy
+version: "2.1"

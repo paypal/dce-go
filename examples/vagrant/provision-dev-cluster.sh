@@ -54,6 +54,8 @@ apt-get -y install                         \
    unzip                                   \
    --no-install-recommends
 
+sudo echo 1 > /sys/fs/cgroup/memory/memory.use_hierarchy
+
 update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java
 
 readonly IP_ADDRESS=192.168.33.8
@@ -63,8 +65,8 @@ readonly MARATHON_VERSION=1.1.2-1.0.482
 
 function install_go {
 
-  wget -c "https://storage.googleapis.com/golang/go1.7.4.linux-amd64.tar.gz" "--no-check-certificate"
-  tar -xvf go1.7.4.linux-amd64.tar.gz
+  wget -c "https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz" "--no-check-certificate"
+  tar -xvf go1.9.2.linux-amd64.tar.gz
   sudo mv go /usr/local
 
   export GOROOT=/usr/local/go
@@ -89,9 +91,12 @@ function prepare_extra {
   mkdir -p /etc/mesos-slave
   mkdir -p /etc/mesos-master
   mkdir -p /output/usr/local/lib/mesos
+  mkdir -p /etc/docker || true
+  cp /vagrant/examples/vagrant/config/daemon.json /etc/docker/
   cp /vagrant/examples/vagrant/mesos_config/etc_mesos-slave/* /etc/mesos-slave
   cp /vagrant/examples/vagrant/mesos_config/etc_mesos-master/* /etc/mesos-master
   cp /vagrant/examples/vagrant/mesos-module/${MESOS_MODULE}/* /output/usr/local/lib/mesos/
+  cp /vagrant/examples/vagrant/marathon/marathon /etc/default/marathon
 }
 
 function install_aurora {
@@ -116,7 +121,7 @@ function build_docker_compose_executor {
   sudo ln -sf /vagrant $GOPATH/src/github.com/paypal/dce-go
   sudo chmod 777 $GOPATH/src/github.com/paypal/dce-go
   cd $GOPATH/src/github.com/paypal/dce-go
-  glide install
+  glide install --strip-vendor
   go build -o executor $GOPATH/src/github.com/paypal/dce-go/dce/main.go
   mv executor /home/vagrant
   sed -i.bkp '$a export GOROOT=/usr/local/go;export GOPATH=/home/vagrant/go;export PATH=$PATH:$GOPATH/bin:$GOROOT/bin' /home/vagrant/.bashrc

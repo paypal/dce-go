@@ -16,39 +16,47 @@ package general
 
 import (
 	"container/list"
+	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"fmt"
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	utils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 )
 
 const (
-	PORT_DELIMITER = ":"
-	PATH_DELIMITER = "/"
-	NETWORK_PROXY  = "networkproxy"
+	portDelimiter = ":"
+	pathDelimiter = "/"
 )
 
-func EditComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element) (string, *list.Element, error) {
+func editComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element,
+	extraHosts map[interface{}]bool) (string, *list.Element, error) {
 	var err error
 
 	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 	if filesMap[file][types.SERVICES] == nil {
+		log.Printf("Services is empty for file %s \n", file)
 		return "", ports, nil
 	}
 
-	servMap := filesMap[file][types.SERVICES].(map[interface{}]interface{})
+	servMap, ok := filesMap[file][types.SERVICES].(map[interface{}]interface{})
+	if !ok {
+		log.Printf("Failed converting services to map[interface{}]interface{}")
+		return "", ports, nil
+	}
 
 	for serviceName := range servMap {
-		ports, err = UpdateServiceSessions(serviceName.(string), file, executorId, taskId, &filesMap, ports)
+		ports, err = updateServiceSessions(serviceName.(string), file, executorId, taskId, filesMap, ports, extraHosts)
+		if err != nil {
+			log.Printf("Failed updating services: %v \n", err)
+			return file, ports, err
+		}
 	}
 
 	filesMap[file][types.VERSION] = "2.1"
@@ -58,22 +66,21 @@ func EditComposeFile(ctx *context.Context, file string, executorId string, taskI
 		file = file + utils.FILE_POSTFIX
 	}
 	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
+
+	logger.Printf("Updated compose files, current context: %v\n", filesMap)
 	return file, ports, err
 }
 
-func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMap *types.ServiceDetail, ports *list.Element) (*list.Element, error) {
-	containerDetails := (*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName].(map[interface{}]interface{})
+func updateServiceSessions(serviceName, file, executorId, taskId string, filesMap types.ServiceDetail, ports *list.Element,
+	extraHosts map[interface{}]bool) (*list.Element, error) {
+	containerDetails, ok := filesMap[file][types.SERVICES].(map[interface{}]interface{})[serviceName].(map[interface{}]interface{})
+	if !ok {
+		log.Println("POD_UPDATE_YAML_FAIL")
+	}
 	logger := log.WithFields(log.Fields{
 		"serviceName": serviceName,
 		"taskId":      taskId,
 	})
-
-	// Count service
-	/*if _, ok := containerDetails[types.IMAGE].(string); ok {
-		pod.PodServices = append(pod.PodServices, serviceName)
-		serviceCount++
-	}*/
-	pod.PodServices[serviceName] = true
 
 	// Remove restart session
 	if _, ok := containerDetails[types.RESTART].(string); ok {
@@ -81,12 +88,38 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 		log.Println("Edit Compose File : Remove restart")
 	}
 
-	// Update session of network_mode
-	if serviceName != NETWORK_PROXY {
-		if network_mode, ok := containerDetails[types.NETWORK_MODE].(string); !ok ||
-			(network_mode != types.HOST_MODE && network_mode != types.NONE_NETWORK_MODE) {
+	// save extra host section of all services for moving them to infra container later
+	scanForExtraHostsSection(containerDetails, extraHosts)
 
-			containerDetails[types.NETWORK_MODE] = "service:" + NETWORK_PROXY
+	// Get env list
+	var envIsArray bool
+	envMap, ok := containerDetails[types.ENVIRONMENT].(map[interface{}]interface{})
+	if ok {
+		logger.Printf("ENV is an array %v of %s : %v", envIsArray, serviceName, envMap)
+	}
+	envList, ok := containerDetails[types.ENVIRONMENT].([]interface{})
+	if ok {
+		logger.Printf("ENV is an array %v of %s : %v", envIsArray, serviceName, envList)
+		envIsArray = true
+	}
+	if envMap == nil && envList == nil {
+		envMap = make(map[interface{}]interface{})
+	}
+
+	if envIsArray {
+		envList = append(envList, fmt.Sprintf("%s=%d", "PYTHONUNBUFFERED", 1))
+		containerDetails[types.ENVIRONMENT] = envList
+	} else {
+		envMap["PYTHONUNBUFFERED"] = 1
+		containerDetails[types.ENVIRONMENT] = envMap
+	}
+
+	// Update session of network_mode
+	if serviceName != types.INFRA_CONTAINER {
+		if networkMode, ok := containerDetails[types.NETWORK_MODE].(string); !ok ||
+			(networkMode != types.HOST_MODE && networkMode != types.NONE_NETWORK_MODE) {
+
+			containerDetails[types.NETWORK_MODE] = "service:" + types.INFRA_CONTAINER
 
 		} else {
 			config.GetConfig().SetDefault(types.RM_INFRA_CONTAINER, true)
@@ -99,23 +132,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	if containerName, ok := containerDetails[types.CONTAINER_NAME].(string); ok {
 		containerName = utils.PrefixTaskId(taskId, containerName)
 		containerDetails[types.CONTAINER_NAME] = containerName
-
-		if serviceName == NETWORK_PROXY {
-			config.SetConfig(types.INFRA_CONTAINER_NAME, containerName)
-		}
-
-		if pod.ServiceNameMap[serviceName] == "" {
-			pod.ServiceNameMap[serviceName] = containerName
-		}
-
 		logger.Println("Edit Compose File : Updated container_name as ", containerName)
-	} else {
-
-		if pod.ServiceNameMap[serviceName] == "" {
-			pod.ServiceNameMap[serviceName] = fmt.Sprintf("%s_%s",
-				strings.Replace(strings.Replace(config.GetConfig().GetString(config.FOLDER_NAME), "_", "", -1),
-					"-", "", -1), serviceName)
-		}
 	}
 
 	// Update value of LINKS
@@ -145,7 +162,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 
 	// Add cgroup parent
 	path, _ := filepath.Abs("")
-	dirs := strings.Split(path, PATH_DELIMITER)
+	dirs := strings.Split(path, pathDelimiter)
 	containerDetails[types.CGROUP_PARENT] = "/mesos/" + dirs[len(dirs)-1]
 	logger.Println("Edit Compose File : Add cgroup parent /mesos/", dirs[len(dirs)-1])
 
@@ -157,14 +174,16 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 			if portList, ok := containerDetails[types.PORTS].([]interface{}); ok {
 
 				for i, p := range portList {
-					portMap := strings.Split(p.(string), PORT_DELIMITER)
+					portMap := strings.Split(p.(string), portDelimiter)
 					if len(portMap) > 1 {
 						if ports == nil {
 							return nil, errors.New("No ports available")
 						}
-						p = strconv.FormatUint(ports.Value.(uint64), 10) + PORT_DELIMITER + portMap[1]
+						p = strconv.FormatUint(ports.Value.(uint64), 10) + portDelimiter + portMap[1]
 						portList[i] = p.(string)
 						ports = ports.Next()
+					} else {
+						pod.SinglePort = true
 					}
 				}
 
@@ -186,8 +205,7 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	}
 
 	// Add service ports to infra container
-	if serviceName == NETWORK_PROXY {
-
+	if serviceName == types.INFRA_CONTAINER {
 		if portList := config.GetConfig().Get(types.PORTS); portList != nil {
 
 			logger.Println("Add services ports mapping to infra container ", portList)
@@ -195,7 +213,103 @@ func UpdateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 		}
 	}
 
-	(*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName] = containerDetails
+	filesMap[file][types.SERVICES].(map[interface{}]interface{})[serviceName] = containerDetails
 
 	return ports, nil
+}
+
+func postEditComposeFile(ctx *context.Context, file string) error {
+	var err error
+	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	if filesMap[file][types.SERVICES] == nil {
+		return nil
+	}
+	servMap := filesMap[file][types.SERVICES].(map[interface{}]interface{})
+	for serviceName := range servMap {
+		err = updateDynamicPorts(serviceName.(string), file, &filesMap)
+		if err != nil {
+			log.Errorf("Fail updating dynamic ports : %v", err)
+			return err
+		}
+	}
+	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
+
+	err = utils.WriteChangeToFiles(*ctx)
+	if err != nil {
+		log.Errorf("Failure writing updated compose files : %v", err)
+		return err
+	}
+	return nil
+}
+
+func updateDynamicPorts(serviceName, file string, filesMap *types.ServiceDetail) error {
+	containerDetails := (*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName].(map[interface{}]interface{})
+	ids, err := pod.GetPodContainerIds([]string{file})
+	if err != nil {
+		log.Errorf("Error retrieving infra container id : %v", err)
+		return err
+	}
+	if portList, ok := containerDetails[types.PORTS].([]interface{}); ok {
+		for i, p := range portList {
+			portMap := strings.Split(p.(string), portDelimiter)
+			if len(portMap) == 1 {
+				dynamicPort, err := pod.GetDockerPorts(ids[0], portMap[0])
+				if err != nil {
+					log.Errorf("Error retrieving docker dynamic port : %v", err)
+				}
+				p = dynamicPort + portDelimiter + portMap[0]
+				portList[i] = p.(string)
+			}
+		}
+
+		containerDetails[types.PORTS] = portList
+		(*filesMap)[file][types.SERVICES].(map[interface{}]interface{})[serviceName] = containerDetails
+
+		logger.Println("Edit Compose File : Updated ports as ", portList)
+	}
+	return nil
+}
+
+func scanForExtraHostsSection(containerDetails map[interface{}]interface{}, extraHostsCollection map[interface{}]bool) {
+	// if extra_hosts is defined, extract and store it to inject it later in infra container yaml
+	if val, ok := containerDetails[types.EXTRA_HOSTS].([]interface{}); ok {
+		for _, v := range val {
+			extraHostsCollection[v] = true
+		}
+		// delete extra_hosts section from all services except networkproxy
+		delete(containerDetails, types.EXTRA_HOSTS)
+		log.Println("Found extra_hosts section defined")
+	}
+}
+
+func addExtraHostsSection(ctx *context.Context, file, svcName string, extraHostsCollection map[interface{}]bool) {
+	filesMap, ok := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	if !ok {
+		log.Warnln("Couldn't get service detail")
+		return
+	}
+	servMap, ok := filesMap[file][types.SERVICES].(map[interface{}]interface{})
+	if !ok {
+		log.Warnf("Couldn't get content of compose file %s\n", file)
+		return
+	}
+
+	if containerDetails, ok := servMap[svcName].(map[interface{}]interface{}); ok {
+		// i.e. only if some new extra_hosts were found in the compose files other than the ones already defined in infra container yaml
+		if val, ok := containerDetails[types.EXTRA_HOSTS].([]interface{}); ok {
+			for _, v := range val {
+				extraHostsCollection[v] = true
+			}
+
+			var extraHostsList []interface{}
+			for key := range extraHostsCollection {
+				extraHostsList = append(extraHostsList, key)
+			}
+			containerDetails[types.EXTRA_HOSTS] = extraHostsList
+			filesMap[file][types.SERVICES].(map[interface{}]interface{})[svcName] = containerDetails
+			logger.Printf("Added extra_hosts section to the file %s under service %s", file, svcName)
+		}
+		return
+
+	}
 }

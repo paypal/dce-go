@@ -15,14 +15,19 @@
 package pod
 
 import (
+	"log"
+	"strings"
 	"testing"
+	"time"
 
-	//"github.com/paypal/dce-go/types"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
+	"github.com/paypal/dce-go/utils/wait"
+	"github.com/stretchr/testify/assert"
 )
 
-/*func TestLaunchPod(t *testing.T) {
+func TestLaunchPod(t *testing.T) {
 	// file doesn't exist, should fail
 	files := []string{"docker-fail.yml"}
 	res := LaunchPod(files)
@@ -37,21 +42,25 @@ import (
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
 
-	err := RemovePod(files)
-	if err != nil {
-		t.Error(err.Error())
+	// long running job
+	files = []string{"testdata/docker-long.yml"}
+	res = LaunchPod(files)
+	if res != types.POD_STARTING {
+		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
-
-}
-
-func TestGetContainerNetwork(t *testing.T) {
-
-	// container exist
-	network, err := GetContainerNetwork("example_redis_1")
+	err := ForceKill(files)
 	if err != nil {
 		t.Errorf("expected no errors, but got %v", err)
 	}
-	if network != "example_default" {
+}
+
+func TestGetContainerNetwork(t *testing.T) {
+	// container exist
+	network, err := GetContainerNetwork("redis_test")
+	if err != nil {
+		t.Errorf("expected no errors, but got %v", err)
+	}
+	if network != "testdata_default" {
 		t.Errorf("expected network to be example_default, but got *%s*", network)
 	}
 
@@ -68,30 +77,136 @@ func TestRemoveNetwork(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected no error, but got %v", err)
 	}
-}*/
-
-func TestGetRunningPodContainers(t *testing.T) {
-	ids, err := GetRunningPodContainers([]string{"testdata/docker-long.yml"})
-	if err != nil {
-		t.Errorf("expected no errors, but got %v", err)
-	}
-	if len(ids) != 1 && len(ids) != 0 {
-		t.Errorf("expected one/no running containers, but got %d", len(ids))
-	}
-
 }
 
 func TestForceKill(t *testing.T) {
-	err := ForceKill([]string{"testdata/docker-long.yml"})
+	files := []string{"testdata/docker-long.yml"}
+	res := LaunchPod(files)
+	if res != types.POD_STARTING {
+		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
+	}
+	err := ForceKill(files)
 	if err != nil {
 		t.Errorf("expected no errors, but got %v", err)
 	}
 }
 
 func TestStopPod(t *testing.T) {
+	files := []string{"testdata/docker-long.yml"}
+	res := LaunchPod(files)
+	if res != types.POD_STARTING {
+		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
+	}
 	config.GetConfig().SetDefault(types.RM_INFRA_CONTAINER, true)
-	err := StopPod([]string{"testdata/docker-long.yml"})
+	err := StopPod(files)
 	if err != nil {
 		t.Errorf("expected no errors, but got %v", err)
+	}
+}
+
+func TestGetContainerIdByService(t *testing.T) {
+	files := []string{"testdata/docker-long.yml"}
+	res := LaunchPod(files)
+	if res != types.POD_STARTING {
+		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
+	}
+
+	res, err := wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
+		return GetContainerIdByService(files, "redis")
+	}))
+	assert.NoError(t, err, "Test get container id should success")
+	log.Println("Container id:", res)
+
+	res, err = wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
+		return GetContainerIdByService(files, "fake")
+	}))
+	if err == nil {
+		t.Fatal("Expected err isn't nil, but got nil")
+	}
+}
+
+func TestKillContainer(t *testing.T) {
+	err := KillContainer("", "")
+	log.Println(err.Error())
+	assert.Error(t, err, "test kill invalid container")
+
+	files := []string{"testdata/docker-long.yml"}
+	res := LaunchPod(files)
+	if res != types.POD_STARTING {
+		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
+	}
+	id, err := wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
+		return GetContainerIdByService(files, "redis")
+	}))
+	err = KillContainer("SIGUSR1", id)
+	assert.NoError(t, err, "Test sending kill signal to container")
+	err = KillContainer("", id)
+
+	config.GetConfig().Set(types.RM_INFRA_CONTAINER, true)
+	StopPod(files)
+}
+
+func TestGetAndRemoveLabel(t *testing.T) {
+	key1 := "org.apache.aurora.metadata.nsvip"
+	value1 := "1.1.1.1"
+	key2 := "org.apache.aurora.metadata.com.paypal.apirouter.namespace"
+	value2 := "namespace"
+	var labels []*mesos.Label
+	labels = append(labels, &mesos.Label{
+		Key:   &key1,
+		Value: &value1,
+	})
+	labels = append(labels, &mesos.Label{
+		Key:   &key2,
+		Value: &value2,
+	})
+
+	taskInfo := &mesos.TaskInfo{
+		Labels: &mesos.Labels{
+			Labels: labels,
+		},
+	}
+	type args struct {
+		key      string
+		taskInfo *mesos.TaskInfo
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "testremovelabel",
+			args: args{
+				key:      key1,
+				taskInfo: taskInfo,
+			},
+			want: value1,
+		},
+		{
+			name: "testremovenonexistentlabel",
+			args: args{
+				key:      "invalidkey",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetAndRemoveLabel(tt.args.key, tt.args.taskInfo); got != tt.want {
+				t.Errorf("GetAndRemoveLabel() = %v, want %v", got, tt.want)
+
+				labelsList := taskInfo.GetLabels().GetLabels()
+				for _, label := range labelsList {
+					if label.GetKey() == tt.args.key {
+						t.Errorf("key %s not removed from tge taskInfo", tt.args.key)
+					}
+					if strings.Contains(label.GetKey(), tt.args.key) && strings.Contains(label.GetKey(), ".") {
+						t.Errorf("key %s not removed from tge taskInfo", tt.args.key)
+					}
+				}
+			}
+		})
 	}
 }

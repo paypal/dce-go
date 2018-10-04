@@ -18,7 +18,9 @@ import (
 	"bufio"
 	"bytes"
 	"container/list"
+	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -26,16 +28,13 @@ import (
 	"regexp"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
-	"fmt"
-
 	mesos "github.com/mesos/mesos-go/mesosproto"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/pod"
-	"golang.org/x/net/context"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -44,6 +43,7 @@ const (
 	FILE_POSTFIX   = "-generated.yml"
 	PATH_DELIMITER = "/"
 	MAP_DELIMITER  = "="
+	TraceFolder    = "composetrace"
 )
 
 type EditorFunc func(serviceName string, taskInfo *mesos.TaskInfo, executorId string, taskId string, containerDetails map[interface{}]interface{}, ports *list.Element) (map[interface{}]interface{}, *list.Element, error)
@@ -61,10 +61,7 @@ func GetFiles(taskInfo *mesos.TaskInfo) ([]string, error) {
 
 	var files []string
 	for _, file := range strings.Split(filelist, FILE_DELIMITER) {
-		/*if strings.Contains(file, PATH_DELIMITER) {
-			config.GetConfig().SetDefault(types.NO_FOLDER, true)
-		}*/
-		files = append(files, file)
+		files = append(files, strings.TrimSpace(file))
 	}
 
 	log.Println("Required file list : ", files)
@@ -86,7 +83,8 @@ func GetPluginOrder(taskInfo *mesos.TaskInfo) ([]string, error) {
 		plugins = append(plugins, plugin)
 	}
 
-	log.Println("Plugin Order : ", plugins)
+	pod.PluginOrder = plugins
+	log.Println("Plugin Order : ", pod.PluginOrder)
 	return plugins, nil
 }
 
@@ -94,13 +92,16 @@ func GetPluginOrder(taskInfo *mesos.TaskInfo) ([]string, error) {
 func GetYAML(taskInfo *mesos.TaskInfo) []string {
 	log.Println("====================Get compose file from URI====================")
 	var files []string
+	if taskInfo == nil || taskInfo.Executor == nil || taskInfo.Executor.Command == nil {
+		return files
+	}
 	uris := taskInfo.Executor.Command.GetUris()
 	for _, uri := range uris {
 		arr := strings.Split(uri.GetValue(), "/")
 		name := arr[len(arr)-1]
 		GetDirFilesRecv(name, &files)
 	}
-	log.Println("Compose file from URI(Pre_files): ", files)
+	log.Println("Compose file from URI: ", files)
 	return files
 }
 
@@ -109,9 +110,13 @@ func GetYAML(taskInfo *mesos.TaskInfo) []string {
 // In case they have different depth of folders to keep compose files, GetDirFilesRecv help to get the complete path of
 // compose file
 func GetDirFilesRecv(dir string, files *[]string) {
-	if d, _ := os.Stat(dir); !d.IsDir() && (strings.Contains(dir, ".yml") ||
-		strings.Contains(dir, ".yaml") && (!strings.Contains(dir, "config") ||
-			!strings.Contains(dir, "plugin")) || dir == "yaml") {
+	d, err := os.Stat(dir)
+	if err != nil {
+		log.Errorf("Error getting file info of %s:%v\n", dir, err)
+		return
+	}
+
+	if !d.IsDir() && (strings.HasSuffix(dir, ".yml") || strings.HasSuffix(dir, ".yaml") || dir == "yaml") {
 		*files = append(*files, dir)
 		return
 	}
@@ -170,7 +175,7 @@ func IsSubset(first, second []string) bool {
 // check if file exist
 func CheckFileExist(file string) bool {
 	if _, err := os.Stat(file); os.IsNotExist(err) {
-		log.Println("File does not exit")
+		log.Printf("File %s does not exist", file)
 		return false
 	}
 	return true
@@ -190,6 +195,7 @@ func WriteToFile(file string, data []byte) (string, error) {
 		file = FolderPath(strings.Fields(file))[0]
 	}
 
+	log.Printf("Write to file : %s\n", file)
 	f, err := os.Create(file)
 	if err != nil {
 		log.Errorf("Error creating file %v", err)
@@ -204,6 +210,13 @@ func WriteToFile(file string, data []byte) (string, error) {
 	return f.Name(), nil
 }
 
+func DeleteFile(file string) error {
+	if !strings.Contains(file, config.GetAppFolder()) {
+		file = FolderPath(strings.Fields(file))[0]
+	}
+	return os.Remove(file)
+}
+
 func WriteChangeToFiles(ctx context.Context) error {
 	filesMap := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 	for file := range filesMap {
@@ -216,7 +229,32 @@ func WriteChangeToFiles(ctx context.Context) error {
 	return nil
 }
 
+func DumpPluginModifiedComposeFiles(ctx context.Context, plugin string, pluginOrder int) {
+	if ctx.Value(types.SERVICE_DETAIL) == nil {
+
+	}
+	filesMap, ok := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	if !ok {
+		log.Printf("Skip dumping modified compose file by plugin %s", plugin)
+		return
+	}
+	for file := range filesMap {
+		content, _ := yaml.Marshal(filesMap[file])
+		fParts := strings.Split(file.(string), PATH_DELIMITER)
+		if len(fParts) < 2 {
+			log.Printf("Skip dumping modified compose file by plugin %s, since file name is invalid %s", plugin, file)
+			return
+		}
+		_, err := WriteToFile(fmt.Sprintf("%s/%s/%s-%s-%d.yml", fParts[0], TraceFolder, fParts[1], plugin, pluginOrder), content)
+		if err != nil {
+			log.Printf("Failed dumping modified compose file by plugin %s", plugin)
+		}
+	}
+}
+
 func OverwriteFile(file string, data []byte) {
+	log.Printf("Over-write file: %s\n", file)
+
 	os.Remove(file)
 
 	f, err := os.Create(file)
@@ -232,8 +270,18 @@ func OverwriteFile(file string, data []byte) {
 
 //Split a large file into a number of smaller files by file separator
 func SplitYAML(file string) ([]string, error) {
+	logger := log.WithFields(log.Fields{
+		"File": file,
+		"Func": "SplitYAML",
+	})
+
+	logger.Println("Start split downloaded compose file")
+
 	var names []string
+
+	// Check if file exist
 	if _, err := os.Stat(file); os.IsNotExist(err) {
+		logger.Printf("File %s doesn't exist\n", file)
 		return nil, err
 	}
 
@@ -241,26 +289,37 @@ func SplitYAML(file string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	scanner := bufio.NewScanner(strings.NewReader(string(dat)))
 	scanner.Split(SplitFunc)
 	for scanner.Scan() {
 		splitData := scanner.Text()
+		logger.Printf("Split data : %s\n", splitData)
+
+		// Get split compose file name from split data
+		// If name isn't found, skip writing split data into a separate file
 		name := strings.TrimLeft(getYAMLDocumentName(splitData, "#.*yml"), "#")
 		if name == "" {
+			logger.Println("No file name found from split data")
 			continue
 		}
 		fileName, err := WriteToFile(name, []byte(splitData))
 		if err != nil {
+			logger.Errorf("Error writing files %s : %v\n", fileName, err)
 			return nil, err
 		}
 		names = append(names, fileName)
 	}
 
+	// Copy downloaded file to folder ONLY IF the file doesn't need to be split
 	if len(names) == 0 {
-		names = append(names, file)
+		path := strings.Split(file, PATH_DELIMITER)
+		d := FolderPath(strings.Fields(path[len(path)-1]))[0]
+		CopyFile(file, d)
+		names = append(names, d)
 	}
-	return names, nil
+
+	logger.Printf("After split file, get file names: %s\n", names)
+	return FolderPath(names), nil
 }
 
 // splitYAMLDocument is a bufio.SplitFunc for splitting YAML streams into individual documents.
@@ -304,28 +363,70 @@ func getYAMLDocumentName(data, pattern string) string {
 	return name
 }
 
-// replace element in array
-func ReplaceArrayElement(array interface{}, old string, new string) interface{} {
-	if _array, ok := array.([]interface{}); ok {
-		index, err := IndexArray(_array, old)
-		if err != nil {
-			return _array
+//ReplaceElement does replace element in array/map
+func ReplaceElement(i interface{}, old string, new string) interface{} {
+	if array, ok := i.([]interface{}); ok {
+		index, err := IndexArrayRegex(array, old)
+		if err != nil || index == -1 {
+			return array
 		}
-		_array[index] = new
-		return _array
+		array[index] = new
+		return array
 
 	}
 
-	if _array, ok := array.(map[interface{}]interface{}); ok {
-		_, exit := _array[old]
+	if m, ok := i.(map[interface{}]interface{}); ok {
+		_, exit := m[old]
 		if exit {
-			_array[old] = new
+			m[old] = new
 		}
-		return _array
+		return m
 
 	}
 
-	return array
+	log.Println("Only support replacing elements in array and map")
+
+	return i
+}
+
+//AppendElement does append element in array/map
+//Element will be overwrite if it already exist
+//Using regular expression to match the element
+func AppendElement(i interface{}, old string, new string) interface{} {
+	if array, ok := i.([]interface{}); ok {
+		index, err := IndexArrayRegex(array, old)
+		if err != nil || index == -1 {
+			array = append(array, new)
+			return array
+		} else {
+			array[index] = new
+		}
+		return array
+
+	}
+
+	if m, ok := i.(map[interface{}]interface{}); ok {
+		m[old] = new
+		return m
+	}
+
+	log.Println("Only support appending elements in array and map")
+
+	return i
+}
+
+func IndexArrayRegex(array []interface{}, expr string) (int, error) {
+	r, err := regexp.Compile(expr)
+	if err != nil {
+		log.Errorf("Error compile expression: %v\n", err)
+		return -1, err
+	}
+	for i, a := range array {
+		if r.MatchString(a.(string)) {
+			return i, nil
+		}
+	}
+	return -1, err
 }
 
 // get index of an element in array
@@ -396,13 +497,12 @@ func DeFolderPath(filepaths []string) []string {
 	return filenames
 }
 
-func ParseYamls(files []string) (map[interface{}](map[interface{}]interface{}), error) {
+func ParseYamls(files *[]string) (map[interface{}](map[interface{}]interface{}), error) {
 	res := make(map[interface{}](map[interface{}]interface{}))
-	for _, file := range files {
+	for _, file := range *files {
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
 			log.Errorf("Error reading file %s : %v", file, err)
-			return nil, err
 		}
 		m := make(map[interface{}]interface{})
 		err = yaml.Unmarshal(data, &m)
@@ -414,25 +514,26 @@ func ParseYamls(files []string) (map[interface{}](map[interface{}]interface{}), 
 	return res, nil
 }
 
-// app folder is used to keep all the generated yml files
+// GenerateAppFolder does generate app folder and copy compose files exist in fileName label
+// into folder
 func GenerateAppFolder() error {
-	// if app comes with a folder, then skip creating app folder
-	/*if config.GetConfig().GetBool(types.NO_FOLDER) {
-		return nil
-	}*/
-
 	folder := config.GetAppFolder()
 	if folder == "" {
 		folder = types.DEFAULT_FOLDER
 		config.SetConfig(config.FOLDER_NAME, types.DEFAULT_FOLDER)
 	}
 
+	// Append run id to folder name
 	path, _ := filepath.Abs("")
 	dirs := strings.Split(path, PATH_DELIMITER)
 	folder = strings.TrimSpace(fmt.Sprintf("%s_%s", folder, dirs[len(dirs)-1]))
 
-	_folder := []string{strings.TrimSpace(folder)}
-	err := GenerateFileDirs(_folder)
+	// Folder to keep all compose files generated by plugins
+	traceFolder := fmt.Sprintf("%s/%s", folder, TraceFolder)
+
+	// Generate directory
+	folders := []string{strings.TrimSpace(folder), traceFolder}
+	err := GenerateFileDirs(folders)
 	if err != nil {
 		log.Println("Error generating file dirs: ", err.Error())
 		return err
@@ -440,16 +541,61 @@ func GenerateAppFolder() error {
 
 	config.GetConfig().Set(config.FOLDER_NAME, folder)
 
-	// copy compose files into pod folder
+	// Copy compose files into pod folder
 	for i, file := range pod.ComposeFiles {
 		path := strings.Split(file, PATH_DELIMITER)
 		dest := FolderPath(strings.Fields(path[len(path)-1]))[0]
 		err = CopyFile(file, dest)
 		if err != nil {
-			log.Errorf("Failed to copy file into pod folder %v", err)
-			return err
+			log.Printf("Copy file %s into pod folder %v", file, err)
 		}
 		pod.ComposeFiles[i] = dest
+	}
+
+	log.Printf("compose file list: %s\n", pod.ComposeFiles)
+	return nil
+}
+
+func CopyDir(source string, dest string) (err error) {
+
+	// get properties of source dir
+	sourceinfo, err := os.Stat(source)
+	if err != nil {
+		return err
+	}
+
+	// create dest dir
+	err = os.MkdirAll(dest, sourceinfo.Mode())
+	if err != nil {
+		return err
+	}
+
+	directory, _ := os.Open(source)
+
+	objects, err := directory.Readdir(-1)
+
+	for _, obj := range objects {
+
+		sourcefilepointer := source + "/" + obj.Name()
+
+		destinationfilepointer := dest + "/" + obj.Name()
+
+		if obj.IsDir() {
+			// create sub-directories - recursively
+			err = CopyDir(sourcefilepointer, destinationfilepointer)
+			if err != nil {
+				log.Errorln(err)
+				return err
+			}
+		} else {
+			// perform copy
+			err = CopyFile(sourcefilepointer, destinationfilepointer)
+			if err != nil {
+				log.Errorln(err)
+				return err
+			}
+		}
+
 	}
 	return nil
 }
@@ -475,8 +621,34 @@ func CopyFile(source string, dest string) (err error) {
 		if err != nil {
 			err = os.Chmod(dest, sourceinfo.Mode())
 		}
-
+		log.Printf("Copy file from %s to %s\n", sourcefile.Name(), destfile.Name())
 	}
 
 	return
+}
+
+// Convert array like a=b to map a:b
+func ConvertArrayToMap(arr []interface{}) map[interface{}]interface{} {
+	m := make(map[interface{}]interface{})
+	for _, i := range arr {
+		b := strings.SplitN(i.(string), "=", 2)
+		if len(b) == 2 {
+			m[b[0]] = b[1]
+		} else {
+			m[b[0]] = ""
+		}
+	}
+	return m
+}
+
+func ConvertMapToArray(m map[interface{}]interface{}) []interface{} {
+	var a []interface{}
+	for k, v := range m {
+		if v != "" {
+			a = append(a, fmt.Sprintf("%s=%v", k, v))
+		} else {
+			a = append(a, k)
+		}
+	}
+	return a
 }

@@ -15,11 +15,15 @@
 package general
 
 import (
+	"context"
+	"os/exec"
+	"strconv"
 	"testing"
 
+	"github.com/mesos/mesos-go/mesosproto"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
-	"golang.org/x/net/context"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateInfraContainer(t *testing.T) {
@@ -30,4 +34,38 @@ func TestCreateInfraContainer(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected no error, but got %v", err)
 	}
+}
+
+func TestGeneralExt_PreLaunchTask(t *testing.T) {
+	config.GetConfig().SetDefault(types.NO_FOLDER, true)
+	g := new(generalExt)
+	var ctx context.Context
+	ctx = context.Background()
+	begin, _ := strconv.ParseUint("1000", 10, 64)
+	end, _ := strconv.ParseUint("1003", 10, 64)
+	r := []*mesosproto.Value_Range{
+		{Begin: &begin,
+			End: &end},
+	}
+	ranges := &mesosproto.Value_Ranges{Range: r}
+	name := types.PORTS
+	taskInfo := &mesosproto.TaskInfo{
+		Resources: []*mesosproto.Resource{
+			{
+				Name:   &name,
+				Ranges: ranges,
+			},
+		},
+	}
+
+	// No compose file
+	err := g.PreLaunchTask(&ctx, &[]string{}, "exeutorid", taskInfo)
+	assert.Equal(t, string(types.NoComposeFile), err.Error(), "Test if compose file list is empty")
+
+	// One compose file
+	compose := []string{"testdata/test.yml"}
+	err = g.PreLaunchTask(&ctx, &compose, "exeutorid", taskInfo)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(compose))
+	exec.Command("rm", "docker-infra-container.yml").Run()
 }

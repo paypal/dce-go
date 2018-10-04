@@ -16,6 +16,9 @@ package config
 
 import (
 	"testing"
+
+	"github.com/mesos/mesos-go/mesosproto"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSetConfig(t *testing.T) {
@@ -46,5 +49,29 @@ func TestGetPullRetryCount(t *testing.T) {
 	count := GetPullRetryCount()
 	if count != 3 {
 		t.Errorf("expected pull retry to be 3, but got %d", count)
+	}
+}
+
+func TestOverrideConfig(t *testing.T) {
+	type test struct {
+		key         string
+		val         string
+		expectedKey string
+		expectedVal string
+		msg         string
+	}
+
+	overrideTests := []test{
+		{"config.test1", "test1", "test1key", "", "shouldn't reset config if key isn't set"},
+		{"config.launchtask.timeout", "1", "launchtask.timeout", "1", "should reset config if key is set"},
+		{"config1.launchtask.timeout", "2", "launchtask.timeout", "1", "shouldn't reset config with invalid prefix"},
+	}
+
+	for _, ot := range overrideTests {
+		var labels []*mesosproto.Label
+		labels = append(labels, &mesosproto.Label{Key: &ot.key, Value: &ot.val})
+		taskInfo := &mesosproto.TaskInfo{Labels: &mesosproto.Labels{Labels: labels}}
+		OverrideConfig(taskInfo)
+		assert.Equal(t, ot.expectedVal, GetConfig().GetString(ot.expectedKey), ot.msg)
 	}
 }

@@ -19,45 +19,53 @@ package config
 
 import (
 	"io/ioutil"
-
 	"os"
 	"path/filepath"
-
-	"strconv"
-
-	"fmt"
-
+	"strings"
 	"time"
 
-	"github.com/paypal/dce-go/types"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+
+	"github.com/paypal/dce-go/types"
 )
 
 // Define default values
 const (
-	cfgFile              = "config"
-	FOLDER_NAME          = "foldername"
-	LAUNCH_TASK          = "launchtask"
-	HEALTH_CHECK         = "healthcheck"
-	POD_MONITOR_INTERVAL = "podmonitorinterval"
-	TIMEOUT              = "timeout"
-	INFRA_CONTAINER      = "infracontainer"
-	PULL_RETRY           = "pullretry"
-	MAX_RETRY            = "maxretry"
-	NETWORKS             = "networks"
-	PRE_EXIST            = "pre_existing"
-	NETWORK_NAME         = "name"
-	NETWORK_DRIVER       = "driver"
-	CLEANPOD             = "cleanpod"
+	CONFIG_File                          = "config"
+	FOLDER_NAME                          = "foldername"
+	HEALTH_CHECK                         = "healthcheck"
+	POD_MONITOR_INTERVAL                 = "launchtask.podmonitorinterval"
+	TIMEOUT                              = "launchtask.timeout"
+	INFRA_CONTAINER                      = "infracontainer"
+	PULL_RETRY                           = "launchtask.pullretry"
+	MAX_RETRY                            = "launchtask.maxretry"
+	RETRY_INTERVAL                       = "launchtask.retryinterval"
+	NETWORKS                             = "networks"
+	PRE_EXIST                            = "pre_existing"
+	NETWORK_NAME                         = "name"
+	NETWORK_DRIVER                       = "driver"
+	CLEANPOD                             = "cleanpod"
+	CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL = "cleanpod.cleanvolumeandcontaineronmesoskill"
+	CLEAN_IMAGE_ON_MESOS_KILL            = "cleanpod.cleanimageonmesoskill"
+	CLEAN_FAIL_TASK                      = "cleanpod.cleanfailtask"
+	DOCKER_COMPOSE_VERBOSE               = "dockercomposeverbose"
+	SKIP_PULL_IMAGES                     = "launchtask.skippull"
+	COMPOSE_TRACE                        = "launchtask.composetrace"
+	DEBUG_MODE                           = "launchtask.debug"
+	COMPOSE_HTTP_TIMEOUT                 = "launchtask.composehttptimeout"
+	HTTP_TIMEOUT                         = "launchtask.httptimeout"
+	COMPOSE_STOP_TIMEOUT                 = "cleanpod.timeout"
+	CONFIG_OVERRIDE_PREFIX               = "config."
 )
 
 // Read from default configuration file and set config as key/values
 func init() {
-	err := getConfigFromFile(cfgFile)
+	err := getConfigFromFile(CONFIG_File)
 
 	if err != nil {
-		log.Fatalf("Fail to retreive data from file, err: %s\n", err.Error())
+		log.Fatalf("Fail to retrieve data from file, err: %s\n", err.Error())
 	}
 }
 
@@ -67,13 +75,15 @@ func ConfigInit(pluginConfig string) {
 
 	file, err := os.Open(pluginConfig)
 	if err != nil {
-		log.Errorf("Fail to open file, err: %s\n", err.Error())
+		log.Fatalf("Fail to open file, err: %s\n", err.Error())
 	}
 
 	err = viper.MergeConfig(file)
 	if err != nil {
-		log.Errorf("Fail to merge config, err: %s\n", err.Error())
+		log.Fatalf("Fail to merge config, err: %s\n", err.Error())
 	}
+
+	setDefaultConfig(GetConfig())
 }
 
 func getConfigFromFile(cfgFile string) error {
@@ -96,14 +106,14 @@ func getConfigFromFile(cfgFile string) error {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatalf("No config file loaded, err: %s\n", err.Error())
+		log.Errorf("No config file loaded, err: %s\n", err.Error())
 		return err
 	}
 	return nil
 }
 
 func SetConfig(key string, value interface{}) {
-	log.Println(fmt.Sprintf("Set config : %s = %v", key, value))
+	log.Printf("Set config : %s = %v", key, value)
 	GetConfig().Set(key, value)
 }
 
@@ -115,6 +125,17 @@ func GetConfig() *viper.Viper {
 	return viper.GetViper()
 }
 
+func setDefaultConfig(conf *viper.Viper) {
+	conf.SetDefault(POD_MONITOR_INTERVAL, 10000)
+	conf.SetDefault(COMPOSE_HTTP_TIMEOUT, 300)
+	conf.SetDefault(MAX_RETRY, 3)
+	conf.SetDefault(PULL_RETRY, 3)
+	conf.SetDefault(RETRY_INTERVAL, 10000)
+	conf.SetDefault(TIMEOUT, 500000)
+	conf.SetDefault(COMPOSE_STOP_TIMEOUT, 10)
+	conf.SetDefault(HTTP_TIMEOUT, 20000)
+}
+
 func GetAppFolder() string {
 	folder := GetConfig().GetString(FOLDER_NAME)
 	if folder == "" {
@@ -124,53 +145,29 @@ func GetAppFolder() string {
 }
 
 func GetPullRetryCount() int {
-	retry := GetConfigSection(LAUNCH_TASK)[PULL_RETRY]
-	if retry == "" {
-		return 1
-	}
-
-	_retry, err := strconv.Atoi(retry)
-	if err != nil {
-		log.Println("Error converting retry count from string to int : ", err.Error())
-		return 1
-	}
-
-	if _retry <= 0 {
-		return 1
-	}
-	return _retry
+	return GetConfig().GetInt(PULL_RETRY)
 }
 
-func GetTimeout() time.Duration {
-	timeout := GetConfigSection(LAUNCH_TASK)[TIMEOUT]
-	if timeout == "" {
-		log.Warningln("pod timeout doesn't set in config...timeout will be set as 500s")
-		return time.Duration(500000)
-	}
-	t, err := strconv.Atoi(timeout)
-	if err != nil {
-		log.Fatalf("Error converting timeout from string to int : %s\n", err.Error())
-	}
-	return time.Duration(t)
+func GetLaunchTimeout() time.Duration {
+	return time.Duration(GetConfig().GetInt(TIMEOUT))
+}
+
+func GetStopTimeout() int {
+	return GetConfig().GetInt(COMPOSE_STOP_TIMEOUT)
+}
+
+func GetRetryInterval() time.Duration {
+	return time.Duration(GetConfig().GetInt(RETRY_INTERVAL))
 }
 
 func GetMaxRetry() int {
-	retry := GetConfigSection(LAUNCH_TASK)[MAX_RETRY]
-	if retry == "" {
-		log.Warningln("maxretry setting missing in config...setting to zero")
-		return 0
-	}
-	i, err := strconv.Atoi(retry)
-	if err != nil {
-		log.Fatalf("Error converting retry from string to int : %s\n", err.Error())
-	}
-	return i
+	return GetConfig().GetInt(MAX_RETRY)
 }
 
 func GetNetwork() (types.Network, bool) {
 	nmap, ok := GetConfig().GetStringMap(INFRA_CONTAINER)[NETWORKS].(map[string]interface{})
 	if !ok {
-		log.Println("networks section missing in configration file")
+		log.Println("networks section missing in config")
 		return types.Network{}, false
 	}
 
@@ -192,4 +189,62 @@ func GetNetwork() (types.Network, bool) {
 		Driver:   nmap[NETWORK_DRIVER].(string),
 	}
 	return network, true
+}
+
+func EnableVerbose() bool {
+	return GetConfig().GetBool(DOCKER_COMPOSE_VERBOSE)
+}
+
+func SkipPullImages() bool {
+	return GetConfig().GetBool(SKIP_PULL_IMAGES)
+}
+
+func EnableComposeTrace() bool {
+	return GetConfig().GetBool(COMPOSE_TRACE)
+}
+
+func GetPollInterval() int {
+	return GetConfig().GetInt(POD_MONITOR_INTERVAL)
+}
+
+func GetHttpTimeout() time.Duration {
+	return time.Duration(GetConfig().GetInt(HTTP_TIMEOUT)) * time.Millisecond
+}
+
+func GetComposeHttpTimeout() int {
+	return GetConfig().GetInt(COMPOSE_HTTP_TIMEOUT)
+}
+
+func EnableDebugMode() bool {
+	return GetConfig().GetBool(DEBUG_MODE)
+}
+
+func IsService() bool {
+	return GetConfig().GetBool(types.IS_SERVICE)
+}
+
+func CreateFileAppendMode(filename string) *os.File {
+
+	File, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Errorf("Error in creating %v file", filename, err)
+		return os.Stdout
+	}
+	return File
+}
+
+// OverrideConfig gets labels with override prefix "config." and override configs with value of label
+// Checking labels contain key word "config." instead of prefix since different framework will add different prefix for labels
+func OverrideConfig(taskInfo *mesos.TaskInfo) {
+	labelsList := taskInfo.GetLabels().GetLabels()
+
+	for _, label := range labelsList {
+		if strings.Contains(label.GetKey(), CONFIG_OVERRIDE_PREFIX) {
+			parts := strings.SplitAfterN(label.GetKey(), CONFIG_OVERRIDE_PREFIX, 2)
+			if len(parts) == 2 && GetConfig().IsSet(parts[1]) {
+				GetConfig().Set(parts[1], label.GetValue())
+				log.Infof("override config %s with %s", parts[1], label.GetValue())
+			}
+		}
+	}
 }

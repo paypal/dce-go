@@ -21,6 +21,9 @@ import (
 	"strings"
 	"testing"
 
+	"reflect"
+
+	"github.com/mesos/mesos-go/examples/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 )
@@ -45,7 +48,7 @@ func TestPrefixTaskId(t *testing.T) {
 func TestParseYamls(t *testing.T) {
 	config.GetConfig().SetDefault(types.NO_FOLDER, true)
 	yamls := []string{"testdata/docker-adhoc.yml", "testdata/docker-long.yml", "testdata/docker-empty.yml"}
-	res, err := ParseYamls(yamls)
+	res, err := ParseYamls(&yamls)
 	if err != nil {
 		t.Fatalf("Got error to parseyamls %v", err)
 	}
@@ -91,42 +94,134 @@ func TestIndexArray(t *testing.T) {
 }
 
 func TestReplaceArrayElement(t *testing.T) {
+	//Test array
 	array := make([]interface{}, 3)
 	array[0] = "pen"
 	array[1] = "apple"
 	array[2] = "peach"
-	res := ReplaceArrayElement(array, "pen", "pencil").([]interface{})
+	res := ReplaceElement(array, "pen", "pencil").([]interface{})
 	if len(res) != len(array) || res[0] != "pencil" {
 		t.Fatalf("expected first element to be 'pencil', but got %s", res[0])
+	}
+
+	//Replace element not exist in array
+	res1 := ReplaceElement(array, "not_exist", "not_exist").([]interface{})
+	if len(res1) != len(res) {
+		t.Fatalf("Expected array doesn't change, but got %v \n", res1)
+	}
+
+	array[0] = "fruit=banana"
+	res2 := ReplaceElement(array, "^fruit=", "fruit=apple").([]interface{})
+	if res2[0] != "fruit=apple" {
+		t.Fatalf("Expected fruit=apple replace fruit=banana, but got %v \n", res2)
+	}
+
+	array[0] = "fruit.banana"
+	res5 := ReplaceElement(array, "^fruit$", "fruit=apple").([]interface{})
+	if res5[0] != "fruit.banana" {
+		t.Fatalf("Expected no changes, but got %v \n", res5)
+	}
+
+	array[0] = "fruitbanana"
+	res6 := ReplaceElement(array, "^fruit$", "fruit=apple").([]interface{})
+	if res6[0] != "fruitbanana" {
+		t.Fatalf("Expected no changes, but got %v \n", res6)
+	}
+
+	//Test map
+	m := make(map[interface{}]interface{})
+	m["key1"] = "val1"
+	m["key2"] = "val2"
+	res3 := ReplaceElement(m, "key2", "val3").(map[interface{}]interface{})
+	if res3["key2"].(string) != "val3" {
+		t.Fatalf("expected first element to be 'val3', but got %s", res3["key3"])
+	}
+
+	res4 := ReplaceElement(m, "key3", "val3").(map[interface{}]interface{})
+	_, ok := res4["key3"]
+	if ok {
+		t.Fatalf("Expected new element not added, but got %s", res4["key3"])
+	}
+}
+
+func TestAppendElement(t *testing.T) {
+	//Test array
+	array := make([]interface{}, 3)
+	array[0] = "pen"
+	array[1] = "apple"
+	array[2] = "peach"
+	res := AppendElement(array, "monkey", "monkey").([]interface{})
+	if len(res) != len(array)+1 || res[3] != "monkey" {
+		t.Fatalf("expected first element to be 'monkey', but got %s", res[3])
+	}
+
+	//Test duplicate element won't be appended
+	res = AppendElement(array, "monkey", "monkey").([]interface{})
+	if len(res) != len(array)+1 || res[3] != "monkey" {
+		t.Fatalf("expected first element to be 'monkey', but got %s", res[3])
+	}
+
+	array[0] = "fruit=banana"
+	res2 := AppendElement(array, "^fruit=", "fruit=apple").([]interface{})
+	if res2[0] != "fruit=apple" {
+		t.Fatalf("Expected fruit=apple replace fruit=banana, but got %v \n", res2)
+	}
+
+	array[0] = "fruit.banana"
+	res5 := AppendElement(array, "^fruit$", "fruit=apple1").([]interface{})
+	if res5[len(res5)-1] != "fruit=apple1" {
+		t.Fatalf("Expected fruit=apple will be appended, but got %v \n", res5)
+	}
+
+	//Test map
+	m := make(map[interface{}]interface{})
+	m["key1"] = "val1"
+	m["key2"] = "val2"
+	res1 := AppendElement(m, "key3", "val3").(map[interface{}]interface{})
+	if res1["key3"].(string) != "val3" {
+		t.Fatalf("expected first element to be 'val3', but got %s", res1["key3"])
 	}
 }
 
 func TestSplitYAML(t *testing.T) {
-	expected_files := [6]string{"docker-compose-base.yml", "docker-compose-qa.yml", "docker-compose-production.yml", "docker-compose-sandbox.yml", "docker-compose-debug.yml", "docker-compose-healthcheck.yml"}
-	files, err := SplitYAML("testdata/yaml")
+	config.GetConfig().Set(types.NO_FOLDER, true)
+
+	expectedFile1 := []string{"docker-compose-base.yml", "docker-compose-qa.yml", "docker-compose-production.yml", "docker-compose-sandbox.yml", "docker-compose-debug.yml", "docker-compose-healthcheck.yml"}
+	files1, err := SplitYAML("testdata/yaml")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	var files_arr [6]string
-	copy(files_arr[:], files[0:6])
-	if files_arr != expected_files {
-		t.Fatalf("expected files to be %v, but got %v", expected_files, files)
+
+	if !reflect.DeepEqual(files1, expectedFile1) {
+		t.Errorf("expected files to be %v, but got %v", expectedFile1, files1)
 	}
 
-	files = FolderPath(files)
-	for _, file := range files {
+	for _, file := range files1 {
 		os.Remove(file)
 	}
 
-	files, err = SplitYAML("testdata/docker-adhoc.yml")
+	expectedFile2 := []string{"docker-adhoc.yml"}
+	files2, err := SplitYAML("testdata/docker-adhoc.yml")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("Error split file %s\n", err.Error())
 	}
-	if len(files) != 1 {
-		t.Errorf("expected length of file list is 1 , but got %v", len(files))
+	if files2[0] != expectedFile2[0] {
+		t.Errorf("expected files to be %s , but got %v", expectedFile2, files2)
 	}
-	if len(files) == 0 || files[0] != "testdata/docker-adhoc.yml" {
-		t.Errorf("expected file name is testdata/docker-adhoc.yml , but got %v", files[0])
+
+	for _, file := range files2 {
+		os.Remove(file)
 	}
-	os.Remove(types.DEFAULT_FOLDER)
+}
+
+func TestConvertArrayToMap(t *testing.T) {
+	a := []interface{}{"a=b", "c", "d="}
+	m := ConvertArrayToMap(a)
+	assert.Equal(t, m["a"], "b", "a=b")
+	assert.Equal(t, m["c"], "", "c")
+	assert.Equal(t, m["d"], "", "d=")
+
+	b := []interface{}{}
+	m = ConvertArrayToMap(b)
+	assert.Equal(t, len(m), 0, "empty map")
 }

@@ -15,15 +15,14 @@
 package example
 
 import (
-	"os"
-
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
 	log "github.com/sirupsen/logrus"
+	"github.com/paypal/dce-go/config"
 )
 
 var logger *log.Entry
@@ -32,10 +31,10 @@ type exampleExt struct {
 }
 
 func init() {
+	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
 	logger = log.WithFields(log.Fields{
 		"plugin": "example",
 	})
-	log.SetOutput(os.Stdout)
 
 	logger.Println("Plugin Registering")
 
@@ -74,6 +73,11 @@ func (ex *exampleExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 func (ex *exampleExt) PostLaunchTask(ctx *context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error) {
 	logger.Println("PostLaunchTask begin")
 	return "", nil
+}
+
+func (ex *exampleExt) PreStopPod() error {
+	logger.Println("PreStopPod Starting")
+	return nil
 }
 
 func (ex *exampleExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
