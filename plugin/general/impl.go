@@ -54,8 +54,8 @@ func init() {
 	config.ConfigInit(utils.SearchFile(".", "general.yaml"))
 }
 
-func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
-	logger.Println("PreLaunchTask begin")
+func (ge *generalExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
+	logger.Println("LaunchTaskPreImagePull begin")
 
 	if composeFiles == nil || len(*composeFiles) == 0 {
 		return fmt.Errorf(string(types.NoComposeFile))
@@ -139,6 +139,11 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 		logger.Println("Current port is ", strconv.FormatUint(currentPort.Value.(uint64), 10))
 	}
 
+	return nil
+}
+
+func (gp *generalExt) LaunchTaskPostImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
+	logger.Println("LaunchTaskPostImagePull begin")
 	return nil
 }
 

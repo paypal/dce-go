@@ -30,7 +30,6 @@ const (
 	POD_KILLED
 	POD_FINISHED
 	POD_PULL_FAILED
-	POD_PULL_SUCCESS
 	POD_EMPTY
 )
 
@@ -50,8 +49,6 @@ func (status PodStatus) String() string {
 		return "POD_FINISHED"
 	case POD_PULL_FAILED:
 		return "POD_PULL_FAILED"
-	case POD_PULL_SUCCESS:
-		return "POD_PULL_SUCCESS"
 	case POD_EMPTY:
 		return ""
 	}
@@ -70,11 +67,11 @@ const (
 func (status HealthStatus) String() string {
 	switch status {
 	case STARTING:
-		return "STARTING"
+		return "starting"
 	case HEALTHY:
-		return "HEALTHY"
+		return "healthy"
 	case UNHEALTHY:
-		return "UNHEALTHY"
+		return "unhealthy"
 	}
 
 	return ""
@@ -83,6 +80,7 @@ func (status HealthStatus) String() string {
 const (
 	CONTAINER_NAME          = "container_name"
 	NETWORK_MODE            = "network_mode"
+	HEALTH_CHECK            = "healthcheck"
 	LINKS                   = "links"
 	PORTS                   = "ports"
 	LABELS                  = "labels"

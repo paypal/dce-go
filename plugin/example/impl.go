@@ -19,10 +19,10 @@ import (
 
 	"github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
+	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
 	log "github.com/sirupsen/logrus"
-	"github.com/paypal/dce-go/config"
 )
 
 var logger *log.Entry
@@ -41,8 +41,8 @@ func init() {
 	plugin.ComposePlugins.Register(new(exampleExt), "example")
 }
 
-func (ex *exampleExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
-	logger.Println("PreLaunchTask begin")
+func (ex *exampleExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
+	logger.Println("LaunchTaskPreImagePull begin")
 	// docker compose YML files are saved in context as type SERVICE_DETAIL which is map[interface{}]interface{}.
 	// Massage YML files and save it in context.
 	// Then pass to next plugin.
@@ -67,6 +67,11 @@ func (ex *exampleExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 	// Save the changes back to context
 	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
 
+	return nil
+}
+
+func (ex *exampleExt) LaunchTaskPostImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
+	logger.Println("LaunchTaskPostImagePull begin")
 	return nil
 }
 
