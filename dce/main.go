@@ -56,7 +56,7 @@ func newDockerComposeExecutor() *dockerComposeExecutor {
 func (exec *dockerComposeExecutor) Registered(driver exec.ExecutorDriver, execInfo *mesos.ExecutorInfo, fwinfo *mesos.FrameworkInfo, slaveInfo *mesos.SlaveInfo) {
 	log.Println("====================Mesos Registered====================")
 	log.Println("Mesos Register : Registered Executor on slave ", slaveInfo.GetHostname())
-	pod.ComposeExcutorDriver = driver
+	pod.ComposeExecutorDriver = driver
 }
 
 func (exec *dockerComposeExecutor) Reregistered(driver exec.ExecutorDriver, slaveInfo *mesos.SlaveInfo) {
@@ -73,7 +73,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
 
 	log.Println("====================Mesos LaunchTask====================")
-	pod.ComposeExcutorDriver = driver
+	pod.ComposeExecutorDriver = driver
 	logger = log.WithFields(log.Fields{
 		"requuid":   pod.GetLabel("requuid", taskInfo),
 		"tenant":    pod.GetLabel("tenant", taskInfo),
@@ -134,6 +134,12 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	// Select plugin extension points from plugin pools
 	extpoints = plugin.GetOrderedExtpoints(pluginOrder)
 
+	// Executing PreImagePull in order
+
+	// Pull image
+
+	// Executing PostImagePull in order
+
 	// Executing PreLaunchTask in order
 	_, err = utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
 		for i, ext := range extpoints {
@@ -190,7 +196,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	case types.POD_STARTING:
 		// Initial health check
 		res, err := initHealthCheck(podServices)
-		if err != nil || res == types.POD_FAILED {
+		if err != nil || res == types.POD_FAILED.String() {
 			cancel()
 			pod.SendPodStatus(types.POD_FAILED)
 		}
@@ -207,7 +213,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				}
 				logger.Printf("Get pod status : %s returned by PostLaunchTask", tempStatus)
 
-				if tempStatus == types.POD_FAILED {
+				if tempStatus == types.POD_FAILED.String() {
 					return tempStatus, nil
 				}
 			}
@@ -216,12 +222,12 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		if err != nil {
 			logger.Errorf("Error executing PostLaunchTask : %v", err)
 		}
-		if tempStatus == types.POD_FAILED {
+		if tempStatus == types.POD_FAILED.String() {
 			cancel()
 			pod.SendPodStatus(types.POD_FAILED)
 		}
 
-		if res == types.POD_RUNNING {
+		if res == types.POD_RUNNING.String() {
 			cancel()
 			if pod.GetPodStatus() != types.POD_RUNNING {
 				pod.SendPodStatus(types.POD_RUNNING)
@@ -230,7 +236,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		}
 
 		//For adhoc job, send finished to mesos if job already finished during init health check
-		if res == types.POD_FINISHED {
+		if res == types.POD_FINISHED.String() {
 			cancel()
 			pod.SendPodStatus(types.POD_FINISHED)
 		}
@@ -285,7 +291,7 @@ func (exec *dockerComposeExecutor) FrameworkMessage(driver exec.ExecutorDriver, 
 func (exec *dockerComposeExecutor) Shutdown(driver exec.ExecutorDriver) {
 	// Execute shutdown plugin extensions in order
 	for _, ext := range extpoints {
-		ext.Shutdown(pod.ComposeExcutorDriver)
+		ext.Shutdown(pod.ComposeExecutorDriver)
 	}
 	log.Println("====================Stop ExecutorDriver====================")
 	driver.Stop()
@@ -295,7 +301,7 @@ func (exec *dockerComposeExecutor) Error(driver exec.ExecutorDriver, err string)
 	log.Printf("Got error message : %v\n", err)
 }
 
-func pullAndLaunchPod() string {
+func pullAndLaunchPod() types.PodStatus {
 	logger.Println("====================Pod Pull And Launch====================")
 
 	if !config.SkipPullImages() {
@@ -319,7 +325,7 @@ func initHealthCheck(podServices map[string]bool) (string, error) {
 
 	if err != nil {
 		log.Printf("POD_INIT_HEALTH_CHECK_TIMEOUT -- %v", err)
-		return types.POD_FAILED, err
+		return types.POD_FAILED.String(), err
 	}
 	return res, err
 }
@@ -383,11 +389,11 @@ func main() {
 	}
 
 	log.Println("Executor : Executor process has started and running.")
-	status, err :=driver.Join()
+	status, err := driver.Join()
 	if err != nil {
-		log.Errorf("error from driver.Join(): %v",err)
+		log.Errorf("error from driver.Join(): %v", err)
 	}
-	log.Printf("driver.Join() exits with status %s",status.String())
+	log.Printf("driver.Join() exits with status %s", status.String())
 }
 
 func switchDebugMode() {

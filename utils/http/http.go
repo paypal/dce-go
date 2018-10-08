@@ -21,8 +21,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/paypal/dce-go/config"
+	log "github.com/sirupsen/logrus"
 )
 
 // generate body for http request

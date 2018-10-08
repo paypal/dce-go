@@ -16,8 +16,6 @@
 package monitor
 
 import (
-	log "github.com/sirupsen/logrus"
-
 	"fmt"
 	"time"
 
@@ -25,33 +23,34 @@ import (
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/pod"
 	"github.com/paypal/dce-go/utils/wait"
+	log "github.com/sirupsen/logrus"
 )
 
 // Watching pod status and notifying executor if any container in the pod goes wrong
-func podMonitor(systemProxyId string) string {
+func podMonitor(systemProxyId string) types.PodStatus {
 	logger := log.WithFields(log.Fields{
 		"func": "monitor.podMonitor",
 	})
 
 	var err error
 
-	for i := 0; i < len(pod.PodContainers); i++ {
+	for i := 0; i < len(pod.MonitorContainerList); i++ {
 		var healthy string
 		var exitCode int
 		var running bool
 
-		if hc, ok := pod.HealthCheckListId[pod.PodContainers[i]]; ok && hc {
-			healthy, running, exitCode, err = pod.CheckContainer(pod.PodContainers[i], true)
+		if hc, ok := pod.HealthCheckListId[pod.MonitorContainerList[i]]; ok && hc {
+			healthy, running, exitCode, err = pod.CheckContainer(pod.MonitorContainerList[i], true)
 			logger.Debugf("container %s has health check, health status: %s, exitCode: %d, err : %v",
-				pod.PodContainers[i], healthy, exitCode, err)
+				pod.MonitorContainerList[i], healthy, exitCode, err)
 		} else {
-			healthy, running, exitCode, err = pod.CheckContainer(pod.PodContainers[i], false)
+			healthy, running, exitCode, err = pod.CheckContainer(pod.MonitorContainerList[i], false)
 			log.Debugf("container %s doesn't have health check, status: %s, exitCode: %d, err : %v",
-				pod.PodContainers[i], healthy, exitCode, err)
+				pod.MonitorContainerList[i], healthy, exitCode, err)
 		}
 
 		if err != nil {
-			logger.Errorf(fmt.Sprintf("POD_MONITOR_HEALTH_CHECK_FAILED -- Error inspecting container with id : %s, %v", pod.PodContainers[i], err.Error()))
+			logger.Errorf(fmt.Sprintf("POD_MONITOR_HEALTH_CHECK_FAILED -- Error inspecting container with id : %s, %v", pod.MonitorContainerList[i], err.Error()))
 			logger.Errorln("POD_MONITOR_FAILED -- Send Failed")
 			return types.POD_FAILED
 		}
@@ -61,18 +60,18 @@ func podMonitor(systemProxyId string) string {
 			return types.POD_FAILED
 		}
 
-		if healthy == types.UNHEALTHY {
+		if healthy == types.UNHEALTHY.String() {
 			if config.GetConfigSection(config.CLEANPOD) == nil ||
-				config.GetConfigSection(config.CLEANPOD)[types.UNHEALTHY] == "true" {
+				config.GetConfigSection(config.CLEANPOD)[types.UNHEALTHY.String()] == "true" {
 				logger.Println("POD_MONITOR_HEALTH_CHECK_FAILED -- Stop pod monitor and send Failed")
 				return types.POD_FAILED
 			}
-			logger.Warnf("Container %s became unhealthy, but pod won't be killed due to cleanpod config", pod.PodContainers[i])
+			logger.Warnf("Container %s became unhealthy, but pod won't be killed due to cleanpod config", pod.MonitorContainerList[i])
 		}
 
 		if exitCode == 0 && !running {
-			logger.Printf("Removed finished(exit with 0) container %s from monitor list", pod.PodContainers[i])
-			pod.PodContainers = append(pod.PodContainers[:i], pod.PodContainers[i+1:]...)
+			logger.Printf("Removed finished(exit with 0) container %s from monitor list", pod.MonitorContainerList[i])
+			pod.MonitorContainerList = append(pod.MonitorContainerList[:i], pod.MonitorContainerList[i+1:]...)
 			i--
 
 		}
@@ -80,27 +79,27 @@ func podMonitor(systemProxyId string) string {
 
 	// Send finished to mesos IF no container running or ONLY system proxy is running in the pod
 	isService := config.IsService()
-	if len(pod.PodContainers) == 0 && !isService {
+	if len(pod.MonitorContainerList) == 0 && !isService {
 		logger.Println("Task is ADHOC job. All containers in the pod exit with code 0, sending FINISHED")
 		return types.POD_FINISHED
 	}
 
-	if len(pod.PodContainers) == 0 {
+	if len(pod.MonitorContainerList) == 0 {
 		logger.Println("Task is SERVICE. All containers in the pod exit with code 0, sending FAILED")
 		return types.POD_FAILED
 	}
 
-	if len(pod.PodContainers) == 1 && pod.PodContainers[0] == systemProxyId && !isService {
+	if len(pod.MonitorContainerList) == 1 && pod.MonitorContainerList[0] == systemProxyId && !isService {
 		logger.Println("Task is ADHOC job. Only infra container is running in the pod, sending FINISHED")
 		return types.POD_FINISHED
 	}
 
-	if len(pod.PodContainers) == 1 && pod.PodContainers[0] == systemProxyId {
+	if len(pod.MonitorContainerList) == 1 && pod.MonitorContainerList[0] == systemProxyId {
 		logger.Println("Task is SERVICE. Only infra container is running in the pod, sending FAILED")
 		return types.POD_FAILED
 	}
 
-	return ""
+	return types.POD_EMPTY
 }
 
 // Polling pod monitor periodically
@@ -126,13 +125,13 @@ func MonitorPoller() {
 	}
 
 	res, err := wait.PollForever(time.Duration(config.GetPollInterval())*time.Millisecond, nil, wait.ConditionFunc(func() (string, error) {
-		return podMonitor(infraContainerId), nil
+		return podMonitor(infraContainerId).String(), nil
 	}))
 
 	logger.Printf("Pod Monitor Receiver : Received  message %s", res)
 
-	curntPodStatus := pod.GetPodStatus()
-	if curntPodStatus == types.POD_KILLED || curntPodStatus == types.POD_FAILED {
+	curPodStatus := pod.GetPodStatus()
+	if curPodStatus == types.POD_KILLED || curPodStatus == types.POD_FAILED {
 		logger.Println("====================Pod Monitor Stopped====================")
 		return
 	}
@@ -143,10 +142,10 @@ func MonitorPoller() {
 	}
 
 	switch res {
-	case types.POD_FAILED:
+	case types.POD_FAILED.String():
 		pod.SendPodStatus(types.POD_FAILED)
 
-	case types.POD_FINISHED:
+	case types.POD_FINISHED.String():
 		pod.SendPodStatus(types.POD_FINISHED)
 	}
 }
