@@ -38,7 +38,10 @@ func GenBody(t interface{}) io.Reader {
 
 // http post
 func PostRequest(url string, body io.Reader) ([]byte, error) {
-	client := &http.Client{Timeout: config.GetHttpTimeout()}
+	client := &http.Client{
+		Transport: DefaultTransport(),
+		Timeout:   config.GetHttpTimeout(),
+	}
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		log.Println("Error creating http request : ", err.Error())
@@ -50,7 +53,7 @@ func PostRequest(url string, body io.Reader) ([]byte, error) {
 		log.Println("Error posting http request : ", err.Error())
 		return nil, err
 	}
-	resp_body, err := ioutil.ReadAll(resp.Body)
+	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("Error reading http response : ", err.Error())
 		return nil, err
@@ -60,12 +63,15 @@ func PostRequest(url string, body io.Reader) ([]byte, error) {
 		log.Errorf("Failure to close response body :%v", err)
 		return nil, err
 	}
-	return resp_body, nil
+	return respBody, nil
 }
 
 // http get
 func GetRequest(url string) ([]byte, error) {
-	client := &http.Client{Timeout: config.GetHttpTimeout()}
+	client := &http.Client{
+		Transport: DefaultTransport(),
+		Timeout:   config.GetHttpTimeout(),
+	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println("Error creating http request : ", err.Error())
