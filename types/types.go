@@ -62,6 +62,7 @@ const (
 	STARTING HealthStatus = 1 + iota
 	HEALTHY
 	UNHEALTHY
+	UNKNOWN_HEALTH_STATUS
 )
 
 func (status HealthStatus) String() string {
@@ -72,9 +73,11 @@ func (status HealthStatus) String() string {
 		return "healthy"
 	case UNHEALTHY:
 		return "unhealthy"
+	case UNKNOWN_HEALTH_STATUS:
+		return "unknown"
 	}
 
-	return ""
+	return "unknown"
 }
 
 const (

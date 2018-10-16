@@ -21,6 +21,7 @@ import (
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
+	"github.com/paypal/dce-go/utils"
 	"github.com/paypal/dce-go/utils/pod"
 	"github.com/paypal/dce-go/utils/wait"
 	log "github.com/sirupsen/logrus"
@@ -35,18 +36,18 @@ func podMonitor(systemProxyId string) types.PodStatus {
 	var err error
 
 	for i := 0; i < len(pod.MonitorContainerList); i++ {
-		var healthy string
+		var healthy types.HealthStatus
 		var exitCode int
 		var running bool
 
 		if hc, ok := pod.HealthCheckListId[pod.MonitorContainerList[i]]; ok && hc {
 			healthy, running, exitCode, err = pod.CheckContainer(pod.MonitorContainerList[i], true)
 			logger.Debugf("container %s has health check, health status: %s, exitCode: %d, err : %v",
-				pod.MonitorContainerList[i], healthy, exitCode, err)
+				pod.MonitorContainerList[i], healthy.String(), exitCode, err)
 		} else {
 			healthy, running, exitCode, err = pod.CheckContainer(pod.MonitorContainerList[i], false)
 			log.Debugf("container %s doesn't have health check, status: %s, exitCode: %d, err : %v",
-				pod.MonitorContainerList[i], healthy, exitCode, err)
+				pod.MonitorContainerList[i], healthy.String(), exitCode, err)
 		}
 
 		if err != nil {
@@ -60,7 +61,7 @@ func podMonitor(systemProxyId string) types.PodStatus {
 			return types.POD_FAILED
 		}
 
-		if healthy == types.UNHEALTHY.String() {
+		if healthy == types.UNHEALTHY {
 			if config.GetConfigSection(config.CLEANPOD) == nil ||
 				config.GetConfigSection(config.CLEANPOD)[types.UNHEALTHY.String()] == "true" {
 				logger.Println("POD_MONITOR_HEALTH_CHECK_FAILED -- Stop pod monitor and send Failed")
@@ -141,11 +142,11 @@ func MonitorPoller() {
 		return
 	}
 
-	switch res {
-	case types.POD_FAILED.String():
+	switch utils.ToPodStatus(res) {
+	case types.POD_FAILED:
 		pod.SendPodStatus(types.POD_FAILED)
 
-	case types.POD_FINISHED.String():
+	case types.POD_FINISHED:
 		pod.SendPodStatus(types.POD_FINISHED)
 	}
 }

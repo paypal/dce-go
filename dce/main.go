@@ -32,6 +32,7 @@ import (
 	"github.com/paypal/dce-go/plugin"
 	_ "github.com/paypal/dce-go/plugin/example"
 	_ "github.com/paypal/dce-go/plugin/general"
+
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils"
 	fileUtils "github.com/paypal/dce-go/utils/file"
@@ -224,7 +225,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	case types.POD_STARTING:
 		// Initial health check
 		res, err := initHealthCheck(podServices)
-		if err != nil || res == types.POD_FAILED.String() {
+		if err != nil || res == types.POD_FAILED {
 			cancel()
 			pod.SendPodStatus(types.POD_FAILED)
 		}
@@ -255,7 +256,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			pod.SendPodStatus(types.POD_FAILED)
 		}
 
-		if res == types.POD_RUNNING.String() {
+		if res == types.POD_RUNNING {
 			cancel()
 			if pod.GetPodStatus() != types.POD_RUNNING {
 				pod.SendPodStatus(types.POD_RUNNING)
@@ -264,7 +265,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		}
 
 		//For adhoc job, send finished to mesos if job already finished during init health check
-		if res == types.POD_FINISHED.String() {
+		if res == types.POD_FINISHED {
 			cancel()
 			pod.SendPodStatus(types.POD_FINISHED)
 		}
@@ -346,16 +347,16 @@ func pullImage() error {
 	return nil
 }
 
-func initHealthCheck(podServices map[string]bool) (string, error) {
+func initHealthCheck(podServices map[string]bool) (types.PodStatus, error) {
 	res, err := wait.WaitUntil(config.GetLaunchTimeout()*time.Millisecond, wait.ConditionCHFunc(func(healthCheckReply chan string) {
 		pod.HealthCheck(pod.ComposeFiles, podServices, healthCheckReply)
 	}))
 
 	if err != nil {
 		log.Printf("POD_INIT_HEALTH_CHECK_TIMEOUT -- %v", err)
-		return types.POD_FAILED.String(), err
+		return types.POD_FAILED, err
 	}
-	return res, err
+	return utils.ToPodStatus(res), err
 }
 
 func getServices(ctx context.Context) map[string]bool {
