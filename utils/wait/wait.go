@@ -30,7 +30,7 @@ import (
 type ConditionCHFunc func(done chan string)
 type ConditionFunc func() (string, error)
 
-var LogStatus = &types.LogCommandStatus{
+var LogStatus = &LogCommandStatus{
 	IsRunning: false,
 }
 

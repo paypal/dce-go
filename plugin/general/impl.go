@@ -54,8 +54,8 @@ func init() {
 	config.ConfigInit(utils.SearchFile(".", "general.yaml"))
 }
 
-func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
-	logger.Println("PreLaunchTask begin")
+func (ge *generalExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
+	logger.Println("LaunchTaskPreImagePull begin")
 
 	if composeFiles == nil || len(*composeFiles) == 0 {
 		return fmt.Errorf(string(types.NoComposeFile))
@@ -142,13 +142,18 @@ func (ge *generalExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 	return nil
 }
 
+func (gp *generalExt) LaunchTaskPostImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
+	logger.Println("LaunchTaskPostImagePull begin")
+	return nil
+}
+
 func (gp *generalExt) PostLaunchTask(ctx *context.Context, files []string, taskInfo *mesos.TaskInfo) (string, error) {
 	logger.Println("PostLaunchTask begin")
 	if pod.SinglePort {
 		err := postEditComposeFile(ctx, infraYmlPath)
 		if err != nil {
 			log.Errorf("PostLaunchTask: Error editing compose file : %v", err)
-			return types.POD_FAILED, err
+			return types.POD_FAILED.String(), err
 		}
 	}
 	return "", nil
@@ -165,7 +170,7 @@ func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
 func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
 	logger.Println("PostKillTask begin, pod status:", pod.GetPodStatus())
 	var err error
-	if !pod.PodLaunched {
+	if !pod.IsPodLaunched {
 		logger.Println("Pod hasn't started, no postKill work needed.")
 		return nil
 	}
@@ -173,7 +178,7 @@ func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
 	if pod.GetPodStatus() != types.POD_FAILED || (pod.GetPodStatus() == types.POD_FAILED && config.GetConfig().GetBool(config.CLEAN_FAIL_TASK)) {
 		// clean pod volume and container if clean_container_volume_on_kill is true
 		cleanVolumeAndContainer := config.GetConfig().GetBool(config.CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL)
-		if cleanVolumeAndContainer{
+		if cleanVolumeAndContainer {
 			err = pod.RemovePodVolume(pod.ComposeFiles)
 			if err != nil {
 				logger.Errorf("Error cleaning volumes: %v", err)
