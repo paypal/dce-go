@@ -1,5 +1,5 @@
 # dce-go
-[![godoc](https://img.shields.io/badge/godoc-reference-5272B4.svg?style=flat-square)](http://godoc.org)
+[![godoc](https://img.shields.io/badge/godoc-reference-5272B4.svg?style=flat-square)](http://godoc.org) [![Build Status](https://travis-ci.org/paypal/dce-go.svg?branch=develop)](https://travis-ci.org/paypal/dce-go)
 
 ## Overview
 
