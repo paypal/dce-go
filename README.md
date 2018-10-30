@@ -14,9 +14,9 @@ Composite containers representing an application is a common requirement for mod
 The project goal is to model a pod of containers with docker-compose and launch it with your favorite Mesos frameworks like Marathon, Apache Aurora, etc. One does not need to switch to Kubernetes on Mesos if all that they are looking to do is launch pods (model pod like workloads). With network and storage plugins supported directly in Docker, one can model advanced pods supported through compose. Furthermore, instead of using some different spec to define pods, we wanted to build around the compose spec that is well accepted in the docker community. A developer can now write the pod spec once, run it locally in their laptop using compose and later seamlessly move into Mesos without having to modify the pod spec.
 
 Running multiple pods on the same host may create many conflicts (containerId's , ports etc.). Executor takes care of resolving these conflicts.  A new docker-compose file resolving all the conflicts is generated. Each container is tagged with specific taskId and executorId and this is used to clean up containers via mesos hooks if executor is terminated. Cgroup is introduced to limit, account for, and isolate the resource usage (cpu, memory at this point) of a Pod.
- 
-dce-go is implemented in golang and provides a pluggable mechanism which gives developers more flexibilities to inject their custom logic. 
- 
+
+dce-go is implemented in golang and provides a pluggable mechanism which gives developers more flexibilities to inject their custom logic.
+
 
 
 ### Plugins
@@ -26,7 +26,7 @@ Pod is launched according to docker compose files provided by users. Docker comp
 Pod containers essentially has to share namespace and containers in a pod need to share a common cgroup.
 
 ##### cgroup hierarchy
-dce-go mounts by default all the containers representing the pod under the parent mesos task cgroup. The memory subsystem use_hierarchy should be enabled for mesos cgroup. With this even if individual containers are not controlled, resources will be enforced as per the parent task limits. 
+dce-go mounts by default all the containers representing the pod under the parent mesos task cgroup. The memory subsystem use_hierarchy should be enabled for mesos cgroup. With this even if individual containers are not controlled, resources will be enforced as per the parent task limits.
 
 ##### Infrastructure Container
 This container is automatically added by the general plugin. Infrastructure container is the secret of how containers in a Pod can share the network namespace with it and the infra container gets the pod IP assigned to. We are not collapsing other namespaces like pid at this point in general plugin.
@@ -38,14 +38,14 @@ This container is automatically added by the general plugin. Infrastructure cont
 - Provides pod monitor to not only kill entire pod on unexpected container exit but also when a container becomes unhealthy as per docker healthchecks.
 - Supports running multiple compose files.
 - Mesos Module provided to prevent pod leaks in rare case of executor crashes.
-- Provides plugins. 
+- Provides plugins.
 - Last but not the least any existing Mesos Frameworks like Aurora, Marathon etc can use DCE directly without making ANY framework changes.
 
 
 ### To start using dce-go
 1. [Installing environment](docs/environment.md)
 2. [How to use](docs/how-to-use.md)
-    
+
 ### To start developing dce-go
 1. [Installing environment](docs/environment.md)
 2. [How to develop](docs/how-to-develop.md)
