@@ -3,15 +3,18 @@ language: go
 go:
   - "1.10.x"
 
+# Cribbed from https://github.com/Masterminds/glide/issues/639#issuecomment-257431434
+before_install:
+  - GLIDE_OS_ARCH=`go env GOHOSTOS`-`go env GOHOSTARCH`
+  - GLIDE_TAG=$(curl -s https://glide.sh/version)
+  - GLIDE_LATEST_RELEASE_URL="https://github.com/Masterminds/glide/releases/download/${GLIDE_TAG}/glide-${GLIDE_TAG}-${GLIDE_OS_ARCH}.tar.gz"
+  - wget ${GLIDE_LATEST_RELEASE_URL} -O /tmp/glide.tar.gz
+  - mkdir /tmp/glide
+  - tar --directory=/tmp/glide -xvf /tmp/glide.tar.gz
+  - export PATH=$PATH:/tmp/glide/${GLIDE_OS_ARCH}
+
 install:
-   - glide install --strip-vendor
+  - glide install --strip-vendor
 
 script:
   - go build -o executor dce/main.go
-
-addons:
-  apt:
-    sources:
-      - sourceline: 'ppa:masterminds/glide'
-    packages:
-      - glide
