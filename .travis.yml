@@ -4,9 +4,7 @@ go:
   - "1.10.x"
 
 install:
-   - glide install
-   # Needed in order for compilation to work since gorealis uses dep and we use glide.
-   - rm -r vendor/github.com/paypal/gorealis/vendor/git.apache.org/thrift.git
+   - glide install --strip-vendor
 
 script:
   - go build -o executor dce/main.go
