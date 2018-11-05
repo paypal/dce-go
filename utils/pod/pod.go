@@ -103,6 +103,20 @@ func checkContainerExitCode(containerId string) (int, error) {
 	return exitCode, nil
 }
 
+//get docker health check logs
+func PrintHealthCheckLogs(containerId string) error {
+	out, err := waitUtil.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "inspect",
+		"--format='{{json .State.Health}}'",
+		containerId))
+
+	if err != nil {
+		log.Println("Error inspecting container for health check details :", err)
+		return err
+	}
+	log.Println("Health Check inspect Logs: ", string(out))
+	return nil
+}
+
 // Generate cmd parts
 // docker-compose parts
 // example : docker-compose -f compose.yaml up
@@ -1071,6 +1085,10 @@ healthCheck:
 
 			if err != nil || healthy == types.UNHEALTHY {
 				log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
+				err = PrintHealthCheckLogs(containers[i])
+				if err != nil {
+					log.Println("Error occured during docker inspect: ", err)
+				}
 				out <- types.POD_FAILED.String()
 				return
 			}
