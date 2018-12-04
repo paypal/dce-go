@@ -814,7 +814,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 			state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() {
 
 			log.Printf("Calling log write function again for container logs.")
-			dockerLogToPodLogFile(ComposeFiles, false)
+			go dockerLogToPodLogFile(ComposeFiles, false)
 		}
 	}
 
