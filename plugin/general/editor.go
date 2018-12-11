@@ -78,11 +78,11 @@ func getVersion(filesMap types.ServiceDetail, file string) string {
 	if currentVersion, ok := filesMap[file][types.VERSION].(string); ok {
 		currentVersionFloat, err := strconv.ParseFloat(currentVersion, 64)
 		if err != nil {
-			log.Printf("Error trying to change version from str to float. Defaulting it to 2.1")
-		} else {
-			if currentVersionFloat > 2.1 && currentVersionFloat < 3.0 {
-				return fmt.Sprintf("%.1f", currentVersionFloat)
-			}
+			log.Errorf("Error trying to change version from str to float. Defaulting it to 2.1")
+			return "2.1"
+		}
+		if currentVersionFloat > 2.1 && currentVersionFloat < 3.0 {
+			return fmt.Sprintf("%.1f", currentVersionFloat)
 		}
 	}
 	return "2.1"
