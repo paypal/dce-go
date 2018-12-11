@@ -31,10 +31,11 @@ import (
 )
 
 const (
-	PORT_DELIMITER = ":"
-	PATH_DELIMITER = "/"
-	TASK_ID        = "taskId"
-	EXECUTOR_ID    = "executorId"
+	PORT_DELIMITER  = ":"
+	PATH_DELIMITER  = "/"
+	TASK_ID         = "taskId"
+	EXECUTOR_ID     = "executorId"
+	DEFAULT_VERSION = "2.1"
 )
 
 func editComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element,
@@ -75,17 +76,21 @@ func editComposeFile(ctx *context.Context, file string, executorId string, taskI
 }
 
 func getVersion(filesMap types.ServiceDetail, file string) string {
-	if currentVersion, ok := filesMap[file][types.VERSION].(string); ok {
-		currentVersionFloat, err := strconv.ParseFloat(currentVersion, 64)
-		if err != nil {
-			log.Errorf("Error trying to change version from str to float. Defaulting it to 2.1")
-			return "2.1"
-		}
-		if currentVersionFloat > 2.1 && currentVersionFloat < 3.0 {
-			return fmt.Sprintf("%.1f", currentVersionFloat)
-		}
+	currentVersion, ok := filesMap[file][types.VERSION].(string)
+	if !ok {
+		log.Errorf("Error find version or cast version to string. Defaulting it to %s", DEFAULT_VERSION)
+		return DEFAULT_VERSION
 	}
-	return "2.1"
+	currentVersionFloat, err := strconv.ParseFloat(currentVersion, 64)
+	if err != nil {
+		log.Errorf("Error trying to change version from str to float. Defaulting it to %s", DEFAULT_VERSION)
+		return DEFAULT_VERSION
+	}
+	if currentVersionFloat > 2.1 && currentVersionFloat < 3.0 {
+		return fmt.Sprintf("%.1f", currentVersionFloat)
+	}
+
+	return DEFAULT_VERSION
 }
 
 func updateServiceSessions(serviceName, file, executorId, taskId string, filesMap types.ServiceDetail, ports *list.Element,
