@@ -30,6 +30,7 @@ const (
 	POD_KILLED
 	POD_FINISHED
 	POD_PULL_FAILED
+	POD_COMPOSE_CHECK_FAILED
 	POD_EMPTY
 )
 
@@ -49,6 +50,8 @@ func (status PodStatus) String() string {
 		return "POD_FINISHED"
 	case POD_PULL_FAILED:
 		return "POD_PULL_FAILED"
+	case POD_COMPOSE_CHECK_FAILED:
+		return "POD_COMPOSE_CHECK_FAILED"
 	case POD_EMPTY:
 		return ""
 	}
@@ -89,6 +92,7 @@ const (
 	LABELS                  = "labels"
 	ENVIRONMENT             = "environment"
 	RESTART                 = "restart"
+	APP_START_TIME          = "appStartTime"
 	SERVICES                = "services"
 	IMAGE                   = "image"
 	VERSION                 = "version"

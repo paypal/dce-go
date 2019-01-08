@@ -519,6 +519,37 @@ func ForceKill(files []string) error {
 	return nil
 }
 
+//validate compose before image pull
+func ValidateCompose(files []string) error {
+	parts, err := GenerateCmdParts(files, " config -q")
+	if err != nil {
+		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
+		return err
+	}
+
+	cmd := exec.Command("docker-compose", parts...)
+	dcelog := config.CreateFileAppendMode(types.DCE_OUT)
+	dceerr := config.CreateFileAppendMode(types.DCE_ERR)
+	cmd.Stdout = dcelog
+	cmd.Stderr = dceerr
+	log.Println("Validate compose : Command to validate manifest : docker-compose ", parts)
+
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+
+	err = waitUtil.WaitCmd(config.GetLaunchTimeout()*time.Millisecond, &types.CmdResult{
+		Command: cmd,
+	})
+
+	if err != nil {
+		return err
+	}
+	log.Println("Compose file is valid.")
+	return nil
+}
+
 // pull image
 // docker-compose pull
 func PullImage(files []string) error {
@@ -803,6 +834,10 @@ func SendPodStatus(status types.PodStatus) {
 	case types.POD_PULL_FAILED:
 		callAllPluginsPostKillTask()
 		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+
+	case types.POD_COMPOSE_CHECK_FAILED:
+		callAllPluginsPostKillTask()
+		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
 	logger.Printf("MesosStatus %s completed", status)
@@ -820,6 +855,15 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 		State:  state,
 	}
 
+	logger.Printf("start sending status %s to mesos", state.Enum().String())
+	_, err := driver.SendStatusUpdate(runStatus)
+	if err != nil {
+		logger.Errorf("Error updating mesos task status : %v", err.Error())
+		return err
+	}
+
+	logger.Printf("Updated Status to mesos: %s", state.String())
+
 	logStatus := waitUtil.GetLogStatus()
 	logger.Printf("LogStatus: %v", logStatus)
 	if !logStatus {
@@ -831,15 +875,6 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 			go dockerLogToPodLogFile(ComposeFiles, false)
 		}
 	}
-
-	logger.Printf("start sending status %s to mesos", state.Enum().String())
-	_, err := driver.SendStatusUpdate(runStatus)
-	if err != nil {
-		logger.Errorf("Error updating mesos task status : %v", err.Error())
-		return err
-	}
-
-	logger.Printf("Updated Status to mesos: %s", state.String())
 
 	time.Sleep(5 * time.Second)
 	if state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() ||
