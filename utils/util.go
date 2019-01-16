@@ -41,6 +41,8 @@ func ToPodStatus(s string) types.PodStatus {
 		return types.POD_FINISHED
 	case "POD_PULL_FAILED":
 		return types.POD_PULL_FAILED
+	case "POD_COMPOSE_CHECK_FAILED":
+		return types.POD_COMPOSE_CHECK_FAILED
 	}
 
 	return types.POD_EMPTY

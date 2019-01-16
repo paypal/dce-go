@@ -71,6 +71,7 @@ func (exec *dockerComposeExecutor) Disconnected(exec.ExecutorDriver) {
 
 func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
 	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
+	appStartTime := time.Now()
 
 	log.Println("====================Mesos LaunchTask====================")
 	pod.ComposeExecutorDriver = driver
@@ -117,9 +118,11 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	// Create context with timeout
 	// Wait for pod launching until timeout
 	var ctx context.Context
+
 	var cancel context.CancelFunc
 	ctx = context.Background()
 	ctx, cancel = context.WithTimeout(ctx, config.GetLaunchTimeout()*time.Millisecond)
+
 	go pod.WaitOnPod(&ctx)
 
 	// Get order of plugins from config or mesos labels
@@ -166,6 +169,14 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
+	//Validate Compose files
+	if err := validateComposeFiles(); err != nil {
+		pod.SetPodStatus(types.POD_COMPOSE_CHECK_FAILED)
+		cancel()
+		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		return
+	}
+
 	// Pull image
 	if err := pullImage(); err != nil {
 		pod.SetPodStatus(types.POD_PULL_FAILED)
@@ -173,6 +184,9 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 		return
 	}
+
+	timeElapsed := time.Since(appStartTime)
+	logger.Printf("Time elapsed since App launch: %.3fs", timeElapsed.Seconds())
 
 	// Executing LaunchTaskPostImagePull in order
 	if _, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
@@ -328,6 +342,17 @@ func (exec *dockerComposeExecutor) Shutdown(driver exec.ExecutorDriver) {
 
 func (exec *dockerComposeExecutor) Error(driver exec.ExecutorDriver, err string) {
 	log.Printf("Got error message : %s", err)
+}
+
+func validateComposeFiles() error {
+	logger.Println("====================Validating Compose Files====================")
+
+	err := pod.ValidateCompose(pod.ComposeFiles)
+	if err != nil {
+		log.Print("POD_BAD_MANIFEST_FAILURE -- %v ", err)
+		return errors.Wrap(err, "compose validation failed")
+	}
+	return nil
 }
 
 func pullImage() error {
