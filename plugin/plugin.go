@@ -17,11 +17,3 @@ package plugin
 func GetOrderedExtpoints(plugins []string) []ComposePlugin {
 	return ComposePlugins.Select(plugins)
 }
-
-func GetReverseOrderedExtpoints(plugins []ComposePlugin) []ComposePlugin {
-	for i := 0; i < len(plugins)/2; i++ {
-		j := len(plugins) - i - 1
-		plugins[i], plugins[j] = plugins[j], plugins[i]
-	}
-	return plugins
-}

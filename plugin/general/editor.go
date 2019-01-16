@@ -31,8 +31,11 @@ import (
 )
 
 const (
-	portDelimiter = ":"
-	pathDelimiter = "/"
+	PORT_DELIMITER  = ":"
+	PATH_DELIMITER  = "/"
+	TASK_ID         = "taskId"
+	EXECUTOR_ID     = "executorId"
+	DEFAULT_VERSION = "2.1"
 )
 
 func editComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element,
@@ -59,7 +62,8 @@ func editComposeFile(ctx *context.Context, file string, executorId string, taskI
 		}
 	}
 
-	filesMap[file][types.VERSION] = "2.1"
+	filesMap[file][types.VERSION] = getVersion(filesMap, file)
+
 	if !strings.Contains(file, utils.FILE_POSTFIX) {
 		filesMap[file+utils.FILE_POSTFIX] = filesMap[file]
 		delete(filesMap, file)
@@ -69,6 +73,24 @@ func editComposeFile(ctx *context.Context, file string, executorId string, taskI
 
 	logger.Printf("Updated compose files, current context: %v\n", filesMap)
 	return file, ports, err
+}
+
+func getVersion(filesMap types.ServiceDetail, file string) string {
+	currentVersion, ok := filesMap[file][types.VERSION].(string)
+	if !ok {
+		log.Errorf("Error find version or cast version to string. Defaulting it to %s", DEFAULT_VERSION)
+		return DEFAULT_VERSION
+	}
+	currentVersionFloat, err := strconv.ParseFloat(currentVersion, 64)
+	if err != nil {
+		log.Errorf("Error trying to change version from str to float. Defaulting it to %s", DEFAULT_VERSION)
+		return DEFAULT_VERSION
+	}
+	if currentVersionFloat > 2.1 && currentVersionFloat < 3.0 {
+		return fmt.Sprintf("%.1f", currentVersionFloat)
+	}
+
+	return DEFAULT_VERSION
 }
 
 func updateServiceSessions(serviceName, file, executorId, taskId string, filesMap types.ServiceDetail, ports *list.Element,
@@ -143,18 +165,18 @@ func updateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	// Tag containers in pod with taskId and executorId
 	if labels, ok := containerDetails[types.LABELS].(map[interface{}]interface{}); !ok {
 		if labels, ok := containerDetails[types.LABELS].([]interface{}); ok {
-			labels = append(labels, fmt.Sprintf("%s=%s", types.EXECUTOR_ID, executorId))
-			labels = append(labels, fmt.Sprintf("%s=%s", types.TASK_ID, taskId))
+			labels = append(labels, fmt.Sprintf("%s=%s", EXECUTOR_ID, executorId))
+			labels = append(labels, fmt.Sprintf("%s=%s", TASK_ID, taskId))
 			containerDetails[types.LABELS] = labels
 		} else {
 			labels := make(map[interface{}]interface{})
-			labels[types.TASK_ID] = taskId
-			labels[types.EXECUTOR_ID] = executorId
+			labels[TASK_ID] = taskId
+			labels[EXECUTOR_ID] = executorId
 			containerDetails[types.LABELS] = labels
 		}
 	} else {
-		labels[types.TASK_ID] = taskId
-		labels[types.EXECUTOR_ID] = executorId
+		labels[TASK_ID] = taskId
+		labels[EXECUTOR_ID] = executorId
 		containerDetails[types.LABELS] = labels
 	}
 
@@ -162,7 +184,7 @@ func updateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 
 	// Add cgroup parent
 	path, _ := filepath.Abs("")
-	dirs := strings.Split(path, pathDelimiter)
+	dirs := strings.Split(path, PATH_DELIMITER)
 	containerDetails[types.CGROUP_PARENT] = "/mesos/" + dirs[len(dirs)-1]
 	logger.Println("Edit Compose File : Add cgroup parent /mesos/", dirs[len(dirs)-1])
 
@@ -174,12 +196,12 @@ func updateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 			if portList, ok := containerDetails[types.PORTS].([]interface{}); ok {
 
 				for i, p := range portList {
-					portMap := strings.Split(p.(string), portDelimiter)
+					portMap := strings.Split(p.(string), PORT_DELIMITER)
 					if len(portMap) > 1 {
 						if ports == nil {
 							return nil, errors.New("No ports available")
 						}
-						p = strconv.FormatUint(ports.Value.(uint64), 10) + portDelimiter + portMap[1]
+						p = strconv.FormatUint(ports.Value.(uint64), 10) + PORT_DELIMITER + portMap[1]
 						portList[i] = p.(string)
 						ports = ports.Next()
 					} else {
@@ -251,13 +273,13 @@ func updateDynamicPorts(serviceName, file string, filesMap *types.ServiceDetail)
 	}
 	if portList, ok := containerDetails[types.PORTS].([]interface{}); ok {
 		for i, p := range portList {
-			portMap := strings.Split(p.(string), portDelimiter)
+			portMap := strings.Split(p.(string), PORT_DELIMITER)
 			if len(portMap) == 1 {
 				dynamicPort, err := pod.GetDockerPorts(ids[0], portMap[0])
 				if err != nil {
 					log.Errorf("Error retrieving docker dynamic port : %v", err)
 				}
-				p = dynamicPort + portDelimiter + portMap[0]
+				p = dynamicPort + PORT_DELIMITER + portMap[0]
 				portList[i] = p.(string)
 			}
 		}

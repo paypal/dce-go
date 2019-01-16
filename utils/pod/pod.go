@@ -47,8 +47,8 @@ const (
 	INSPECT_RESULT_LEN      = 6
 )
 
-var ComposeExcutorDriver executor.ExecutorDriver
-var PodStatus = &types.PodStatus{
+var ComposeExecutorDriver executor.ExecutorDriver
+var CurPodStatus = &Status{
 	Status: types.POD_STAGING,
 }
 
@@ -57,9 +57,9 @@ var ComposeTaskInfo *mesos.TaskInfo
 var PluginOrder []string
 
 var HealthCheckListId = make(map[string]bool)
-var PodContainers []string
+var MonitorContainerList []string
 var SinglePort bool
-var PodLaunched bool = false
+var IsPodLaunched = false
 
 // Check exit code of all the containers in the pod.
 // If all the exit codes are zero, then assign zero as pod's exit code,
@@ -101,6 +101,20 @@ func checkContainerExitCode(containerId string) (int, error) {
 		log.Fatalf("Error converting string to int : %s\n", err.Error())
 	}
 	return exitCode, nil
+}
+
+//get docker health check logs
+func PrintHealthCheckLogs(containerId string) error {
+	out, err := waitUtil.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "inspect",
+		"--format='{{json .State.Health}}'",
+		containerId))
+
+	if err != nil {
+		log.Println("Error inspecting container for health check details :", err)
+		return err
+	}
+	log.Println("Health Check inspect Logs: ", string(out))
+	return nil
 }
 
 // Generate cmd parts
@@ -264,7 +278,7 @@ func GetPorts(taskInfo *mesos.TaskInfo) *list.Element {
 
 // Launch pod
 // docker-compose up
-func LaunchPod(files []string) string {
+func LaunchPod(files []string) types.PodStatus {
 	//log.SetOutput(os.Stdout)
 	log.Println("====================Launch Pod====================")
 
@@ -288,8 +302,8 @@ func LaunchPod(files []string) string {
 	go dockerLogToPodLogFile(files, true)
 
 	err = cmd.Run()
-	PodLaunched = true
-	log.Println("Updated the state of PodLaunched to true.")
+	IsPodLaunched = true
+	log.Println("Updated the state of IsPodLaunched to true.")
 	if err != nil {
 		log.Printf("POD_LAUNCH_FAIL -- Error running launch task command : %v", err)
 		return types.POD_FAILED
@@ -505,6 +519,37 @@ func ForceKill(files []string) error {
 	return nil
 }
 
+//validate compose before image pull
+func ValidateCompose(files []string) error {
+	parts, err := GenerateCmdParts(files, " config -q")
+	if err != nil {
+		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
+		return err
+	}
+
+	cmd := exec.Command("docker-compose", parts...)
+	dcelog := config.CreateFileAppendMode(types.DCE_OUT)
+	dceerr := config.CreateFileAppendMode(types.DCE_ERR)
+	cmd.Stdout = dcelog
+	cmd.Stderr = dceerr
+	log.Println("Validate compose : Command to validate manifest : docker-compose ", parts)
+
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+
+	err = waitUtil.WaitCmd(config.GetLaunchTimeout()*time.Millisecond, &types.CmdResult{
+		Command: cmd,
+	})
+
+	if err != nil {
+		return err
+	}
+	log.Println("Compose file is valid.")
+	return nil
+}
+
 // pull image
 // docker-compose pull
 func PullImage(files []string) error {
@@ -540,7 +585,7 @@ func PullImage(files []string) error {
 
 //CheckContainer does check container details
 //return healthy,run,err
-func CheckContainer(containerId string, healthCheck bool) (string, bool, int, error) {
+func CheckContainer(containerId string, healthCheck bool) (types.HealthStatus, bool, int, error) {
 	containerDetail, err := InspectContainerDetails(containerId, healthCheck)
 	if err != nil {
 		log.Printf("CheckContainer : Error inspecting container with id : %s, %v", containerId, err.Error())
@@ -555,9 +600,9 @@ func CheckContainer(containerId string, healthCheck bool) (string, bool, int, er
 	if healthCheck {
 		if containerDetail.IsRunning {
 			//log.Printf("CheckContainer : Primary container %s is running , %s\n", containerId, containerDetail.HealthStatus)
-			return containerDetail.HealthStatus, containerDetail.IsRunning, containerDetail.ExitCode, nil
+			return utils.ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
 		}
-		return containerDetail.HealthStatus, containerDetail.IsRunning, containerDetail.ExitCode, nil
+		return utils.ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
 	}
 
 	if containerDetail.IsRunning {
@@ -637,7 +682,7 @@ func InspectContainerDetails(containerId string, healthcheck bool) (types.Contai
 		containerId, containerStatusDetails.Name, containerStatusDetails.HealthStatus,
 		containerStatusDetails.ExitCode, containerStatusDetails.IsRunning)
 
-	if containerStatusDetails.HealthStatus == types.UNHEALTHY || containerStatusDetails.ExitCode != 0 {
+	if containerStatusDetails.HealthStatus == types.UNHEALTHY.String() || containerStatusDetails.ExitCode != 0 {
 		log.Printf("Inspect container : %s , Name: %s, health status: %s, exit code : %v, is running : %v\n",
 			containerId, containerStatusDetails.Name, containerStatusDetails.HealthStatus,
 			containerStatusDetails.ExitCode, containerStatusDetails.IsRunning)
@@ -737,21 +782,21 @@ func GetAndRemoveLabel(key string, taskInfo *mesos.TaskInfo) string {
 }
 
 // Read pod status
-func GetPodStatus() string {
-	PodStatus.RLock()
-	defer PodStatus.RUnlock()
-	return PodStatus.Status
+func GetPodStatus() types.PodStatus {
+	CurPodStatus.RLock()
+	defer CurPodStatus.RUnlock()
+	return CurPodStatus.Status
 }
 
 // Set pod status
-func SetPodStatus(status string) {
-	PodStatus.Lock()
-	PodStatus.Status = status
-	PodStatus.Unlock()
+func SetPodStatus(status types.PodStatus) {
+	CurPodStatus.Lock()
+	CurPodStatus.Status = status
+	CurPodStatus.Unlock()
 	log.Printf("Update Status : Update podStatus as %s", status)
 }
 
-func SendPodStatus(status string) {
+func SendPodStatus(status types.PodStatus) {
 	logger := log.WithFields(log.Fields{
 		"status": status,
 		"func":   "pod.SendPodStatus",
@@ -766,29 +811,33 @@ func SendPodStatus(status string) {
 	logger.Println("Pod status:", status)
 	switch status {
 	case types.POD_RUNNING:
-		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_RUNNING.Enum())
+		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_RUNNING.Enum())
 	case types.POD_FINISHED:
 		// Stop pod after sending status to mesos
 		// To kill system proxy container
-		if len(PodContainers) > 0 {
-			logger.Printf("Stop containers still running in the pod: %v", PodContainers)
+		if len(MonitorContainerList) > 0 {
+			logger.Printf("Stop containers still running in the pod: %v", MonitorContainerList)
 			err := StopPod(ComposeFiles)
 			if err != nil {
 				logger.Errorf("Error stop pod: %v", err)
 			}
 		}
-		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FINISHED.Enum())
+		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FINISHED.Enum())
 	case types.POD_FAILED:
-		if PodLaunched {
+		if IsPodLaunched {
 			err := StopPod(ComposeFiles)
 			if err != nil {
 				logger.Errorf("Error cleaning up pod : %v\n", err.Error())
 			}
 		}
-		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	case types.POD_PULL_FAILED:
 		callAllPluginsPostKillTask()
-		SendMesosStatus(ComposeExcutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+
+	case types.POD_COMPOSE_CHECK_FAILED:
+		callAllPluginsPostKillTask()
+		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
 	logger.Printf("MesosStatus %s completed", status)
@@ -798,24 +847,12 @@ func SendPodStatus(status string) {
 func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state *mesos.TaskState) error {
 	logger := log.WithFields(log.Fields{
 		"state": state.Enum().String(),
-		"func":   "pod.SendMesosStatus",
+		"func":  "pod.SendMesosStatus",
 	})
 
 	runStatus := &mesos.TaskStatus{
 		TaskId: taskId,
 		State:  state,
-	}
-
-	logStatus := waitUtil.GetLogStatus()
-	logger.Printf("LogStatus: %v", logStatus)
-	if !logStatus {
-		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
-			state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
-			state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() {
-
-			log.Printf("Calling log write function again for container logs.")
-			dockerLogToPodLogFile(ComposeFiles, false)
-		}
 	}
 
 	logger.Printf("start sending status %s to mesos", state.Enum().String())
@@ -826,6 +863,18 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 	}
 
 	logger.Printf("Updated Status to mesos: %s", state.String())
+
+	logStatus := waitUtil.GetLogStatus()
+	logger.Printf("LogStatus: %v", logStatus)
+	if !logStatus {
+		if state.Enum().String() == mesos.TaskState_TASK_FINISHED.Enum().String() ||
+			state.Enum().String() == mesos.TaskState_TASK_KILLED.Enum().String() ||
+			state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() {
+
+			log.Printf("Calling log write function again for container logs.")
+			go dockerLogToPodLogFile(ComposeFiles, false)
+		}
+	}
 
 	time.Sleep(5 * time.Second)
 	if state.Enum().String() == mesos.TaskState_TASK_FAILED.Enum().String() ||
@@ -1023,7 +1072,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 		containers, err = GetContainerIdsByServices(files, services)
 		if err != nil {
 			logger.Errorln("Error retrieving container id list : ", err.Error())
-			out <- types.POD_FAILED
+			out <- types.POD_FAILED.String()
 			return
 		}
 
@@ -1043,7 +1092,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 		if err != nil {
 			logger.Errorf("Error getting container id of service %s: %v", types.INFRA_CONTAINER, err)
 			log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
-			out <- types.POD_FAILED
+			out <- types.POD_FAILED.String()
 			return
 		}
 	}
@@ -1055,7 +1104,7 @@ healthCheck:
 
 		for i := 0; i < len(containers); i++ {
 
-			var healthy string
+			var healthy types.HealthStatus
 			var exitCode int
 			var running bool
 
@@ -1071,7 +1120,11 @@ healthCheck:
 
 			if err != nil || healthy == types.UNHEALTHY {
 				log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
-				out <- types.POD_FAILED
+				err = PrintHealthCheckLogs(containers[i])
+				if err != nil {
+					log.Println("Error occured during docker inspect: ", err)
+				}
+				out <- types.POD_FAILED.String()
 				return
 			}
 
@@ -1097,29 +1150,29 @@ healthCheck:
 		}
 	}
 
-	PodContainers = make([]string, len(containers))
-	copy(PodContainers, containers)
+	MonitorContainerList = make([]string, len(containers))
+	copy(MonitorContainerList, containers)
 
 	logger.Printf("Health Check List: %v", HealthCheckListId)
-	logger.Printf("Pod Monitor List: %v", PodContainers)
+	logger.Printf("Pod Monitor List: %v", MonitorContainerList)
 
 	isService := config.IsService()
 	logger.Printf("Task is SERVICE: %v", isService)
 	if len(containers) == 0 && !isService {
 		logger.Println("Task is ADHOC job. Send POD_FINISHED")
-		out <- types.POD_FINISHED
+		out <- types.POD_FINISHED.String()
 	} else if len(containers) == 0 && isService {
 		logger.Println("Task is SERVICE. Send POD_FAILED")
-		out <- types.POD_FAILED
+		out <- types.POD_FAILED.String()
 	} else if !isService && hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
 		logger.Println("Task is ADHOC job. Only infra container is running, send POD_FINISHED")
-		out <- types.POD_FINISHED
+		out <- types.POD_FINISHED.String()
 	} else if isService && hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
 		logger.Println("Task is SERVICE. Only infra container is running, send POD_FAILED")
-		out <- types.POD_FAILED
+		out <- types.POD_FAILED.String()
 	} else {
 		logger.Println("Initial Health Check : send POD_RUNNING")
-		out <- types.POD_RUNNING
+		out <- types.POD_RUNNING.String()
 	}
 
 	logger.Println("====================Health check Done====================")

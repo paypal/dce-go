@@ -229,7 +229,7 @@ func WriteChangeToFiles(ctx context.Context) error {
 	return nil
 }
 
-func DumpPluginModifiedComposeFiles(ctx context.Context, plugin string, pluginOrder int) {
+func DumpPluginModifiedComposeFiles(ctx context.Context, plugin, funcName string, pluginOrder int) {
 	if ctx.Value(types.SERVICE_DETAIL) == nil {
 
 	}
@@ -245,7 +245,7 @@ func DumpPluginModifiedComposeFiles(ctx context.Context, plugin string, pluginOr
 			log.Printf("Skip dumping modified compose file by plugin %s, since file name is invalid %s", plugin, file)
 			return
 		}
-		_, err := WriteToFile(fmt.Sprintf("%s/%s/%s-%s-%d.yml", fParts[0], TraceFolder, fParts[1], plugin, pluginOrder), content)
+		_, err := WriteToFile(fmt.Sprintf("%s/%s/%s-%s-%s-%d.yml", fParts[0], TraceFolder, fParts[1], plugin, funcName, pluginOrder), content)
 		if err != nil {
 			log.Printf("Failed dumping modified compose file by plugin %s", plugin)
 		}
