@@ -52,6 +52,10 @@ func podMonitor(systemProxyId string) types.PodStatus {
 
 		if err != nil {
 			logger.Errorf(fmt.Sprintf("POD_MONITOR_HEALTH_CHECK_FAILED -- Error inspecting container with id : %s, %v", pod.MonitorContainerList[i], err.Error()))
+			err = pod.PrintHealthCheckLogs(pod.MonitorContainerList[i])
+			if err != nil {
+				log.Println("Error occured during docker inspect: ", err)
+			}
 			logger.Errorln("POD_MONITOR_FAILED -- Send Failed")
 			return types.POD_FAILED
 		}
@@ -64,6 +68,10 @@ func podMonitor(systemProxyId string) types.PodStatus {
 		if healthy == types.UNHEALTHY {
 			if config.GetConfigSection(config.CLEANPOD) == nil ||
 				config.GetConfigSection(config.CLEANPOD)[types.UNHEALTHY.String()] == "true" {
+				err = pod.PrintHealthCheckLogs(pod.MonitorContainerList[i])
+				if err != nil {
+					log.Println("Error occured during docker inspect: ", err)
+				}
 				logger.Println("POD_MONITOR_HEALTH_CHECK_FAILED -- Stop pod monitor and send Failed")
 				return types.POD_FAILED
 			}
