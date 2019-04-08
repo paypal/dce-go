@@ -175,7 +175,7 @@ func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
 		return nil
 	}
 
-	if pod.GetPodStatus() != types.POD_FAILED || (pod.GetPodStatus() == types.POD_FAILED && config.GetConfig().GetBool(config.CLEAN_FAIL_TASK)) {
+	if pod.GetPodStatus() != types.POD_FAILED || config.GetConfig().GetBool(config.CLEAN_FAIL_TASK) {
 		// clean pod volume and container if clean_container_volume_on_kill is true
 		cleanVolumeAndContainer := config.GetConfig().GetBool(config.CLEAN_CONTAINER_VOLUME_ON_MESOS_KILL)
 		if cleanVolumeAndContainer {
