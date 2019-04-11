@@ -295,6 +295,12 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *mesos.TaskID) {
 	log.Println("====================Mesos KillTask====================")
 
+	defer func() {
+		log.Println("====================Stop ExecutorDriver====================")
+		time.Sleep(5 * time.Second)
+		driver.Stop()
+	}()
+
 	logKill := log.WithFields(log.Fields{
 		"taskId": taskId,
 	})
@@ -318,9 +324,8 @@ func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *
 			logKill.Errorf("Error during kill Task : %v", err.Error())
 		}
 
-		log.Println("====================Stop ExecutorDriver====================")
-		time.Sleep(200 * time.Millisecond)
-		driver.Stop()
+	default:
+		log.Infof("current pod status %s, stop driver", status)
 
 	}
 

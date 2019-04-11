@@ -104,16 +104,20 @@ func checkContainerExitCode(containerId string) (int, error) {
 }
 
 //get docker health check logs
-func PrintHealthCheckLogs(containerId string) error {
-	out, err := waitUtil.RetryCmd(config.GetMaxRetry(), exec.Command("docker", "inspect",
-		"--format='{{json .State.Health}}'",
-		containerId))
+func PrintInspectDetail(containerId string) error {
+	dceLog := config.CreateFileAppendMode(types.DCE_OUT)
+	dceErr := config.CreateFileAppendMode(types.DCE_ERR)
+	cmd := exec.Command("docker", "inspect",
+		containerId)
+	cmd.Stdout = dceLog
+	cmd.Stderr = dceErr
+	out, err := waitUtil.RetryCmd(config.GetMaxRetry(), cmd)
 
 	if err != nil {
 		log.Println("Error inspecting container for health check details :", err)
 		return err
 	}
-	log.Println("Health Check inspect Logs: ", string(out))
+	fmt.Println("Inspect Logs: ", string(out))
 	return nil
 }
 
@@ -1120,9 +1124,9 @@ healthCheck:
 
 			if err != nil || healthy == types.UNHEALTHY {
 				log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
-				err = PrintHealthCheckLogs(containers[i])
+				err = PrintInspectDetail(containers[i])
 				if err != nil {
-					log.Println("Error occured during docker inspect: ", err)
+					log.Warnf("Error during docker inspect: ", err)
 				}
 				out <- types.POD_FAILED.String()
 				return
