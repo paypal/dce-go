@@ -207,7 +207,7 @@ func WriteToFile(file string, data []byte) (string, error) {
 		log.Errorf("Error creating file %v", err)
 		return "", err
 	}
-
+	defer f.Close()
 	_, err = f.Write(data)
 	if err != nil {
 		log.Errorln("Error writing into file : ", err.Error())
@@ -267,7 +267,7 @@ func OverwriteFile(file string, data []byte) {
 	if err != nil {
 		log.Errorln("Error creating file")
 	}
-
+	defer f.Close()
 	_, err = f.Write(data)
 	if err != nil {
 		log.Errorln("Error writing into file : ", err.Error())
