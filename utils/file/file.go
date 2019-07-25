@@ -120,6 +120,12 @@ func GetDirFilesRecv(dir string, files *[]string) {
 		*files = append(*files, dir)
 		return
 	}
+	archiveExt := []string{".tar", ".tar.gz", ".tar.bz2", ".tar.xz", ".gz", ".tgz", ".tbz2", ".txz", ".zip"}
+	fileext := filepath.Ext(dir)
+
+	if index := IndexArray(archiveExt, fileext); index != -1 {
+		dir = strings.TrimSuffix(dir, fileext)
+	}
 	dirs, err := ioutil.ReadDir(dir)
 	if err != nil || dirs == nil || len(dirs) == 0 {
 		log.Printf("%s is not a directory : %v", dir, err)
@@ -289,6 +295,7 @@ func SplitYAML(file string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	dir := filepath.Dir(file)
 	scanner := bufio.NewScanner(strings.NewReader(string(dat)))
 	scanner.Split(SplitFunc)
 	for scanner.Scan() {
@@ -302,6 +309,9 @@ func SplitYAML(file string) ([]string, error) {
 			logger.Println("No file name found from split data")
 			continue
 		}
+		if dir != "." {
+			name = filepath.Join(dir, name)
+		}
 		fileName, err := WriteToFile(name, []byte(splitData))
 		if err != nil {
 			logger.Errorf("Error writing files %s : %v\n", fileName, err)
@@ -312,8 +322,7 @@ func SplitYAML(file string) ([]string, error) {
 
 	// Copy downloaded file to folder ONLY IF the file doesn't need to be split
 	if len(names) == 0 {
-		path := strings.Split(file, PATH_DELIMITER)
-		d := FolderPath(strings.Fields(path[len(path)-1]))[0]
+		d := FolderPath(strings.Fields(file))[0]
 		CopyFile(file, d)
 		names = append(names, d)
 	}
@@ -430,13 +439,13 @@ func IndexArrayRegex(array []interface{}, expr string) (int, error) {
 }
 
 // get index of an element in array
-func IndexArray(array []interface{}, element string) (int, error) {
+func IndexArray(array []string, element string) int {
 	for i, e := range array {
 		if e == element {
-			return i, nil
+			return i
 		}
 	}
-	return -1, errors.New("Element missing in list")
+	return -1
 }
 
 func SearchInArray(array []interface{}, key string) string {
@@ -543,8 +552,15 @@ func GenerateAppFolder() error {
 
 	// Copy compose files into pod folder
 	for i, file := range pod.ComposeFiles {
-		path := strings.Split(file, PATH_DELIMITER)
-		dest := FolderPath(strings.Fields(path[len(path)-1]))[0]
+		dir := filepath.Dir(file)
+		//create the directory in the folder if required
+		if dir != "." {
+			err = os.MkdirAll(filepath.Join(folder, dir), os.ModePerm)
+			if err != nil {
+				log.Printf("error creating directory %s into pod folder %v", dir, err)
+			}
+		}
+		dest := FolderPath(strings.Fields(file))[0]
 		err = CopyFile(file, dest)
 		if err != nil {
 			log.Printf("Copy file %s into pod folder %v", file, err)
