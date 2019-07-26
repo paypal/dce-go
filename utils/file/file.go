@@ -258,20 +258,23 @@ func DumpPluginModifiedComposeFiles(ctx context.Context, plugin, funcName string
 	}
 }
 
-func OverwriteFile(file string, data []byte) {
+func OverwriteFile(file string, data []byte) error {
 	log.Printf("Over-write file: %s\n", file)
 
 	os.Remove(file)
 
 	f, err := os.Create(file)
 	if err != nil {
-		log.Errorln("Error creating file")
+		log.Errorf("Error creating file %s", err)
+		return err
 	}
 	defer f.Close()
 	_, err = f.Write(data)
 	if err != nil {
-		log.Errorln("Error writing into file : ", err.Error())
+		log.Errorf("Error writing into file : %s", err.Error())
+		return err
 	}
+	return nil
 }
 
 //Split a large file into a number of smaller files by file separator
