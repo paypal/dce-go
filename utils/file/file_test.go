@@ -18,14 +18,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
-	"reflect"
-
-	"github.com/mesos/mesos-go/examples/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPrefixTaskId(t *testing.T) {
@@ -80,17 +79,14 @@ func TestWriteToGeneratedFile(t *testing.T) {
 }
 
 func TestIndexArray(t *testing.T) {
-	array := make([]interface{}, 3)
+	array := make([]string, 3)
 	array[0] = "pen"
 	array[1] = "apple"
 	array[2] = "peach"
-	i, err := IndexArray(array, "apple")
-	if err != nil {
-		t.Error(err.Error())
-	}
-	if i != 1 {
-		t.Fatalf("expected index to be 1, but got %v", i)
-	}
+	i := IndexArray(array, "apple")
+	assert.Equal(t, 1, i, "")
+	i = IndexArray(array, "test")
+	assert.Equal(t, -1, i, "")
 }
 
 func TestReplaceArrayElement(t *testing.T) {
@@ -186,7 +182,7 @@ func TestAppendElement(t *testing.T) {
 func TestSplitYAML(t *testing.T) {
 	config.GetConfig().Set(types.NO_FOLDER, true)
 
-	expectedFile1 := []string{"docker-compose-base.yml", "docker-compose-qa.yml", "docker-compose-production.yml", "docker-compose-sandbox.yml", "docker-compose-debug.yml", "docker-compose-healthcheck.yml"}
+	expectedFile1 := []string{"testdata/docker-compose-base.yml", "testdata/docker-compose-qa.yml", "testdata/docker-compose-production.yml", "testdata/docker-compose-sandbox.yml", "testdata/docker-compose-debug.yml", "testdata/docker-compose-healthcheck.yml"}
 	files1, err := SplitYAML("testdata/yaml")
 	if err != nil {
 		t.Errorf(err.Error())
@@ -200,7 +196,7 @@ func TestSplitYAML(t *testing.T) {
 		os.Remove(file)
 	}
 
-	expectedFile2 := []string{"docker-adhoc.yml"}
+	expectedFile2 := []string{"testdata/docker-adhoc.yml"}
 	files2, err := SplitYAML("testdata/docker-adhoc.yml")
 	if err != nil {
 		t.Errorf("Error split file %s\n", err.Error())
@@ -224,4 +220,13 @@ func TestConvertArrayToMap(t *testing.T) {
 	b := []interface{}{}
 	m = ConvertArrayToMap(b)
 	assert.Equal(t, len(m), 0, "empty map")
+}
+
+func TestGetDirFilesRecv(t *testing.T) {
+	var files []string
+	GetDirFilesRecv("testdata/docker-adhoc.yml", &files)
+	assert.Equal(t, []string{"testdata/docker-adhoc.yml"}, files, "non archive format files should work")
+	files = []string{}
+	GetDirFilesRecv("testdata/config.zip", &files)
+	assert.Equal(t, []string{"testdata/config/docker-adhoc.yml"}, files, "archive format files should work")
 }
