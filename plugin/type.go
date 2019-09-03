@@ -35,6 +35,7 @@ type ComposePlugin interface {
 // lifecycle function. Currently this is supported only for LaunchTask(), but can be extended to other Executor lifecycle
 // functions as needed
 type ExecutorHook interface {
+	// PostExec is invoked  post execution of Docker Compose Mesos Executor's lifecycle function
 	PostExec(taskInfo *mesos.TaskInfo) error
 	// BestEffort is invoked in case a PostExec returned an error and are expected to return a bool to indicate
 	// if the execution needs to continue with the next available hook or not

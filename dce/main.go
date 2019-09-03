@@ -85,7 +85,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	// defer to execute any hooks Post execution of LaunchTask
 	defer func() {
 		var postHooks []string
-		if postHooks = config.GetConfig().GetStringSlice("hooks.LaunchTask.Post"); len(postHooks) < 1 {
+		if postHooks = config.GetConfig().GetStringSlice("execHooks.LaunchTask.Post"); len(postHooks) < 1 {
 			logger.Infof("No post ExecHook implementations found in config, skipping")
 			return
 		}
@@ -93,7 +93,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			for _, name := range postHooks {
 				hook := plugin.ExecutorHooks.Lookup(name)
 				if hook == nil {
-					logger.Errorf("Hook %s is nil, not initialized?", name)
+					logger.Errorf("Hook %s is nil, not initialized? still continuing with available hooks", name)
 					continue
 				}
 				if pherr := hook.PostExec(taskInfo); pherr != nil {
