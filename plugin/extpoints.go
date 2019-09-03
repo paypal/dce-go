@@ -69,6 +69,7 @@ func UnregisterExtension(name string) []string {
 	return ifaces
 }
 
+
 // Base extension point
 
 type extensionPoint struct {
@@ -183,6 +184,57 @@ func (ep *composePluginExt) All() map[string]ComposePlugin {
 }
 
 func (ep *composePluginExt) Names() []string {
+	var names []string
+	for k := range ep.all() {
+		names = append(names, k)
+	}
+	return names
+}
+
+
+// ExecutorHook
+
+var ExecutorHooks = &executorHookExt{
+	newExtensionPoint(new(ExecutorHook)),
+}
+
+type executorHookExt struct {
+	*extensionPoint
+}
+
+func (ep *executorHookExt) Unregister(name string) bool {
+	return ep.unregister(name)
+}
+
+func (ep *executorHookExt) Register(extension ExecutorHook, name string) bool {
+	return ep.register(extension, name)
+}
+
+func (ep *executorHookExt) Lookup(name string) ExecutorHook {
+	ext := ep.lookup(name)
+	if ext == nil {
+		return nil
+	}
+	return ext.(ExecutorHook)
+}
+
+func (ep *executorHookExt) Select(names []string) []ExecutorHook {
+	var selected []ExecutorHook
+	for _, name := range names {
+		selected = append(selected, ep.Lookup(name))
+	}
+	return selected
+}
+
+func (ep *executorHookExt) All() map[string]ExecutorHook {
+	all := make(map[string]ExecutorHook)
+	for k, v := range ep.all() {
+		all[k] = v.(ExecutorHook)
+	}
+	return all
+}
+
+func (ep *executorHookExt) Names() []string {
 	var names []string
 	for k := range ep.all() {
 		names = append(names, k)

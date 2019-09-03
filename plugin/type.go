@@ -30,3 +30,13 @@ type ComposePlugin interface {
 	PostKillTask(taskInfo *mesos.TaskInfo) error
 	Shutdown(executor.ExecutorDriver) error
 }
+
+// ExecutorHook allows custom implementations to be plugged post execution of Docker Compose Mesos Executor's
+// lifecycle function. Currently this is supported only for LaunchTask(), but can be extended to other Executor lifecycle
+// functions as needed
+type ExecutorHook interface {
+	PostExec(taskInfo *mesos.TaskInfo) error
+	// BestEffort is invoked in case a PostExec returned an error and are expected to return a bool to indicate
+	// if the execution needs to continue with the next available hook or not
+	BestEffort() bool
+}
