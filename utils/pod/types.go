@@ -8,5 +8,7 @@ import (
 
 type Status struct {
 	sync.RWMutex
-	Status types.PodStatus
+	Status      types.PodStatus
+	// if set to true, indicates that the pod was launched successfully and task moved to RUNNING state
+	podLaunched bool
 }

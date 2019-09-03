@@ -170,7 +170,7 @@ func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
 func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
 	logger.Println("PostKillTask begin, pod status:", pod.GetPodStatus())
 	var err error
-	if !pod.IsPodLaunched {
+	if !pod.LaunchCmdExecuted {
 		logger.Println("Pod hasn't started, no postKill work needed.")
 		return nil
 	}

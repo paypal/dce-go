@@ -30,9 +30,8 @@ import (
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/dce/monitor"
 	"github.com/paypal/dce-go/plugin"
-	_ "github.com/paypal/dce-go/plugin/example"
-	_ "github.com/paypal/dce-go/plugin/general"
-
+	_ "github.com/paypal/dce-go/pluginimpl/example"
+	_ "github.com/paypal/dce-go/pluginimpl/general"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils"
 	fileUtils "github.com/paypal/dce-go/utils/file"
@@ -82,43 +81,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		"pool":      pod.GetLabel("pool", taskInfo),
 	})
 
-	// defer to execute any hooks Post execution of LaunchTask
-	defer func() {
-		var postHooks []string
-		if postHooks = config.GetConfig().GetStringSlice("hooks.LaunchTask.Post"); len(postHooks) < 1 {
-			logger.Infof("No post ExecHook implementations found in config, skipping")
-			return
-		}
-		if _, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
-			for _, name := range postHooks {
-				hook := plugin.ExecutorHooks.Lookup(name)
-				if hook == nil {
-					logger.Errorf("Hook %s is nil, not initialized?", name)
-					continue
-				}
-				if pherr := hook.PostExec(taskInfo); pherr != nil {
-					logger.Debugf(
-						"ExecutorHook %s failed with %v and is not best effort, so stopping further execution ",
-								name, pherr)
-					if !hook.BestEffort() {
-						return "", errors.Wrapf(pherr, "executing hook %s failed", name)
-					}
-				} else {
-					logger.Infof("Executed hook %s", name)
-				}
-			}
-			return "", nil
-		})); err != nil {
-			logger.Errorln(err)
-			pod.SetPodStatus(types.POD_FAILED)
-			err = pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
-			if err != nil {
-				logger.Errorf("Sending pod status %s to mesos failed | err: %v", types.POD_FAILED, err)
-			}
-			return
-		}
-
-	}()
+	go pod.ListenOnTaskStatus("launchtask.post", driver, taskInfo)
 
 	task, err := json.Marshal(taskInfo)
 	if err != nil {
