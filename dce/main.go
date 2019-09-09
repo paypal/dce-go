@@ -82,7 +82,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		"pool":      pod.GetLabel("pool", taskInfo),
 	})
 
-	go pod.ListenOnTaskStatus("LaunchTask", driver, taskInfo)
+	go pod.ListenOnTaskStatus("launchtask.post", driver, taskInfo)
 
 	task, err := json.Marshal(taskInfo)
 	if err != nil {
