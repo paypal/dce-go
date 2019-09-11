@@ -15,12 +15,13 @@
 package pod
 
 import (
-	"github.com/paypal/dce-go/plugin"
-	"github.com/pkg/errors"
 	"log"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/paypal/dce-go/plugin"
+	"github.com/pkg/errors"
 
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/paypal/dce-go/config"
