@@ -392,7 +392,6 @@ func StopPod(files []string) error {
 	}
 
 	err = callAllPluginsPostKillTask()
-
 	if err != nil {
 		logger.Error(err)
 	}
@@ -835,6 +834,12 @@ func SendPodStatus(status types.PodStatus) {
 			err := StopPod(ComposeFiles)
 			if err != nil {
 				logger.Errorf("Error stop pod: %v", err)
+			}
+		} else {
+			// Adding this else part to clean the adhoc tasks.
+			err := callAllPluginsPostKillTask()
+			if err != nil {
+				logger.Error(err)
 			}
 		}
 		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FINISHED.Enum())
