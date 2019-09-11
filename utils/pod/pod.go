@@ -166,7 +166,7 @@ func GetPodContainerIds(files []string) ([]string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Errorln(os.Stderr, "reading standard input:", err)
+		log.Errorln("reading standard input:", err)
 	}
 	return containerIds, nil
 }
@@ -221,7 +221,7 @@ func GetContainerIdByService(files []string, service string) (string, error) {
 		id += scanner.Text()
 	}
 	if err := scanner.Err(); err != nil {
-		logger.Errorln(os.Stderr, "stderr: ", err)
+		logger.Errorln( "stderr: ", err)
 		return "", err
 	}
 
@@ -247,7 +247,7 @@ func GetPodDetail(files []string, primaryContainerId string, healthcheck bool) {
 		log.Println(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
-		log.Errorln(os.Stderr, "reading standard input:", err)
+		log.Errorln( "reading standard input:", err)
 	}
 
 	if primaryContainerId != "" {
@@ -383,7 +383,7 @@ func StopPod(files []string) error {
 
 	err = cmd.Run()
 	if err != nil {
-		logger.Errorf("POD_STOP_FAIL --", err.Error())
+		logger.Errorf("POD_STOP_FAIL -- %s", err.Error())
 		err = ForceKill(files)
 		if err != nil {
 			logger.Errorf("POD_STOP_FORCE_FAIL -- Error in force pod kill : %v", err)
@@ -1134,7 +1134,7 @@ healthCheck:
 				log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
 				err = PrintInspectDetail(containers[i])
 				if err != nil {
-					log.Warnf("Error during docker inspect: ", err)
+					log.Warnf("Error during docker inspect: %v ", err)
 				}
 				out <- types.POD_FAILED.String()
 				return
@@ -1228,11 +1228,11 @@ func ListenOnTaskStatus(execPhase string, driver executor.ExecutorDriver, taskIn
 					ExecHooks(execPhase, taskInfo)
 				case mesos.TaskState_TASK_FAILED.String():
 					/*
-					Tasks are marked as Failed at
-					1. Initial launch failure
-					2. Monitor or any continuously polling plugin fails after the task has been running for  a longtime
-					we want to execute hooks only on #1 above, so using CurPodStatus.podLaunched
-					  */
+						Tasks are marked as Failed at
+						1. Initial launch failure
+						2. Monitor or any continuously polling plugin fails after the task has been running for  a longtime
+						we want to execute hooks only on #1 above, so using CurPodStatus.podLaunched
+					*/
 					if !CurPodStatus.podLaunched {
 						ExecHooks(execPhase, taskInfo)
 					}
@@ -1249,8 +1249,9 @@ func ListenOnTaskStatus(execPhase string, driver executor.ExecutorDriver, taskIn
 	}
 }
 
-// ExecHooks
-func ExecHooks(execPhase string, taskInfo *mesos.TaskInfo) {
+// ExecHooks finds the hooks (implementations of ExecutorHook interface) configured for executor phase and executes them
+// error is returned if any of the hooks failed, and ExecutorHook.BestEffort() returns true
+func ExecHooks(execPhase string, taskInfo *mesos.TaskInfo) error {
 	logger := log.WithFields(log.Fields{
 		"requuid":   GetLabel("requuid", taskInfo),
 		"tenant":    GetLabel("tenant", taskInfo),
@@ -1260,7 +1261,7 @@ func ExecHooks(execPhase string, taskInfo *mesos.TaskInfo) {
 	var postHooks []string
 	if postHooks = config.GetConfig().GetStringSlice(fmt.Sprintf("execHooks.%s", execPhase)); len(postHooks) < 1 {
 		logger.Infof("No post ExecHook implementations found in config, skipping")
-		return
+		return nil
 	}
 	logger.Infof("Executor Post Hooks found: %v", postHooks)
 	if _, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
@@ -1274,7 +1275,7 @@ func ExecHooks(execPhase string, taskInfo *mesos.TaskInfo) {
 				logger.Debugf(
 					"ExecutorHook %s failed with %v and is not best effort, so stopping further execution ",
 					name, pherr)
-				if !hook.BestEffort() {
+				if !hook.BestEffort(execPhase) {
 					return "", errors.Wrapf(pherr, "executing hook %s failed", name)
 				}
 			} else {
@@ -1284,8 +1285,9 @@ func ExecHooks(execPhase string, taskInfo *mesos.TaskInfo) {
 		return "", nil
 	})); err != nil {
 		logger.Errorf("Executing hooks at %s failed | err: %v", execPhase, err)
-		return
+		return err
 	}
+	return nil
 }
 
 func stopDriver(driver executor.ExecutorDriver) {

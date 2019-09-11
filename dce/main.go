@@ -32,7 +32,6 @@ import (
 	"github.com/paypal/dce-go/plugin"
 	_ "github.com/paypal/dce-go/pluginimpl/example"
 	_ "github.com/paypal/dce-go/pluginimpl/general"
-
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils"
 	fileUtils "github.com/paypal/dce-go/utils/file"

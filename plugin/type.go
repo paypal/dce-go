@@ -39,5 +39,5 @@ type ExecutorHook interface {
 	PostExec(taskInfo *mesos.TaskInfo) error
 	// BestEffort is invoked in case a PostExec returned an error and are expected to return a bool to indicate
 	// if the execution needs to continue with the next available hook or not
-	BestEffort() bool
+	BestEffort(execPhase string) bool
 }

@@ -15,6 +15,8 @@
 package pod
 
 import (
+	"github.com/paypal/dce-go/plugin"
+	"github.com/pkg/errors"
 	"log"
 	"strings"
 	"testing"
@@ -111,13 +113,13 @@ func TestGetContainerIdByService(t *testing.T) {
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
 
-	res, err := wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
+	res1, err := wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
 		return GetContainerIdByService(files, "redis")
 	}))
 	assert.NoError(t, err, "Test get container id should success")
-	log.Println("Container id:", res)
+	log.Println("Container id:", res1)
 
-	res, err = wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
+	res1, err = wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
 		return GetContainerIdByService(files, "fake")
 	}))
 	if err == nil {
@@ -209,4 +211,58 @@ func TestGetAndRemoveLabel(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExecHooks(t *testing.T) {
+	//Register plugin with name
+	if ok := plugin.ExecutorHooks.Register(&happyHook{}, "happyHook"); !ok {
+		log.Fatalf("failed to register plugin %s", "happyHook")
+	}
+
+	if ok := plugin.ExecutorHooks.Register(&mandatoryHook{}, "mandatoryHook"); !ok {
+		log.Fatalf("failed to register plugin %s", "mandatoryHook")
+	}
+
+	if ok := plugin.ExecutorHooks.Register(&panicHook{}, "panicHook"); !ok {
+		log.Fatalf("failed to register plugin %s", "panicHook")
+	}
+
+	config.GetConfig().Set("exechooks.launchtask.post", []string{"happyHook"})
+	assert.NoError(t, ExecHooks("launchtask.post", nil), "happy hook can't fail")
+
+	config.GetConfig().Set("exechooks.launchtask.post", []string{"happyHook", "mandatoryHook"})
+	assert.Error(t, ExecHooks("launchtask.post", nil), "mandatory hook can't succeed")
+
+	config.GetConfig().Set("exechooks.launchtask.post", []string{"panicHook"})
+	assert.Error(t, ExecHooks("launchtask.post", nil), "panicHook hook can't succeed")
+}
+
+// dummy executor hooks for unit test
+type happyHook struct{}
+type mandatoryHook struct{}
+type panicHook struct{}
+
+func (p *happyHook) PostExec(taskInfo *mesos.TaskInfo) error {
+	return nil
+}
+
+func (p *happyHook) BestEffort(execPhase string) bool {
+	return false
+}
+
+func (p *mandatoryHook) PostExec(taskInfo *mesos.TaskInfo) error {
+	return errors.New("failure test case")
+}
+
+func (p *mandatoryHook) BestEffort(execPhase string) bool {
+	return false
+}
+
+func (p *panicHook) PostExec(taskInfo *mesos.TaskInfo) error {
+	panic("unit test panic")
+	return errors.New("panic test case")
+}
+
+func (p *panicHook) BestEffort(execPhase string) bool {
+	return false
 }
