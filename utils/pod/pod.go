@@ -61,7 +61,7 @@ var HealthCheckListId = make(map[string]bool)
 var MonitorContainerList []string
 var SinglePort bool
 var LaunchCmdExecuted = false
-var TaskStatusCh = make(chan string, 1)
+var taskStatusCh = make(chan string, 1)
 
 // Check exit code of all the containers in the pod.
 // If all the exit codes are zero, then assign zero as pod's exit code,
@@ -166,7 +166,7 @@ func GetPodContainerIds(files []string) ([]string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Errorln("reading standard input:", err)
+		log.Errorln(os.Stderr, "reading standard input:", err)
 	}
 	return containerIds, nil
 }
@@ -221,7 +221,7 @@ func GetContainerIdByService(files []string, service string) (string, error) {
 		id += scanner.Text()
 	}
 	if err := scanner.Err(); err != nil {
-		logger.Errorln( "stderr: ", err)
+		logger.Errorln(os.Stderr, "stderr: ", err)
 		return "", err
 	}
 
@@ -247,7 +247,7 @@ func GetPodDetail(files []string, primaryContainerId string, healthcheck bool) {
 		log.Println(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
-		log.Errorln( "reading standard input:", err)
+		log.Errorln(os.Stderr, "reading standard input:", err)
 	}
 
 	if primaryContainerId != "" {
@@ -801,10 +801,10 @@ func SetPodStatus(status types.PodStatus) {
 	log.Printf("Update Status : Update podStatus as %s", status)
 }
 
-// updatePodLaunched sets the CurPodStatus.podLaunched to true
+// updatePodLaunched sets the CurPodStatus.Launched to true
 func updatePodLaunched() {
 	CurPodStatus.Lock()
-	CurPodStatus.podLaunched = true
+	CurPodStatus.Launched = true
 	CurPodStatus.Unlock()
 	log.Printf("Updated Current Pod Status with Pod Launched ")
 }
@@ -899,7 +899,7 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 	time.Sleep(5 * time.Second) // FIXME: This wait time is unjustified, find reason and comment or remove it
 
 	// Push the state to Task status channel so any further steps on a given task status can be executed
-	TaskStatusCh <- state.Enum().String()
+	taskStatusCh <- state.Enum().String()
 
 	return nil
 }
@@ -1222,65 +1222,75 @@ func IsService(taskInfo *mesos.TaskInfo) bool {
 	return assignTask.Task.IsService
 }
 
-// ListenOnTaskStatus
-func ListenOnTaskStatus(execPhase string, driver executor.ExecutorDriver, taskInfo *mesos.TaskInfo) {
+// ListenOnTaskStatus listens
+func ListenOnTaskStatus(driver executor.ExecutorDriver, taskInfo *mesos.TaskInfo) {
+	logger := log.WithFields(log.Fields{
+		"func": "ListenOnTaskStatus",
+	})
+	defer close(taskStatusCh)
+	// Copy taskInfo locally, it may be garbage collected when hooks are executed after LaunchTask
+	cachedTaskInfo := &taskInfo
 	for {
 		select {
-		case status, ok := <-TaskStatusCh: // wait for task status
+		case status, ok := <-taskStatusCh: // wait for task status from LaunchTask
 			if ok {
 				switch status {
 				case mesos.TaskState_TASK_RUNNING.String():
-					ExecHooks(execPhase, taskInfo)
+					if err := execPodStatusHooks(status, *cachedTaskInfo); err != nil {
+						logger.Errorf("executing hooks failed %v ", err)
+					}
 				case mesos.TaskState_TASK_FAILED.String():
 					/*
-						Tasks are marked as Failed at
-						1. Initial launch failure
-						2. Monitor or any continuously polling plugin fails after the task has been running for  a longtime
-						we want to execute hooks only on #1 above, so using CurPodStatus.podLaunched
+							Tasks are marked as Failed at
+							1. Initial launch failure
+							2. Health Monitor or any plugin monitors and fails after the task has been running for
+						       a longtime
 					*/
-					if !CurPodStatus.podLaunched {
-						ExecHooks(execPhase, taskInfo)
+					if err := execPodStatusHooks(status, *cachedTaskInfo); err != nil {
+						logger.Errorf("executing hooks failed %v ", err)
 					}
 					stopDriver(driver)
+					break
 				case mesos.TaskState_TASK_FINISHED.String():
 					stopDriver(driver)
+					break
 				default:
 					log.Infof("Nothing to do on task status %s", status)
 				}
 			} else {
-				log.Error("Failure reading from task status channel")
+				log.Errorln("failure reading from task status channel")
 			}
 		}
 	}
 }
 
-// ExecHooks finds the hooks (implementations of ExecutorHook interface) configured for executor phase and executes them
+// execPodStatusHooks finds the hooks (implementations of ExecutorHook interface) configured for executor phase and executes them
 // error is returned if any of the hooks failed, and ExecutorHook.BestEffort() returns true
-func ExecHooks(execPhase string, taskInfo *mesos.TaskInfo) error {
+func execPodStatusHooks(status string, taskInfo *mesos.TaskInfo) error {
 	logger := log.WithFields(log.Fields{
 		"requuid":   GetLabel("requuid", taskInfo),
 		"tenant":    GetLabel("tenant", taskInfo),
 		"namespace": GetLabel("namespace", taskInfo),
 		"pool":      GetLabel("pool", taskInfo),
 	})
-	var postHooks []string
-	if postHooks = config.GetConfig().GetStringSlice(fmt.Sprintf("execHooks.%s", execPhase)); len(postHooks) < 1 {
-		logger.Infof("No post ExecHook implementations found in config, skipping")
+	var podStatusHooks []string
+	if podStatusHooks = config.GetConfig().GetStringSlice(fmt.Sprintf("podStatusHooks.%s", status)); len(podStatusHooks) < 1 {
+		logger.Infof("No post podStatusHook implementations found in config, skipping")
 		return nil
 	}
-	logger.Infof("Executor Post Hooks found: %v", postHooks)
+	logger.Infof("Executor Post Hooks found: %v", podStatusHooks)
 	if _, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
-		for _, name := range postHooks {
-			hook := plugin.ExecutorHooks.Lookup(name)
+		for _, name := range podStatusHooks {
+			hook := plugin.PodStatusHooks.Lookup(name)
 			if hook == nil {
 				logger.Errorf("Hook %s is nil, not initialized? still continuing with available hooks", name)
 				continue
 			}
-			if pherr := hook.PostExec(taskInfo); pherr != nil {
-				logger.Debugf(
-					"ExecutorHook %s failed with %v and is not best effort, so stopping further execution ",
+			if pherr := hook.Execute(status, taskInfo); pherr != nil {
+				logger.Errorf(
+					"PodStatusHook %s failed with %v and is not best effort, so stopping further execution ",
 					name, pherr)
-				if !hook.BestEffort(execPhase) {
+				if !hook.BestEffort() {
 					return "", errors.Wrapf(pherr, "executing hook %s failed", name)
 				}
 			} else {
@@ -1289,7 +1299,7 @@ func ExecHooks(execPhase string, taskInfo *mesos.TaskInfo) error {
 		}
 		return "", nil
 	})); err != nil {
-		logger.Errorf("Executing hooks at %s failed | err: %v", execPhase, err)
+		logger.Errorf("Executing hooks at pod status %s failed | err: %v", status, err)
 		return err
 	}
 	return nil

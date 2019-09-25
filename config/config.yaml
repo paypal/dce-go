@@ -11,9 +11,10 @@ launchtask:
    httptimeout: 20000
 plugins:
    pluginorder: general
-execHooks:
-   LaunchTask:
-      Post:
+podStatusHooks:
+   task_failed: []
+   task_finished: []
+   task_running: []
 cleanpod:
    cleanfailtask: false
    timeout: 20

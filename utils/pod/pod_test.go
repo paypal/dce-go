@@ -216,26 +216,26 @@ func TestGetAndRemoveLabel(t *testing.T) {
 
 func TestExecHooks(t *testing.T) {
 	//Register plugin with name
-	if ok := plugin.ExecutorHooks.Register(&happyHook{}, "happyHook"); !ok {
+	if ok := plugin.PodStatusHooks.Register(&happyHook{}, "happyHook"); !ok {
 		log.Fatalf("failed to register plugin %s", "happyHook")
 	}
 
-	if ok := plugin.ExecutorHooks.Register(&mandatoryHook{}, "mandatoryHook"); !ok {
+	if ok := plugin.PodStatusHooks.Register(&mandatoryHook{}, "mandatoryHook"); !ok {
 		log.Fatalf("failed to register plugin %s", "mandatoryHook")
 	}
 
-	if ok := plugin.ExecutorHooks.Register(&panicHook{}, "panicHook"); !ok {
+	if ok := plugin.PodStatusHooks.Register(&panicHook{}, "panicHook"); !ok {
 		log.Fatalf("failed to register plugin %s", "panicHook")
 	}
 
-	config.GetConfig().Set("exechooks.launchtask.post", []string{"happyHook"})
-	assert.NoError(t, ExecHooks("launchtask.post", nil), "happy hook can't fail")
+	config.GetConfig().Set("podstatushooks.TASK_RUNNING", []string{"happyHook"})
+	assert.NoError(t, execPodStatusHooks("TASK_RUNNING", nil), "happy hook can't fail")
 
-	config.GetConfig().Set("exechooks.launchtask.post", []string{"happyHook", "mandatoryHook"})
-	assert.Error(t, ExecHooks("launchtask.post", nil), "mandatory hook can't succeed")
+	config.GetConfig().Set("podstatushooks.TASK_FAILED", []string{"happyHook", "mandatoryHook"})
+	assert.Error(t, execPodStatusHooks("TASK_FAILED", nil), "mandatory hook can't succeed")
 
-	config.GetConfig().Set("exechooks.launchtask.post", []string{"panicHook"})
-	assert.Error(t, ExecHooks("launchtask.post", nil), "panicHook hook can't succeed")
+	config.GetConfig().Set("podstatushooks.TASK_FAILED", []string{"panicHook"})
+	assert.Error(t, execPodStatusHooks("TASK_FAILED", nil), "panicHook hook can't succeed")
 }
 
 // dummy executor hooks for unit test
@@ -243,27 +243,27 @@ type happyHook struct{}
 type mandatoryHook struct{}
 type panicHook struct{}
 
-func (p *happyHook) PostExec(taskInfo *mesos.TaskInfo) error {
+func (p *happyHook) Execute(podStatus string, data interface{}) error {
 	return nil
 }
 
-func (p *happyHook) BestEffort(execPhase string) bool {
+func (p *happyHook) BestEffort() bool {
 	return false
 }
 
-func (p *mandatoryHook) PostExec(taskInfo *mesos.TaskInfo) error {
+func (p *mandatoryHook) Execute(status string,  data interface{}) error {
 	return errors.New("failure test case")
 }
 
-func (p *mandatoryHook) BestEffort(execPhase string) bool {
+func (p *mandatoryHook) BestEffort() bool {
 	return false
 }
 
-func (p *panicHook) PostExec(taskInfo *mesos.TaskInfo) error {
+func (p *panicHook) Execute(status string,  data interface{}) error {
 	panic("unit test panic")
 	return errors.New("panic test case")
 }
 
-func (p *panicHook) BestEffort(execPhase string) bool {
+func (p *panicHook) BestEffort() bool {
 	return false
 }
