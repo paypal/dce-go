@@ -60,7 +60,12 @@ var PluginOrder []string
 var HealthCheckListId = make(map[string]bool)
 var MonitorContainerList []string
 var SinglePort bool
-var LaunchCmdExecuted = false
+
+// LaunchCmdAttempted indicates that an attempt to run the command to launch the pod (docker compose up with params) was
+// made. This does not indicate that the result of the command execution.
+var LaunchCmdAttempted = false
+
+// taskStatusCh is pushed with the task status sent to Mesos, so any custom pod task status hooks can be executed
 var taskStatusCh = make(chan string, 1)
 
 // Check exit code of all the containers in the pod.
@@ -308,8 +313,8 @@ func LaunchPod(files []string) types.PodStatus {
 	go dockerLogToPodLogFile(files, true)
 
 	err = cmd.Run()
-	LaunchCmdExecuted = true
-	log.Println("Updated the state of LaunchCmdExecuted to true.")
+	LaunchCmdAttempted = true
+	log.Println("Updated the state of LaunchCmdAttempted to true.")
 	if err != nil {
 		log.Printf("POD_LAUNCH_FAIL -- Error running launch task command : %v", err)
 		return types.POD_FAILED
@@ -844,7 +849,7 @@ func SendPodStatus(status types.PodStatus) {
 		}
 		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FINISHED.Enum())
 	case types.POD_FAILED:
-		if LaunchCmdExecuted {
+		if LaunchCmdAttempted {
 			err := StopPod(ComposeFiles)
 			if err != nil {
 				logger.Errorf("Error cleaning up pod : %v\n", err.Error())
@@ -896,7 +901,9 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 		}
 	}
 
-	time.Sleep(5 * time.Second) // FIXME: This wait time is unjustified, find reason and comment or remove it
+	// Per @kkrishna, This delay is historical, and to have mesos process the status sent above. task failed or finished
+	// would stop the driver prematurely
+	time.Sleep(5 * time.Second)
 
 	// Push the state to Task status channel so any further steps on a given task status can be executed
 	taskStatusCh <- state.Enum().String()
@@ -912,6 +919,7 @@ func WaitOnPod(ctx *context.Context) {
 			log.Println("POD_LAUNCH_TIMEOUT")
 			if dump, ok := config.GetConfig().GetStringMap("dockerdump")["enable"].(bool); ok && dump {
 				DockerDump()
+				
 			}
 			SendPodStatus(types.POD_FAILED)
 		} else if (*ctx).Err() == context.Canceled {
@@ -1241,10 +1249,10 @@ func ListenOnTaskStatus(driver executor.ExecutorDriver, taskInfo *mesos.TaskInfo
 					}
 				case mesos.TaskState_TASK_FAILED.String():
 					/*
-							Tasks are marked as Failed at
-							1. Initial launch failure
-							2. Health Monitor or any plugin monitors and fails after the task has been running for
-						       a longtime
+						Tasks are marked as Failed at,
+						1. Initial launch failure (PodStatus.Launched == false)
+						2. Health Monitor or any plugin monitors and fails after the task has been running for
+						   a longtime (PodStatus.Launched = true, and marked as failed later)
 					*/
 					if err := execPodStatusHooks(status, *cachedTaskInfo); err != nil {
 						logger.Errorf("executing hooks failed %v ", err)

@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-//go:generate go-extpoints . ComposePlugin
+//go:generate go-extpoints . ComposePlugin PodStatusHook
 package plugin
 
 import (
