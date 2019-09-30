@@ -320,7 +320,7 @@ func LaunchPod(files []string) types.PodStatus {
 // 'retry' parameter is to indicate if RetryCmdLogs func should keep retrying if logs cmd fails or just exit.
 //This is to make sure that we don't go in an infinite loop in RetryCmdLogs func when pod is killed, finished or fails.
 func dockerLogToPodLogFile(files []string, retry bool) {
-	parts, err := GenerateCmdParts(files, " logs --follow --no-color")
+	parts, err := GenerateCmdParts(files, " logs -t --follow --no-color")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
 	}
