@@ -1282,7 +1282,8 @@ func execPodStatusHooks(status string, taskInfo *mesos.TaskInfo) error {
 		"pool":      GetLabel("pool", taskInfo),
 	})
 	var podStatusHooks []string
-	if podStatusHooks = config.GetConfig().GetStringSlice(fmt.Sprintf("podStatusHooks.%s", status)); len(podStatusHooks) < 1 {
+	if podStatusHooks = config.GetConfig().GetStringSlice(fmt.Sprintf("podStatusHooks.%s",
+		 status)); len(podStatusHooks) < 1 {
 		logger.Infof("No post podStatusHook implementations found in config, skipping")
 		return nil
 	}
@@ -1294,11 +1295,11 @@ func execPodStatusHooks(status string, taskInfo *mesos.TaskInfo) error {
 				logger.Errorf("Hook %s is nil, not initialized? still continuing with available hooks", name)
 				continue
 			}
-			if pherr := hook.Execute(status, taskInfo); pherr != nil {
+			if pherr, failExec := hook.Execute(status, taskInfo); pherr != nil {
 				logger.Errorf(
 					"PodStatusHook %s failed with %v and is not best effort, so stopping further execution ",
 					name, pherr)
-				if !hook.BestEffort() {
+				if failExec {
 					return "", errors.Wrapf(pherr, "executing hook %s failed", name)
 				}
 			} else {
@@ -1307,7 +1308,7 @@ func execPodStatusHooks(status string, taskInfo *mesos.TaskInfo) error {
 		}
 		return "", nil
 	})); err != nil {
-		logger.Errorf("Executing hooks at pod status %s failed | err: %v", status, err)
+		logger.Errorf("executing hooks at pod status %s failed | err: %v", status, err)
 		return err
 	}
 	return nil
