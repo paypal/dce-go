@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-//go:generate go-extpoints . ComposePlugin
+//go:generate go-extpoints . ComposePlugin PodStatusHook
 package plugin
 
 import (
@@ -29,4 +29,13 @@ type ComposePlugin interface {
 	PreKillTask(taskInfo *mesos.TaskInfo) error
 	PostKillTask(taskInfo *mesos.TaskInfo) error
 	Shutdown(executor.ExecutorDriver) error
+}
+
+// PodStatusHook allows custom implementations to be plugged when a Pod (mesos task) status changes. Currently this is
+// designed to be executed on task status changes during LaunchTask.
+type PodStatusHook interface {
+	// Execute is invoked when the pod.taskStatusCh channel has a new status. It returns an error on failure,
+	// and also a flag "failExec" indicating if the error needs to fail the execution when a series of hooks are executed
+	// This is to support cases where a few hooks can be executed in a best effort manner and need not fail the executor
+	Execute(podStatus string, data interface{}) (failExec bool, err error)
 }

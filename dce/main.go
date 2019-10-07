@@ -30,9 +30,8 @@ import (
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/dce/monitor"
 	"github.com/paypal/dce-go/plugin"
-	_ "github.com/paypal/dce-go/plugin/example"
-	_ "github.com/paypal/dce-go/plugin/general"
-
+	_ "github.com/paypal/dce-go/pluginimpl/example"
+	_ "github.com/paypal/dce-go/pluginimpl/general"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils"
 	fileUtils "github.com/paypal/dce-go/utils/file"
@@ -81,6 +80,8 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		"namespace": pod.GetLabel("namespace", taskInfo),
 		"pool":      pod.GetLabel("pool", taskInfo),
 	})
+
+	go pod.ListenOnTaskStatus(driver, taskInfo)
 
 	task, err := json.Marshal(taskInfo)
 	if err != nil {
