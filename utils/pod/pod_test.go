@@ -20,6 +20,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/paypal/dce-go/plugin"
+	"github.com/pkg/errors"
+
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
@@ -111,13 +114,13 @@ func TestGetContainerIdByService(t *testing.T) {
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
 
-	res, err := wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
+	res1, err := wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
 		return GetContainerIdByService(files, "redis")
 	}))
 	assert.NoError(t, err, "Test get container id should success")
-	log.Println("Container id:", res)
+	log.Println("Container id:", res1)
 
-	res, err = wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
+	res1, err = wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
 		return GetContainerIdByService(files, "fake")
 	}))
 	if err == nil {
@@ -209,4 +212,46 @@ func TestGetAndRemoveLabel(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExecHooks(t *testing.T) {
+	//Register plugin with name
+	if ok := plugin.PodStatusHooks.Register(&happyHook{}, "happyHook"); !ok {
+		log.Fatalf("failed to register plugin %s", "happyHook")
+	}
+
+	if ok := plugin.PodStatusHooks.Register(&mandatoryHook{}, "mandatoryHook"); !ok {
+		log.Fatalf("failed to register plugin %s", "mandatoryHook")
+	}
+
+	if ok := plugin.PodStatusHooks.Register(&panicHook{}, "panicHook"); !ok {
+		log.Fatalf("failed to register plugin %s", "panicHook")
+	}
+
+	config.GetConfig().Set("podstatushooks.TASK_RUNNING", []string{"happyHook"})
+	assert.NoError(t, execPodStatusHooks("TASK_RUNNING", nil), "happy hook can't fail")
+
+	config.GetConfig().Set("podstatushooks.TASK_FAILED", []string{"happyHook", "mandatoryHook"})
+	assert.Error(t, execPodStatusHooks("TASK_FAILED", nil), "mandatory hook can't succeed")
+
+	config.GetConfig().Set("podstatushooks.TASK_FAILED", []string{"panicHook"})
+	assert.Error(t, execPodStatusHooks("TASK_FAILED", nil), "panicHook hook can't succeed")
+}
+
+// dummy executor hooks for unit test
+type happyHook struct{}
+type mandatoryHook struct{}
+type panicHook struct{}
+
+func (p *happyHook) Execute(podStatus string, data interface{}) (failExec bool, err error) {
+	return true, nil
+}
+
+func (p *mandatoryHook) Execute(status string,  data interface{}) (failExec bool, err error) {
+	return true, errors.New("failure test case")
+}
+
+func (p *panicHook) Execute(status string,  data interface{}) (failExec bool, err error) {
+	panic("unit test panic")
+	return false, errors.New("panic test case")
 }
