@@ -1295,7 +1295,7 @@ func execPodStatusHooks(status string, taskInfo *mesos.TaskInfo) error {
 				logger.Errorf("Hook %s is nil, not initialized? still continuing with available hooks", name)
 				continue
 			}
-			if pherr, failExec := hook.Execute(status, taskInfo); pherr != nil {
+			if failExec, pherr := hook.Execute(status, taskInfo); pherr != nil {
 				logger.Errorf(
 					"PodStatusHook %s failed with %v and is not best effort, so stopping further execution ",
 					name, pherr)

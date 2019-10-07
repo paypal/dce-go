@@ -243,15 +243,15 @@ type happyHook struct{}
 type mandatoryHook struct{}
 type panicHook struct{}
 
-func (p *happyHook) Execute(podStatus string, data interface{}) (err error, bestEffort bool) {
-	return nil, true
+func (p *happyHook) Execute(podStatus string, data interface{}) (failExec bool, err error) {
+	return true, nil
 }
 
-func (p *mandatoryHook) Execute(status string,  data interface{}) (err error, bestEffort bool) {
-	return errors.New("failure test case"), true
+func (p *mandatoryHook) Execute(status string,  data interface{}) (failExec bool, err error) {
+	return true, errors.New("failure test case")
 }
 
-func (p *panicHook) Execute(status string,  data interface{}) (err error, bestEffort bool) {
+func (p *panicHook) Execute(status string,  data interface{}) (failExec bool, err error) {
 	panic("unit test panic")
-	return errors.New("panic test case"), false
+	return false, errors.New("panic test case")
 }
