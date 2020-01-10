@@ -28,8 +28,7 @@ import (
 
 func TestCreateInfraContainer(t *testing.T) {
 	config.GetConfig().SetDefault(types.NO_FOLDER, true)
-	var ctx context.Context
-	ctx = context.Background()
+	ctx := context.Background()
 	_, err := CreateInfraContainer(&ctx, "testdata/docker-infra-container.yml")
 	if err != nil {
 		t.Errorf("expected no error, but got %v", err)
@@ -39,8 +38,7 @@ func TestCreateInfraContainer(t *testing.T) {
 func TestGeneralExt_LaunchTaskPreImagePull(t *testing.T) {
 	config.GetConfig().SetDefault(types.NO_FOLDER, true)
 	g := new(generalExt)
-	var ctx context.Context
-	ctx = context.Background()
+	ctx := context.Background()
 	begin, _ := strconv.ParseUint("1000", 10, 64)
 	end, _ := strconv.ParseUint("1003", 10, 64)
 	r := []*mesosproto.Value_Range{

@@ -199,7 +199,7 @@ func updateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 					portMap := strings.Split(p.(string), PORT_DELIMITER)
 					if len(portMap) > 1 {
 						if ports == nil {
-							return nil, errors.New("No ports available")
+							return nil, errors.New("no ports available")
 						}
 						p = strconv.FormatUint(ports.Value.(uint64), 10) + PORT_DELIMITER + portMap[1]
 						portList[i] = p.(string)
@@ -316,22 +316,19 @@ func addExtraHostsSection(ctx *context.Context, file, svcName string, extraHosts
 		return
 	}
 
-	if containerDetails, ok := servMap[svcName].(map[interface{}]interface{}); ok {
-		// i.e. only if some new extra_hosts were found in the compose files other than the ones already defined in infra container yaml
-		if val, ok := containerDetails[types.EXTRA_HOSTS].([]interface{}); ok {
-			for _, v := range val {
-				extraHostsCollection[v] = true
-			}
-
-			var extraHostsList []interface{}
-			for key := range extraHostsCollection {
-				extraHostsList = append(extraHostsList, key)
-			}
-			containerDetails[types.EXTRA_HOSTS] = extraHostsList
-			filesMap[file][types.SERVICES].(map[interface{}]interface{})[svcName] = containerDetails
-			logger.Printf("Added extra_hosts section to the file %s under service %s", file, svcName)
-		}
+	containerDetails, ok := servMap[svcName].(map[interface{}]interface{})
+	if !ok {
+		log.Warnf("Couldn't get service details from compose file %s", file)
 		return
-
+	}
+	// add extra hosts if available
+	if len(extraHostsCollection) != 0 {
+		var extraHostsList []interface{}
+		for key := range extraHostsCollection {
+			extraHostsList = append(extraHostsList, key)
+		}
+		containerDetails[types.EXTRA_HOSTS] = extraHostsList
+		logger.Printf("Added extra_hosts section to the file %s under service %s", file, svcName)
+		filesMap[file][types.SERVICES].(map[interface{}]interface{})[svcName] = containerDetails
 	}
 }
