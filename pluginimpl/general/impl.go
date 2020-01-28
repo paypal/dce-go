@@ -54,6 +54,10 @@ func init() {
 	config.ConfigInit(utils.SearchFile(".", "general.yaml"))
 }
 
+func (p *generalExt) GetPluginName() string {
+	return "general"
+}
+
 func (ge *generalExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
 	logger.Println("LaunchTaskPreImagePull begin")
 

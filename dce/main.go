@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -145,11 +146,31 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				logger.Errorln("Error getting plugins from plugin registration pools")
 				return "", errors.New("plugin is nil")
 			}
+
+			err := utils.SetStepData(pod.StepMetrics,
+				time.Now().Unix(),
+				0,
+				fmt.Sprintf("%s_LaunchTaskPreImagePull", ext.GetPluginName()),
+				"Starting")
+			if err != nil {
+				logger.Errorf("error while adding step data for Granular Metrics: %v", err)
+			}
+
 			err = ext.LaunchTaskPreImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
 			if err != nil {
 				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
 				return "", err
 			}
+
+			err = utils.SetStepData(pod.StepMetrics,
+				0,
+				time.Now().Unix(),
+				fmt.Sprintf("%s_LaunchTaskPreImagePull", ext.GetPluginName()),
+				"Complete")
+			if err != nil {
+				logger.Errorf("error while updating step data for Granular Metrics: %v", err)
+			}
+
 			if config.EnableComposeTrace() {
 				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPreImagePull", i)
 			}
@@ -178,12 +199,20 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		return
 	}
 
+	err = utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, "Image_Pull", "Starting")
+	if err != nil {
+		logger.Errorf("error while adding step data for Granular Metrics: %v", err)
+	}
 	// Pull image
 	if err := pullImage(); err != nil {
 		pod.SetPodStatus(types.POD_PULL_FAILED)
 		cancel()
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 		return
+	}
+	err = utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Image_Pull", "Completed")
+	if err != nil {
+		logger.Errorf("error while adding step data for Granular Metrics: %v", err)
 	}
 
 	timeElapsed := time.Since(appStartTime)
@@ -196,11 +225,30 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				logger.Errorln("Error getting plugins from plugin registration pools")
 				return "", errors.New("plugin is nil")
 			}
+
+			err = utils.SetStepData(pod.StepMetrics,
+				time.Now().Unix(),
+				0,
+				fmt.Sprintf("%s_LaunchTaskPostImagePull", ext.GetPluginName()),
+				"Starting")
+			if err != nil {
+				logger.Errorf("error while adding step data for Granular Metrics: %v", err)
+			}
+
 			err = ext.LaunchTaskPostImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
 			if err != nil {
 				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
 				return "", err
 			}
+			err = utils.SetStepData(pod.StepMetrics,
+				0,
+				time.Now().Unix(),
+				fmt.Sprintf("%s_LaunchTaskPostImagePull", ext.GetPluginName()),
+				"Completed")
+			if err != nil {
+				logger.Errorf("error while adding step data for Granular Metrics: %v", err)
+			}
+
 			if config.EnableComposeTrace() {
 				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPostImagePull", i)
 			}
@@ -226,8 +274,18 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
+	err = utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, "Launch_Pod", "Starting")
+	if err != nil {
+		logger.Errorf("error while adding step data for Granular Metrics: %v", err)
+	}
+
 	// Launch pod
 	replyPodStatus := pod.LaunchPod(pod.ComposeFiles)
+
+	err = utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", "Completed")
+	if err != nil {
+		logger.Errorf("error while adding step data for Granular Metrics: %v", err)
+	}
 
 	logger.Printf("Pod status returned by LaunchPod : %s", replyPodStatus.String())
 
@@ -251,10 +309,29 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			for _, ext := range extpoints {
 				logger.Println("Executing post launch task plugin")
 
+				err = utils.SetStepData(pod.StepMetrics,
+					time.Now().Unix(),
+					0,
+					fmt.Sprintf("%s_PostLaunchTask", ext.GetPluginName()),
+					"Starting")
+				if err != nil {
+					logger.Errorf("error while adding step data for Granular Metrics: %v", err)
+				}
+
 				tempStatus, err = ext.PostLaunchTask(&ctx, pod.ComposeFiles, taskInfo)
 				if err != nil {
 					logger.Errorf("Error executing PostLaunchTask : %v", err)
 				}
+
+				err = utils.SetStepData(pod.StepMetrics,
+					0,
+					time.Now().Unix(),
+					fmt.Sprintf("%s_PostLaunchTask", ext.GetPluginName()),
+					"Completed")
+				if err != nil {
+					logger.Errorf("error while adding step data for Granular Metrics: %v", err)
+				}
+
 				logger.Printf("Get pod status : %s returned by PostLaunchTask", tempStatus)
 
 				if tempStatus == types.POD_FAILED.String() {
@@ -287,7 +364,6 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 
 	default:
 		logger.Printf("default: Unknown status -- %s from pullAndLaunchPod ", replyPodStatus)
-
 	}
 
 	logger.Println("====================Mesos LaunchTask Returned====================")

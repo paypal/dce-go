@@ -41,6 +41,10 @@ func init() {
 	plugin.ComposePlugins.Register(new(exampleExt), "example")
 }
 
+func (p *exampleExt) GetPluginName() string {
+	return "example"
+}
+
 func (ex *exampleExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
 	logger.Println("LaunchTaskPreImagePull begin")
 	// docker compose YML files are saved in context as type SERVICE_DETAIL which is map[interface{}]interface{}.

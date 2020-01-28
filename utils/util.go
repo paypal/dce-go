@@ -60,3 +60,31 @@ func ToHealthStatus(s string) types.HealthStatus {
 
 	return types.UNKNOWN_HEALTH_STATUS
 }
+
+func SetStepData(stepData map[string]interface{}, startTime, endTime int64, stepName, status string) error {
+
+	if len(stepName) == 0 {
+		return errors.New("step name can't be empty for stepData")
+	}
+
+	var stepValue map[string]interface{}
+	var ok bool
+
+	stepValue, ok = stepData[stepName].(map[string]interface{})
+	if !ok {
+		stepValue = make(map[string]interface{})
+		stepValue[stepName] = stepName
+	}
+
+	if startTime != 0 {
+		stepValue["startTime"] = startTime
+	}
+	if endTime != 0 {
+		stepValue["endTime"] = endTime
+	}
+	if len(status) > 0 {
+		stepValue["status"] = status
+	}
+	stepData[stepName] = stepValue
+	return nil
+}

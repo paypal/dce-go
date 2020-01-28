@@ -60,6 +60,7 @@ var PluginOrder []string
 var HealthCheckListId = make(map[string]bool)
 var MonitorContainerList []string
 var SinglePort bool
+var StepMetrics = make(map[string]interface{})
 
 // LaunchCmdAttempted indicates that an attempt to run the command to launch the pod (docker compose up with params) was
 // made. This does not indicate that the result of the command execution.
@@ -919,7 +920,7 @@ func WaitOnPod(ctx *context.Context) {
 			log.Println("POD_LAUNCH_TIMEOUT")
 			if dump, ok := config.GetConfig().GetStringMap("dockerdump")["enable"].(bool); ok && dump {
 				DockerDump()
-				
+
 			}
 			SendPodStatus(types.POD_FAILED)
 		} else if (*ctx).Err() == context.Canceled {
@@ -1283,7 +1284,7 @@ func execPodStatusHooks(status string, taskInfo *mesos.TaskInfo) error {
 	})
 	var podStatusHooks []string
 	if podStatusHooks = config.GetConfig().GetStringSlice(fmt.Sprintf("podStatusHooks.%s",
-		 status)); len(podStatusHooks) < 1 {
+		status)); len(podStatusHooks) < 1 {
 		logger.Infof("No post podStatusHook implementations found in config, skipping")
 		return nil
 	}
