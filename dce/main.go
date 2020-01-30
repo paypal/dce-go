@@ -146,7 +146,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				logger.Errorln("Error getting plugins from plugin registration pools")
 				return "", errors.New("plugin is nil")
 			}
-
+			logger.Printf("Starting to set the pod step data")
 			err := utils.SetStepData(pod.StepMetrics,
 				time.Now().Unix(),
 				0,
@@ -155,6 +155,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			if err != nil {
 				logger.Errorf("error while adding step data for Granular Metrics: %v", err)
 			}
+			logger.Printf("Set the starting time in Pod Metrics, %v", pod.StepMetrics)
 
 			err = ext.LaunchTaskPreImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
 			if err != nil {
@@ -170,6 +171,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			if err != nil {
 				logger.Errorf("error while updating step data for Granular Metrics: %v", err)
 			}
+			logger.Printf("Set the starting time in Pod Metrics, %v", pod.StepMetrics)
 
 			if config.EnableComposeTrace() {
 				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPreImagePull", i)
