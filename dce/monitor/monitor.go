@@ -136,6 +136,8 @@ func MonitorPoller() {
 	logger.Printf("Pod Monitor Receiver : Received  message %s", res)
 
 	curPodStatus := pod.GetPodStatus()
+	// Once mesos send admin kill to the pod, monitor also will find containers exist
+	// have following check to avoid sending redundant or invalid status
 	if curPodStatus == types.POD_KILLED || curPodStatus == types.POD_FAILED {
 		logger.Println("====================Pod Monitor Stopped====================")
 		return
