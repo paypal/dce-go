@@ -171,7 +171,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			if err != nil {
 				logger.Errorf("error while updating step data for Granular Metrics: %v", err)
 			}
-			logger.Printf("Set the starting time in Pod Metrics, %v", pod.StepMetrics)
+			logger.Printf("Set the ending time in Pod Metrics, %v", pod.StepMetrics)
 
 			if config.EnableComposeTrace() {
 				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPreImagePull", i)

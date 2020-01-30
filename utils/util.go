@@ -62,7 +62,7 @@ func ToHealthStatus(s string) types.HealthStatus {
 }
 
 func SetStepData(stepData map[string]interface{}, startTime, endTime int64, stepName, status string) error {
-
+	log.Println("Inside SetStepData")
 	if len(stepName) == 0 {
 		return errors.New("step name can't be empty for stepData")
 	}
@@ -71,11 +71,11 @@ func SetStepData(stepData map[string]interface{}, startTime, endTime int64, step
 	var ok bool
 
 	stepValue, ok = stepData[stepName].(map[string]interface{})
+	log.Printf("ok is: %v", ok)
 	if !ok {
 		stepValue = make(map[string]interface{})
-		stepValue[stepName] = stepName
 	}
-
+	log.Printf("stepValue: %v", stepValue)
 	if startTime != 0 {
 		stepValue["startTime"] = startTime
 	}
@@ -85,6 +85,7 @@ func SetStepData(stepData map[string]interface{}, startTime, endTime int64, step
 	if len(status) > 0 {
 		stepValue["status"] = status
 	}
+	log.Printf("Final stepValue: %v", stepValue)
 	stepData[stepName] = stepValue
 	return nil
 }
