@@ -824,6 +824,7 @@ func SendPodStatus(status types.PodStatus) {
 	if curntPodStatus == types.POD_FAILED || curntPodStatus == types.POD_KILLED ||
 		curntPodStatus == types.POD_FINISHED || curntPodStatus == status {
 		logger.Printf("Task has already been killed or failed or finished or updated as required status: %s", curntPodStatus)
+		return
 	}
 
 	SetPodStatus(status)
@@ -920,7 +921,6 @@ func WaitOnPod(ctx *context.Context) {
 			log.Println("POD_LAUNCH_TIMEOUT")
 			if dump, ok := config.GetConfig().GetStringMap("dockerdump")["enable"].(bool); ok && dump {
 				DockerDump()
-
 			}
 			SendPodStatus(types.POD_FAILED)
 		} else if (*ctx).Err() == context.Canceled {
