@@ -176,6 +176,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			if config.EnableComposeTrace() {
 				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPreImagePull", i)
 			}
+			logger.Printf("dumping of compose file completed for plugin %s", ext.GetPluginName())
 		}
 		return "", err
 	})); err != nil {
@@ -184,6 +185,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 		return
 	}
+	logger.Println("Starting to write to files.")
 	// Write updated compose files into pod folder
 	err = fileUtils.WriteChangeToFiles(ctx)
 	if err != nil {
@@ -193,6 +195,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
+	logger.Println("Starting to validate the compose files.")
 	//Validate Compose files
 	if err := validateComposeFiles(); err != nil {
 		pod.SetPodStatus(types.POD_COMPOSE_CHECK_FAILED)

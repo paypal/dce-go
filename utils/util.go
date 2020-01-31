@@ -66,7 +66,6 @@ func SetStepData(stepData map[string]interface{}, startTime, endTime int64, step
 	if len(stepName) == 0 {
 		return errors.New("step name can't be empty for stepData")
 	}
-
 	var stepValue map[string]interface{}
 	var ok bool
 
@@ -76,6 +75,8 @@ func SetStepData(stepData map[string]interface{}, startTime, endTime int64, step
 		stepValue = make(map[string]interface{})
 	}
 	log.Printf("stepValue: %v", stepValue)
+
+	stepValue["stepName"] = stepName
 	if startTime != 0 {
 		stepValue["startTime"] = startTime
 	}
@@ -85,6 +86,7 @@ func SetStepData(stepData map[string]interface{}, startTime, endTime int64, step
 	if len(status) > 0 {
 		stepValue["status"] = status
 	}
+
 	log.Printf("Final stepValue: %v", stepValue)
 	stepData[stepName] = stepValue
 	return nil
