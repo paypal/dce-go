@@ -269,8 +269,8 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		if tempStatus == types.POD_FAILED.String() {
 			cancel()
 			pod.SendPodStatus(types.POD_FAILED)
+			return
 		}
-
 		if res == types.POD_RUNNING {
 			cancel()
 			if pod.GetPodStatus() != types.POD_RUNNING {
@@ -278,7 +278,6 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				go monitor.MonitorPoller()
 			}
 		}
-
 		//For adhoc job, send finished to mesos if job already finished during init health check
 		if res == types.POD_FINISHED {
 			cancel()
