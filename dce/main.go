@@ -147,7 +147,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				return "", errors.New("plugin is nil")
 			}
 			logger.Printf("Starting to set the pod step data")
-			err := utils.SetStepData(pod.StepMetrics,
+			err = utils.SetStepData(pod.StepMetrics,
 				time.Now().Unix(),
 				0,
 				fmt.Sprintf("%s_LaunchTaskPreImagePull", ext.GetPluginName()),
@@ -180,6 +180,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		}
 		return "", err
 	})); err != nil {
+		logger.Errorf("Error as expected err: %s", err)
 		pod.SetPodStatus(types.POD_FAILED)
 		cancel()
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
