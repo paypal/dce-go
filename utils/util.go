@@ -61,10 +61,10 @@ func ToHealthStatus(s string) types.HealthStatus {
 	return types.UNKNOWN_HEALTH_STATUS
 }
 
-func SetStepData(stepData map[string]interface{}, startTime, endTime int64, stepName, status string) error {
+func SetStepData(stepData map[interface{}]interface{}, startTime, endTime int64, stepName, status string) {
 	log.Println("Inside SetStepData")
 	if len(stepName) == 0 {
-		return errors.New("step name can't be empty for stepData")
+		log.Errorf("error while updating step data for Granular Metrics: step name can't be empty for stepData")
 	}
 	var stepValue map[string]interface{}
 	var ok bool
@@ -89,5 +89,4 @@ func SetStepData(stepData map[string]interface{}, startTime, endTime int64, step
 
 	log.Printf("Final stepValue: %v", stepValue)
 	stepData[stepName] = stepValue
-	return nil
 }
