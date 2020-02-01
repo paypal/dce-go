@@ -676,3 +676,14 @@ func ConvertMapToArray(m map[interface{}]interface{}) []interface{} {
 	}
 	return a
 }
+
+// CreateMapValuesArray creates an interface array of all the values of the given map
+// examples: Map= {"1":"a", "2":"b", "3":"c"}
+// array returned will be: ["a", "b", "c"]
+func CreateMapValuesArray(m map[interface{}]interface{}) []interface{} {
+	var a []interface{}
+	for _, v := range m {
+		a = append(a, v)
+	}
+	return a
+}
