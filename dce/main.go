@@ -148,10 +148,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				return "", errors.New("plugin is nil")
 			}
 			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPreImagePull", ext.GetPluginName())
-			logger.Printf("Starting to set the pod step data")
 			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
-
-			logger.Printf("Set the starting time in Pod Metrics, %v", pod.StepMetrics)
 
 			err = ext.LaunchTaskPreImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
 			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Complete")
@@ -160,22 +157,18 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				return "", err
 			}
 
-			logger.Printf("Set the ending time in Pod Metrics, %v", pod.StepMetrics)
-
 			if config.EnableComposeTrace() {
 				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPreImagePull", i)
 			}
-			logger.Printf("dumping of compose file completed for plugin %s", ext.GetPluginName())
 		}
 		return "", err
 	})); err != nil {
-		logger.Errorf("Error as expected err: %s", err)
+		logger.Errorf("error while executing task pre image pull: %s", err)
 		pod.SetPodStatus(types.POD_FAILED)
 		cancel()
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 		return
 	}
-	logger.Println("Starting to write to files.")
 	// Write updated compose files into pod folder
 	err = fileUtils.WriteChangeToFiles(ctx)
 	if err != nil {
@@ -185,7 +178,6 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
-	logger.Println("Starting to validate the compose files.")
 	//Validate Compose files
 	if err := validateComposeFiles(); err != nil {
 		pod.SetPodStatus(types.POD_COMPOSE_CHECK_FAILED)

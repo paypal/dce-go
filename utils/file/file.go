@@ -224,7 +224,6 @@ func DeleteFile(file string) error {
 }
 
 func WriteChangeToFiles(ctx context.Context) error {
-	log.Printf("File Map: %v", ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail))
 	filesMap := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 	for file := range filesMap {
 		content, err := yaml.Marshal(filesMap[file])
@@ -233,7 +232,6 @@ func WriteChangeToFiles(ctx context.Context) error {
 		}
 		_, err = WriteToFile(file.(string), content)
 		if err != nil {
-			log.Errorf("error while writing to file: %s", err)
 			return err
 		}
 	}
