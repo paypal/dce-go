@@ -147,7 +147,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				logger.Errorln("Error getting plugins from plugin registration pools")
 				return "", errors.New("plugin is nil")
 			}
-			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPreImagePull", ext.GetPluginName())
+			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPreImagePull", ext.Name())
 			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
 			err = ext.LaunchTaskPreImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
@@ -208,7 +208,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				logger.Errorln("Error getting plugins from plugin registration pools")
 				return "", errors.New("plugin is nil")
 			}
-			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPostImagePull", ext.GetPluginName())
+			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPostImagePull", ext.Name())
 			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
 			err = ext.LaunchTaskPostImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
@@ -271,7 +271,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			for _, ext := range extpoints {
 				logger.Println("Executing post launch task plugin")
 
-				granularMetricStepName := fmt.Sprintf("%s_PostLaunchTask", ext.GetPluginName())
+				granularMetricStepName := fmt.Sprintf("%s_PostLaunchTask", ext.Name())
 				utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
 				tempStatus, err = ext.PostLaunchTask(&ctx, pod.ComposeFiles, taskInfo)

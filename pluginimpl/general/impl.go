@@ -54,7 +54,7 @@ func init() {
 	config.ConfigInit(utils.SearchFile(".", "general.yaml"))
 }
 
-func (p *generalExt) GetPluginName() string {
+func (p *generalExt) Name() string {
 	return "general"
 }
 

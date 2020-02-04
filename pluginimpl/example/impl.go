@@ -41,7 +41,7 @@ func init() {
 	plugin.ComposePlugins.Register(new(exampleExt), "example")
 }
 
-func (p *exampleExt) GetPluginName() string {
+func (p *exampleExt) Name() string {
 	return "example"
 }
 

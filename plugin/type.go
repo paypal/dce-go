@@ -23,12 +23,25 @@ import (
 )
 
 type ComposePlugin interface {
-	GetPluginName() string
+	// Get the name of the plugin
+	Name() string
+
+	// execute some tasks before the Image is pulled
 	LaunchTaskPreImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error
+
+	// execute some tasks after the Image is pulled
 	LaunchTaskPostImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error
+
+	// execute the tasks after the pod is launched
 	PostLaunchTask(ctx *context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error)
+
+	// execute the task before we send a Kill to Mesos
 	PreKillTask(taskInfo *mesos.TaskInfo) error
+
+	// execute the task after we send a Kill to Mesos
 	PostKillTask(taskInfo *mesos.TaskInfo) error
+
+	// execute the task to shutdown the pod
 	Shutdown(executor.ExecutorDriver) error
 }
 
