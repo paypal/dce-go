@@ -228,7 +228,7 @@ func WriteChangeToFiles(ctx context.Context) error {
 	for file := range filesMap {
 		content, err := yaml.Marshal(filesMap[file])
 		if err != nil {
-			log.Errorf("error occured while unmarshalling file from fileMap: %s", err)
+			log.Errorf("error occured while marshalling file from fileMap: %s", err)
 		}
 		_, err = WriteToFile(file.(string), content)
 		if err != nil {
