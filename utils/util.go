@@ -85,8 +85,8 @@ func SetStepData(stepData map[interface{}]interface{}, startTime, endTime int64,
 	}
 	if endTime != 0 {
 		stepValue["endTime"] = endTime
-		log.Printf("setting exectime to %v", (stepValue["startTime"].(int64) - stepValue["endTime"].(int64)*1000))
-		stepValue["execTimeMS"] = stepValue["startTime"].(int64) - stepValue["endTime"].(int64)*1000
+		log.Printf("setting exectime to %v", ((stepValue["endTime"].(int64) - stepValue["startTime"].(int64)) * 1000))
+		stepValue["execTimeMS"] = (stepValue["endTime"].(int64) - stepValue["startTime"].(int64)) * 1000
 	}
 	if len(status) > 0 {
 		stepValue["status"] = status
