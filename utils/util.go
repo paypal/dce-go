@@ -88,6 +88,5 @@ func SetStepData(stepData map[interface{}]interface{}, startTime, endTime int64,
 	if len(status) > 0 {
 		stepValue["status"] = status
 	}
-	log.Printf("StepValue: %v", stepValue)
 	stepData[stepName] = stepValue
 }
