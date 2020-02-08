@@ -60,3 +60,33 @@ func ToHealthStatus(s string) types.HealthStatus {
 
 	return types.UNKNOWN_HEALTH_STATUS
 }
+
+/*
+SetStepData sets the metricsof the DCE step in the map. If the step already exist in the map, it just updates the end time
+*/
+func SetStepData(stepData map[interface{}]interface{}, startTime, endTime int64, stepName, status string) {
+
+	if len(stepName) == 0 {
+		log.Error("error while updating step data for Granular Metrics: step name can't be empty for stepData")
+	}
+	var stepValue map[string]interface{}
+	var ok bool
+
+	stepValue, ok = stepData[stepName].(map[string]interface{})
+	if !ok {
+		stepValue = make(map[string]interface{})
+	}
+
+	stepValue["stepName"] = stepName
+	if startTime != 0 {
+		stepValue["startTime"] = startTime
+	}
+	if endTime != 0 {
+		stepValue["endTime"] = endTime
+		stepValue["execTimeMS"] = (stepValue["endTime"].(int64) - stepValue["startTime"].(int64)) * 1000
+	}
+	if len(status) > 0 {
+		stepValue["status"] = status
+	}
+	stepData[stepName] = stepValue
+}
