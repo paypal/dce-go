@@ -226,8 +226,11 @@ func DeleteFile(file string) error {
 func WriteChangeToFiles(ctx context.Context) error {
 	filesMap := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 	for file := range filesMap {
-		content, _ := yaml.Marshal(filesMap[file])
-		_, err := WriteToFile(file.(string), content)
+		content, err := yaml.Marshal(filesMap[file])
+		if err != nil {
+			log.Errorf("error occured while marshalling file from fileMap: %s", err)
+		}
+		_, err = WriteToFile(file.(string), content)
 		if err != nil {
 			return err
 		}
@@ -668,6 +671,17 @@ func ConvertMapToArray(m map[interface{}]interface{}) []interface{} {
 		} else {
 			a = append(a, k)
 		}
+	}
+	return a
+}
+
+// CreateMapValuesArray creates an interface array of all the values of the given map
+// examples: Map= {"1":"a", "2":"b", "3":"c"}
+// array returned will be: ["a", "b", "c"]
+func CreateMapValuesArray(m map[interface{}]interface{}) []interface{} {
+	var a []interface{}
+	for _, v := range m {
+		a = append(a, v)
 	}
 	return a
 }
