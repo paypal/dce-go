@@ -14,4 +14,4 @@ install:
   - docker-compose up
 
 script:
-  - go run examples/client.go -cmd kill -executor compose -url http://localhost:8081
+  - go run examples/client.go -cmd create -executor compose -url http://localhost:8081
