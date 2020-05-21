@@ -13,7 +13,7 @@ services:
       aurora_cluster:
         ipv4_address: 192.168.33.2
 
-  master:
+  mesos-master:
     image: aurorascheduler/mesos-master:1.6.2
     restart: on-failure
     ports:
@@ -31,7 +31,7 @@ services:
     depends_on:
     - zk
 
-  agent-one:
+  mesos-agent:
     image: dcego/mesos-agent:1.6.2
     pid: host
     restart: on-failure
@@ -76,8 +76,8 @@ services:
     - ./:/dce-go
     depends_on:
     - zk
-    - master
-    - agent-one
+    - mesos-master
+    - mesos-agent
 
 networks:
   aurora_cluster:
