@@ -1,0 +1,88 @@
+version: "2"
+
+services:
+  zk:
+    image: aurorascheduler/zookeeper
+    restart: on-failure
+    ports:
+    - "2181:2181"
+    environment:
+      ZK_CONFIG: tickTime=2000,initLimit=10,syncLimit=5,maxClientCnxns=128,forceSync=no,clientPort=2181
+      ZK_ID: 1
+    networks:
+      aurora_cluster:
+        ipv4_address: 192.168.33.2
+
+  master:
+    image: aurorascheduler/mesos-master:1.6.2
+    restart: on-failure
+    ports:
+    - "5050:5050"
+    environment:
+      MESOS_ZK: zk://192.168.33.2:2181/mesos
+      MESOS_QUORUM: 1
+      MESOS_HOSTNAME: localhost
+      MESOS_CLUSTER: test-cluster
+      MESOS_REGISTRY: replicated_log
+      MESOS_WORK_DIR: /tmp/mesos
+    networks:
+      aurora_cluster:
+        ipv4_address: 192.168.33.3
+    depends_on:
+    - zk
+
+  agent-one:
+    image: dcego/mesos-agent:1.6.2
+    pid: host
+    restart: on-failure
+    ports:
+    - "5051:5051"
+    environment:
+      MESOS_MASTER: zk://192.168.33.2:2181/mesos
+      MESOS_CONTAINERIZERS: docker,mesos
+      MESOS_PORT: 5051
+      MESOS_HOSTNAME: localhost
+      MESOS_RESOURCES: ports(*):[11000-11999]
+      MESOS_SYSTEMD_ENABLE_SUPPORT: 'false'
+      MESOS_WORK_DIR: /tmp/mesos
+    networks:
+      aurora_cluster:
+        ipv4_address: 192.168.33.4
+
+    volumes:
+    - /sys/fs/cgroup:/sys/fs/cgroup
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ./:/dce-go
+    depends_on:
+    - zk
+
+  aurora-scheduler:
+    image: aurorascheduler/scheduler:0.22.0
+    pid: host
+    ports:
+    - "8081:8081"
+    restart: on-failure
+    environment:
+      CLUSTER_NAME: test-cluster
+      ZK_ENDPOINTS: "192.168.33.2:2181"
+      MESOS_MASTER: "zk://192.168.33.2:2181/mesos"
+      EXTRA_SCHEDULER_ARGS: >
+        -custom_executor_config=/dce-go/examples/docker-compose/docker-compose-executor.json
+        -enable_mesos_fetcher=true
+    networks:
+      aurora_cluster:
+        ipv4_address: 192.168.33.7
+    volumes:
+    - ./:/dce-go
+    depends_on:
+    - zk
+    - master
+    - agent-one
+
+networks:
+  aurora_cluster:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 192.168.33.0/16
+        gateway: 192.168.33.1

@@ -1,0 +1,48 @@
+[
+  {
+    "executor": {
+      "command": {
+        "value": "./dce-go-linux-amd64 -log_dir=/var/log -logtostderr=true -v=1",
+        "shell": "true",
+        "uris": [
+          {
+            "cache": false,
+            "executable": true,
+            "extract": false,
+            "value": "/dce-go/dce-go-linux-amd64"
+          },
+          {
+            "cache": false,
+            "executable": false,
+            "extract": false,
+            "value": "/dce-go/examples/docker-compose/config.yaml"
+          },
+          {
+            "cache": false,
+            "executable": false,
+            "extract": false,
+            "value": "/dce-go/examples/docker-compose/general.yaml"
+          }
+        ]
+      },
+      "name": "docker-compose-executor",
+      "resources": [
+        {
+          "name": "cpus",
+          "scalar": {
+            "value": 0.25
+          },
+          "type": "SCALAR"
+        },
+        {
+          "name": "mem",
+          "scalar": {
+            "value": 256
+          },
+          "type": "SCALAR"
+        }
+      ]
+    },
+    "task_prefix": "compose-"
+  }
+]

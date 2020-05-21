@@ -61,7 +61,7 @@ func main() {
 			InstanceCount(1).
 			AddPorts(4).
 			AddLabel("fileName", "sampleapp/docker-compose.yml,sampleapp/docker-compose-healthcheck.yml").
-			AddURIs(true, false, "http://192.168.33.8/app.tar.gz")
+			AddURIs(true, false, "/dce-go/examples/sampleapp.tar.gz")
 		break
 	case "none":
 		job = realis.NewJob().

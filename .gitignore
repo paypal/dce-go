@@ -8,3 +8,5 @@ dce/executor
 executor
 .gitmodules
 paypal-plugins/
+examples/sampleapp.tar.gz
+dce-go-linux-amd64

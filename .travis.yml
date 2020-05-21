@@ -1,7 +1,17 @@
 language: go
 
 go:
-  - "1.13.x"
+  - "1.14.x"
+
+services:
+  - docker
+
+before_install:
+  - tar -czf examples/sampleapp.tar.gz -C examples/ sampleapp
+
+install:
+  - go build -o dce-go-linux-amd64 dce/main.go
+  - docker-compose up
 
 script:
-  - go build -o executor dce/main.go
+  - go run examples/client.go -cmd kill -executor compose -url http://localhost:8081
