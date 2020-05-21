@@ -32,7 +32,7 @@ services:
     - zk
 
   mesos-agent:
-    image: rdelvalle/mesos-agent-compose:1.6.2
+    image: dcego/mesos-agent:1.6.2
     pid: host
     restart: on-failure
     ports:
