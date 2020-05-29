@@ -290,8 +290,9 @@ For details, please follow [sample compose manifests here](../examples/manifest)
 
 This project has makefile to build and upload binary for vagrant setup. Below following commands helps achieve this.
 ```
-   $ cd $GOPATH/src/github.com/paypal/dce-go
-   $ make build
+   $ git clone https://github.com/paypal/dce-go
+   $ cd dce-go
+   $ go build -o executor dce/main.go
 ```
 
 To upload binary file to nginx used in vagrant setup. Note that upload target is only meant for vagrant setup. 
