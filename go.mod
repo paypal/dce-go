@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	git.apache.org/thrift.git v0.0.0-20161221203622-b2a4d4ae21c7
+	github.com/apache/thrift v0.13.0
 	github.com/fsnotify/fsnotify v1.4.3-0.20161026203122-fd9ec7deca8b // indirect
 	github.com/gogo/protobuf v0.0.0-20160824171236-909568be09de // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
