@@ -69,6 +69,9 @@ services:
       EXTRA_SCHEDULER_ARGS: >
         -custom_executor_config=/dce-go/examples/docker-compose/docker-compose-executor.json
         -enable_mesos_fetcher=true
+        -transient_task_state_timeout=10mins
+        -min_offer_hold_time=1mins
+
     networks:
       aurora_cluster:
         ipv4_address: 192.168.33.7

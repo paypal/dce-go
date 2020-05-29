@@ -14,5 +14,5 @@ install:
   - docker-compose up -d
 
 script:
-  - sleep 5
-  - go run examples/client.go -cmd create -executor compose -url http://localhost:8081
+  - go run examples/docker-compose/create.go
+  - go run examples/docker-compose/kill.go
