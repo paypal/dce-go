@@ -197,33 +197,32 @@ func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
 				logger.Errorf("Error cleaning images: %v", err)
 			}
 		}
-	} else {
-		if network, ok := config.GetNetwork(); ok {
-			if network.PreExist {
-				return nil
-			}
-		}
-		// skip removing network if network mode is host
-		// RM_INFRA_CONTAINER is set as true if network mode is true during yml parsing
-		if config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
+	}
+	if network, ok := config.GetNetwork(); ok {
+		if network.PreExist {
 			return nil
 		}
+	}
+	// skip removing network if network mode is host
+	// RM_INFRA_CONTAINER is set as true if network mode is true during yml parsing
+	if config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
+		return nil
+	}
 
-		// Get infra container id
-		infraContainerId, err := pod.GetContainerIdByService(pod.ComposeFiles, types.INFRA_CONTAINER)
-		if err != nil {
-			logger.Errorf("Error getting container id of service %s: %v", types.INFRA_CONTAINER, err)
-			return nil
-		}
+	// Get infra container id
+	infraContainerId, err := pod.GetContainerIdByService(pod.ComposeFiles, types.INFRA_CONTAINER)
+	if err != nil {
+		logger.Errorf("Error getting container id of service %s: %v", types.INFRA_CONTAINER, err)
+		return nil
+	}
 
-		networkName, err := pod.GetContainerNetwork(infraContainerId)
-		if err != nil {
-			logger.Errorf("Failed to clean up network :%v", err)
-		}
-		err = pod.RemoveNetwork(networkName)
-		if err != nil {
-			logger.Errorf("POD_CLEAN_NETWORK_FAIL -- %v", err)
-		}
+	networkName, err := pod.GetContainerNetwork(infraContainerId)
+	if err != nil {
+		logger.Errorf("Failed to clean up network :%v", err)
+	}
+	err = pod.RemoveNetwork(networkName)
+	if err != nil {
+		logger.Errorf("POD_CLEAN_NETWORK_FAIL -- %v", err)
 	}
 	return err
 }
