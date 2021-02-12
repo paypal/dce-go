@@ -381,7 +381,7 @@ func validateComposeFiles() error {
 	return nil
 }
 
-func pullImage() error {
+func pullImage() error { 
 	logger.Println("====================Pulling Image====================")
 
 	if !config.SkipPullImages() {
