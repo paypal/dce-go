@@ -1,3 +1,0 @@
-[submodule "paypal-plugins"]
-	path = paypal-plugins
-	url = git@github.paypal.com:PaaS-R/dce-plugins.git
