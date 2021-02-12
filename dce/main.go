@@ -186,11 +186,8 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		return
 	}
 
-	utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, "Image_Pull", "Starting")
-
 	// Pull image
 	err = pullImage()
-	utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Image_Pull", "Completed")
 	if err != nil {
 		pod.SetPodStatus(types.POD_PULL_FAILED)
 		cancel()
@@ -247,7 +244,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 
 	// Launch pod
 	replyPodStatus := pod.LaunchPod(pod.ComposeFiles)
-	utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", "Completed")
+	utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", replyPodStatus.String())
 
 	logger.Printf("Pod status returned by LaunchPod : %s", replyPodStatus.String())
 
@@ -388,8 +385,18 @@ func pullImage() error {
 	logger.Println("====================Pulling Image====================")
 
 	if !config.SkipPullImages() {
+		count := 0
 		err := wait.PollRetry(config.GetPullRetryCount(), time.Duration(config.GetPollInterval())*time.Millisecond, wait.ConditionFunc(func() (string, error) {
-			return "", pod.PullImage(pod.ComposeFiles)
+			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, fmt.Sprintf("Image_Pull_%v",count), "Starting")
+			err := pod.PullImage(pod.ComposeFiles)
+			count++
+			if err != nil{
+				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), fmt.Sprintf("Image_Pull_%v",count), "Error")
+			} else {
+				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), fmt.Sprintf("Image_Pull_%v",count), "Completed")
+			}
+			return "", err
+
 		}))
 
 		if err != nil {

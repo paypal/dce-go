@@ -1,0 +1,6 @@
+time="2021-02-09T12:42:05-06:00" level=info msg="Plugin Registering" plugin=example 
+time="2021-02-09T12:42:05-06:00" level=info msg="Plugin Registering" plugin=general 
+time="2021-02-09T12:42:05-06:00" level=info msg="Plugin Merge Config : pluginimpl/general/general.yaml" 
+time="2021-02-09T12:42:05-06:00" level=info msg="====================Genesis Executor (Go)====================" 
+time="2021-02-09T12:42:05-06:00" level=info msg="created dce log file." 
+time="2021-02-09T12:42:05-06:00" level=error msg="Unable to create a ExecutorDriver : lookup LM-AST-40000423: no such host" 

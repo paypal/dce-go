@@ -1,12 +1,19 @@
-hash: 72cb9cb5eb31c0d845197c178e2794dbb769fdefaccf8eb7b4bf751c3e2dc396
-updated: 2018-04-12T15:10:47.61909011-07:00
+hash: 42d7a36d37e8ee9db667ce950f9761866815a98488e50e0a91cb18a46b290159
+updated: 2019-07-25T14:28:05.910483-07:00
 imports:
+- name: git.apache.org/thrift.git
+  version: b2a4d4ae21c789b689dd162deb819665567f481c
+  repo: https://github.com/rdelval/thrift
+  subpackages:
+  - lib/go/thrift
 - name: github.com/davecgh/go-spew
   version: ecdeabc65495df2dec95d7c4a4c3e021903035e5
   subpackages:
   - spew
 - name: github.com/fsnotify/fsnotify
   version: fd9ec7deca8bf46ecd2a795baaacf2b3a9be1197
+- name: github.com/gofrs/flock
+  version: 5135e617513b1e6e205a3a89b042249dee6730c8
 - name: github.com/gogo/protobuf
   version: 909568be09de550ed094403c2bf8a261b5bb730a
   subpackages:
@@ -40,6 +47,8 @@ imports:
   - messenger
   - messenger/sessionid
   - upid
+- name: github.com/mitchellh/go-ps
+  version: 621e5597135b1d14a7d9c2bfc7bc312e7c58463c
 - name: github.com/mitchellh/mapstructure
   version: f3009df150dadf309fdee4a54ed65c124afad715
 - name: github.com/paypal/gorealis
@@ -102,14 +111,26 @@ imports:
   subpackages:
   - transform
   - unicode/norm
-- name: git.apache.org/thrift.git
-  version: b2a4d4ae21c789b689dd162deb819665567f481c
-  subpackages:
-  - lib/go/thrift
 - name: gopkg.in/yaml.v2
   version: a5b47d31c556af34a302ce5d659e6fea44d90de0
 testImports:
+- name: github.com/google/go-cmp
+  version: 1b316004397f1f336546ca058ddb5b95c41a8772
+  subpackages:
+  - cmp
+  - cmp/internal/diff
+  - cmp/internal/flags
+  - cmp/internal/function
+  - cmp/internal/value
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
+- name: gotest.tools
+  version: 05ebafbffc795887a6c140584cbcad16ebfd73d0
+  subpackages:
+  - assert
+  - assert/cmp
+  - internal/difflib
+  - internal/format
+  - internal/source
