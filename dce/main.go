@@ -151,7 +151,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
 			err = ext.LaunchTaskPreImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
-			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Complete")
+			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
 			if err != nil {
 				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
 				return "", err
@@ -209,7 +209,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
 			err = ext.LaunchTaskPostImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
-			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Completed")
+			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
 			if err != nil {
 				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
 				return "", err
@@ -243,8 +243,13 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, "Launch_Pod", "Starting")
 
 	// Launch pod
-	replyPodStatus := pod.LaunchPod(pod.ComposeFiles)
-	utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", replyPodStatus.String())
+	replyPodStatus,err := pod.LaunchPod(pod.ComposeFiles)
+	if err != nil {
+		utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", "Error")
+	} else {
+		utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", "Success")
+	}
+
 
 	logger.Printf("Pod status returned by LaunchPod : %s", replyPodStatus.String())
 
@@ -272,7 +277,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
 				tempStatus, err = ext.PostLaunchTask(&ctx, pod.ComposeFiles, taskInfo)
-				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Completed")
+				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
 				if err != nil {
 					logger.Errorf("Error executing PostLaunchTask : %v", err)
 				}
@@ -393,7 +398,7 @@ func pullImage() error {
 			if err != nil{
 				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), fmt.Sprintf("Image_Pull_%v",count), "Error")
 			} else {
-				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), fmt.Sprintf("Image_Pull_%v",count), "Completed")
+				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), fmt.Sprintf("Image_Pull_%v",count), "Success")
 			}
 			return "", err
 
