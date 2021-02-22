@@ -15,8 +15,10 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
+	"net/http"
 )
 
 type AllocateIPRequest struct {
@@ -32,7 +34,11 @@ type Label struct {
 }
 
 func TestGetRequest(t *testing.T) {
-	data, err := GetRequest("http://www.mocky.io/v2/589bb17d100000701266e5e1")
+	var ctx context.Context
+	ctx = context.Background()
+	tr := &http.Transport{
+	}
+	data, err := GetRequest(ctx, tr, "http://www.mocky.io/v2/589bb17d100000701266e5e1")
 	if err != nil {
 		t.Error(err.Error())
 	}

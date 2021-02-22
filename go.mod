@@ -2,7 +2,7 @@ module github.com/paypal/dce-go
 
 go 1.13
 
-	require (
+require (
 	git.apache.org/thrift.git v0.0.0-20161221203622-b2a4d4ae21c7
 	github.com/fsnotify/fsnotify v1.4.3-0.20161026203122-fd9ec7deca8b // indirect
 	github.com/gogo/protobuf v0.0.0-20160824171236-909568be09de // indirect
@@ -33,5 +33,4 @@ go 1.13
 	golang.org/x/text v0.0.0-20161027091323-a8b38433e35b // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v2 v2.0.0-20160928153709-a5b47d31c556
-	)
-
+)
