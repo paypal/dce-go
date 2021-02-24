@@ -80,7 +80,7 @@ func GetRequest(ctx context.Context, transport http.RoundTripper, url string) ([
 		Transport: transport,
 		Timeout:   config.GetHttpTimeout(),
 	}
-	req, err := http.NewRequestWithContext(ctx,"GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		log.Println("Error creating http request : ", err.Error())
 		return nil, err

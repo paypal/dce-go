@@ -55,7 +55,6 @@ func UnregisterExtension(name string) []string {
 	return ifaces
 }
 
-
 // Base extension point
 
 type extensionPoint struct {
@@ -177,7 +176,6 @@ func (ep *composePluginExt) Names() []string {
 	return names
 }
 
-
 // PodStatusHook
 
 var PodStatusHooks = &podStatusHookExt{
@@ -227,5 +225,3 @@ func (ep *podStatusHookExt) Names() []string {
 	}
 	return names
 }
-
-
