@@ -3,7 +3,7 @@ module github.com/paypal/dce-go
 go 1.13
 
 require (
-	github.com/apache/thrift v0.13.0
+	git.apache.org/thrift v0.13.0
 	github.com/fsnotify/fsnotify v1.4.3-0.20161026203122-fd9ec7deca8b // indirect
 	github.com/gogo/protobuf v0.0.0-20160824171236-909568be09de // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
@@ -36,5 +36,5 @@ require (
 )
 
 replace (
-	github.com/apache/thrift v0.13.0 => github.com/ridv/thrift v0.13.2
+	git.apache.org/thrift v0.13.0 => github.com/ridv/thrift v0.13.2
 )
