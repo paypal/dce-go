@@ -39,7 +39,6 @@ import (
 	fileUtils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
 	"github.com/paypal/dce-go/utils/wait"
-
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )

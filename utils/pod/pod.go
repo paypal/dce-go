@@ -28,18 +28,16 @@ import (
 
 	"github.com/pkg/errors"
 
+	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
-	log "github.com/sirupsen/logrus"
-
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils"
 	waitUtil "github.com/paypal/dce-go/utils/wait"
-
 	"github.com/paypal/gorealis/gen-go/apache/aurora"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
