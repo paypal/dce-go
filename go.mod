@@ -39,5 +39,5 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig => github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig v0.14.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/splunk => github.com/open-telemetry/opentelemetry-collector-contrib/internal/splunk v0.14.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver => github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver v0.14.0
-	github.com/paypal/gorealis v1.22.4 => github.com/paypal/gorealis v1.1.0
+	github.com/paypal/gorealis v1.22.4 => github.com/paypal/gorealis v1.23.0
 )
