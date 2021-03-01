@@ -66,7 +66,9 @@ SetStepData sets the metricsof the DCE step in the map. If the step already exis
 */
 func SetStepData(stepData map[interface{}]interface{}, startTime, endTime int64, stepName, status string) {
 
-	log.Info("STep Name" + stepName)
+	log.Info("Step Name :" + stepName)
+	log.Info("Start Time :" + stepName)
+	log.Info("End Time :" + stepName)
 
 	if len(stepName) == 0 {
 		log.Error("error while updating step data for Granular Metrics: step name can't be empty for stepData")
