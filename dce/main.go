@@ -395,12 +395,12 @@ func pullImage() error {
 		err := wait.PollRetry(config.GetPullRetryCount(), time.Duration(config.GetPollInterval())*time.Millisecond, wait.ConditionFunc(func() (string, error) {
 			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, fmt.Sprintf("Image_Pull_%v", count), "Starting")
 			err := pod.PullImage(pod.ComposeFiles)
-			count++
 			if err != nil {
 				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), fmt.Sprintf("Image_Pull_%v", count), "Error")
 			} else {
 				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), fmt.Sprintf("Image_Pull_%v", count), "Success")
 			}
+			count++
 			return "", err
 
 		}))
