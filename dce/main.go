@@ -454,6 +454,7 @@ func init() {
 
 func main() {
 	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
+	log.SetLevel(log.DebugLevel)
 
 	log.Println("====================Genesis Executor (Go)====================")
 	log.Println("created dce log file.")
