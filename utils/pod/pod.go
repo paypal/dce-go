@@ -26,9 +26,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
-	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/paypal/dce-go/config"
@@ -37,7 +34,10 @@ import (
 	"github.com/paypal/dce-go/utils"
 	waitUtil "github.com/paypal/dce-go/utils/wait"
 	"github.com/paypal/gorealis/gen-go/apache/aurora"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+
+	"git.apache.org/thrift.git/lib/go/thrift"
 )
 
 const (

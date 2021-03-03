@@ -38,7 +38,6 @@ func GenBody(t interface{}) io.Reader {
 }
 
 // http post
-//func PostRequest(url string, body io.Reader) ([]byte, error) {
 func PostRequest(ctx context.Context, transport http.RoundTripper, url string, body io.Reader) ([]byte, error) {
 	if transport == nil {
 		transport = http.DefaultTransport

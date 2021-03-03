@@ -35,7 +35,7 @@ require (
 )
 
 replace (
-	git.apache.org/thrift.git v0.0.0-20161221203622-b2a4d4ae21c7=> github.com/rdelval/thrift v0.0.0-20161221203622-b2a4d4ae21c7
+	git.apache.org/thrift.git v0.0.0-20161221203622-b2a4d4ae21c7 => github.com/rdelval/thrift v0.0.0-20161221203622-b2a4d4ae21c7
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig => github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig v0.14.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/splunk => github.com/open-telemetry/opentelemetry-collector-contrib/internal/splunk v0.14.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver => github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver v0.14.0
