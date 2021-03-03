@@ -247,8 +247,12 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, "Launch_Pod", "Starting")
 
 	// Launch pod
-	replyPodStatus := pod.LaunchPod(pod.ComposeFiles)
-	utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", replyPodStatus.String())
+	replyPodStatus, err := pod.LaunchPod(pod.ComposeFiles)
+	if err != nil {
+		utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", "Error")
+	} else {
+		utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", "Success")
+	}
 
 	logger.Printf("Pod status returned by LaunchPod : %s", replyPodStatus.String())
 

@@ -289,14 +289,14 @@ func GetPorts(taskInfo *mesos.TaskInfo) *list.Element {
 
 // Launch pod
 // docker-compose up
-func LaunchPod(files []string) types.PodStatus {
+func LaunchPod(files []string) (types.PodStatus, error) {
 	//log.SetOutput(os.Stdout)
 	log.Println("====================Launch Pod====================")
 
 	parts, err := GenerateCmdParts(files, " up -d")
 	if err != nil {
 		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
-		return types.POD_FAILED
+		return types.POD_FAILED, err
 	}
 
 	cmd := exec.Command("docker-compose", parts...)
@@ -317,10 +317,10 @@ func LaunchPod(files []string) types.PodStatus {
 	log.Println("Updated the state of LaunchCmdAttempted to true.")
 	if err != nil {
 		log.Printf("POD_LAUNCH_FAIL -- Error running launch task command : %v", err)
-		return types.POD_FAILED
+		return types.POD_FAILED, err
 	}
 
-	return types.POD_STARTING
+	return types.POD_STARTING, nil
 }
 
 //these logs should be written in a file also along with stdout.
