@@ -15,7 +15,9 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 )
 
@@ -32,7 +34,8 @@ type Label struct {
 }
 
 func TestGetRequest(t *testing.T) {
-	data, err := GetRequest("http://www.mocky.io/v2/589bb17d100000701266e5e1")
+	tr := &http.Transport{}
+	data, err := GetRequest(context.Background(), tr, "http://www.mocky.io/v2/589bb17d100000701266e5e1")
 	if err != nil {
 		t.Error(err.Error())
 	}

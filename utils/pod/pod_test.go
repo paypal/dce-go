@@ -247,11 +247,11 @@ func (p *happyHook) Execute(podStatus string, data interface{}) (failExec bool, 
 	return true, nil
 }
 
-func (p *mandatoryHook) Execute(status string,  data interface{}) (failExec bool, err error) {
+func (p *mandatoryHook) Execute(status string, data interface{}) (failExec bool, err error) {
 	return true, errors.New("failure test case")
 }
 
-func (p *panicHook) Execute(status string,  data interface{}) (failExec bool, err error) {
+func (p *panicHook) Execute(status string, data interface{}) (failExec bool, err error) {
 	panic("unit test panic")
 	return false, errors.New("panic test case")
 }
