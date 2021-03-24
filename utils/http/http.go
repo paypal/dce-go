@@ -16,6 +16,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -37,12 +38,15 @@ func GenBody(t interface{}) io.Reader {
 }
 
 // http post
-func PostRequest(url string, body io.Reader) ([]byte, error) {
+func PostRequest(ctx context.Context, transport http.RoundTripper, url string, body io.Reader) ([]byte, error) {
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
 	client := &http.Client{
-		Transport: DefaultTransport(),
+		Transport: transport,
 		Timeout:   config.GetHttpTimeout(),
 	}
-	req, err := http.NewRequest("POST", url, body)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, body)
 	if err != nil {
 		log.Println("Error creating http request : ", err.Error())
 		return nil, err
@@ -67,12 +71,15 @@ func PostRequest(url string, body io.Reader) ([]byte, error) {
 }
 
 // http get
-func GetRequest(url string) ([]byte, error) {
+func GetRequest(ctx context.Context, transport http.RoundTripper, url string) ([]byte, error) {
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
 	client := &http.Client{
-		Transport: DefaultTransport(),
+		Transport: transport,
 		Timeout:   config.GetHttpTimeout(),
 	}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		log.Println("Error creating http request : ", err.Error())
 		return nil, err
