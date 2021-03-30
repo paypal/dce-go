@@ -17,12 +17,13 @@ package http
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 
-	"github.com/paypal/dce-go/config"
 	log "github.com/sirupsen/logrus"
+	"crypto/tls"
 )
 
 // generate body for http request
@@ -32,16 +33,16 @@ func GenBody(t interface{}) io.Reader {
 	if err != nil {
 		log.Panic("Error marshalling : ", err.Error())
 	}
-	log.Println("Request Body : ", string(tjson))
+	fmt.Println("Request Body : ", string(tjson))
 	return bytes.NewReader(tjson)
 }
 
 // http post
 func PostRequest(url string, body io.Reader) ([]byte, error) {
-	client := &http.Client{
-		Transport: DefaultTransport(),
-		Timeout:   config.GetHttpTimeout(),
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
+	client := &http.Client{Transport: tr}
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		log.Println("Error creating http request : ", err.Error())
@@ -53,7 +54,7 @@ func PostRequest(url string, body io.Reader) ([]byte, error) {
 		log.Println("Error posting http request : ", err.Error())
 		return nil, err
 	}
-	respBody, err := ioutil.ReadAll(resp.Body)
+	resp_body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("Error reading http response : ", err.Error())
 		return nil, err
@@ -63,15 +64,12 @@ func PostRequest(url string, body io.Reader) ([]byte, error) {
 		log.Errorf("Failure to close response body :%v", err)
 		return nil, err
 	}
-	return respBody, nil
+	return resp_body, nil
 }
 
 // http get
 func GetRequest(url string) ([]byte, error) {
-	client := &http.Client{
-		Transport: DefaultTransport(),
-		Timeout:   config.GetHttpTimeout(),
-	}
+	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println("Error creating http request : ", err.Error())
