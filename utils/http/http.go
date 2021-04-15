@@ -49,7 +49,8 @@ func GetRequest(ctx context.Context, transport http.RoundTripper, url string) ([
 }
 
 func getHttpResponse(ctx context.Context, transport http.RoundTripper, url, methodType string, headers map[string]string,
-																			body io.Reader) ([]byte, error) {
+	body io.Reader) ([]byte, error) {
+	
 	client := &http.Client{
 		Transport: getTransportValue(transport),
 		Timeout:   config.GetHttpTimeout(),
