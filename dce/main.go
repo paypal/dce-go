@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -29,18 +28,19 @@ import (
 
 	exec "github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/dce/monitor"
 	"github.com/paypal/dce-go/plugin"
-	_ "github.com/paypal/dce-go/plugin/example"
-	_ "github.com/paypal/dce-go/plugin/general"
+	_ "github.com/paypal/dce-go/pluginimpl/example"
+	_ "github.com/paypal/dce-go/pluginimpl/general"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils"
 	fileUtils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
 	"github.com/paypal/dce-go/utils/wait"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 var logger *log.Entry
@@ -55,24 +55,35 @@ func newDockerComposeExecutor() *dockerComposeExecutor {
 }
 
 func (exec *dockerComposeExecutor) Registered(driver exec.ExecutorDriver, execInfo *mesos.ExecutorInfo, fwinfo *mesos.FrameworkInfo, slaveInfo *mesos.SlaveInfo) {
-	fmt.Println("====================Mesos Registered====================")
-	fmt.Println("Mesos Register : Registered Executor on slave ", slaveInfo.GetHostname())
-	pod.ComposeExcutorDriver = driver
+	log.Println("====================Mesos Registered====================")
+	log.Println("Mesos Register : Registered Executor on slave ", slaveInfo.GetHostname())
+	pod.ComposeExecutorDriver = driver
 }
 
 func (exec *dockerComposeExecutor) Reregistered(driver exec.ExecutorDriver, slaveInfo *mesos.SlaveInfo) {
-	fmt.Println("====================Mesos Reregistered====================")
-	fmt.Println("Mesos Re-registered Re-registered : Executor on slave ", slaveInfo.GetHostname())
+	log.Println("====================Mesos Reregistered====================")
+	log.Println("Mesos Re-registered Re-registered : Executor on slave ", slaveInfo.GetHostname())
 }
 
 func (exec *dockerComposeExecutor) Disconnected(exec.ExecutorDriver) {
-	fmt.Println("====================Mesos Disconnected====================")
-	fmt.Println("Mesos Disconnected : Mesos Executordisconnected.")
+	log.Println("====================Mesos Disconnected====================")
+	log.Println("Mesos Disconnected : Mesos Executordisconnected.")
 }
 
 func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
-	fmt.Println("====================Mesos LaunchTask====================")
-	pod.ComposeExcutorDriver = driver
+	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
+	appStartTime := time.Now()
+
+	log.Println("====================Mesos LaunchTask====================")
+	pod.ComposeExecutorDriver = driver
+	logger = log.WithFields(log.Fields{
+		"requuid":   pod.GetLabel("requuid", taskInfo),
+		"tenant":    pod.GetLabel("tenant", taskInfo),
+		"namespace": pod.GetLabel("namespace", taskInfo),
+		"pool":      pod.GetLabel("pool", taskInfo),
+	})
+
+	go pod.ListenOnTaskStatus(driver, taskInfo)
 
 	task, err := json.Marshal(taskInfo)
 	if err != nil {
@@ -80,18 +91,11 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	}
 	buf := new(bytes.Buffer)
 	json.Indent(buf, task, "", " ")
-	fmt.Println("taskInfo : ", buf)
+	logger.Debugln("taskInfo : ", buf)
 
 	isService := pod.IsService(taskInfo)
-	fmt.Printf("task is service: %v\n", isService)
+	log.Printf("task is service: %v", isService)
 	config.GetConfig().Set(types.IS_SERVICE, isService)
-
-	logger = log.WithFields(log.Fields{
-		"requuid":   pod.GetLabel("requuid", taskInfo),
-		"tenant":    pod.GetLabel("tenant", taskInfo),
-		"namespace": pod.GetLabel("namespace", taskInfo),
-		"pool":      pod.GetLabel("pool", taskInfo),
-	})
 
 	pod.ComposeTaskInfo = taskInfo
 	executorId := taskInfo.GetExecutor().GetExecutorId().GetValue()
@@ -111,12 +115,17 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		logger.Errorln("Error creating app folder")
 	}
 
+	// Override config
+	config.OverrideConfig(taskInfo)
+
 	// Create context with timeout
 	// Wait for pod launching until timeout
 	var ctx context.Context
+
 	var cancel context.CancelFunc
 	ctx = context.Background()
 	ctx, cancel = context.WithTimeout(ctx, config.GetLaunchTimeout()*time.Millisecond)
+
 	go pod.WaitOnPod(&ctx)
 
 	// Get order of plugins from config or mesos labels
@@ -131,25 +140,91 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	// Select plugin extension points from plugin pools
 	extpoints = plugin.GetOrderedExtpoints(pluginOrder)
 
-	// Executing PreLaunchTask in order
-	_, err = utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+	// Executing LaunchTaskPreImagePull in order
+	if _, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+		for i, ext := range extpoints {
+
+			if ext == nil {
+				logger.Errorln("Error getting plugins from plugin registration pools")
+				return "", errors.New("plugin is nil")
+			}
+			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPreImagePull", ext.Name())
+			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
+
+			err = ext.LaunchTaskPreImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
+			if err != nil {
+				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
+				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
+				return "", err
+			}
+			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
+
+			if config.EnableComposeTrace() {
+				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPreImagePull", i)
+			}
+		}
+		return "", err
+	})); err != nil {
+		logger.Errorf("error while executing task pre image pull: %s", err)
+		pod.SetPodStatus(types.POD_FAILED)
+		cancel()
+		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		return
+	}
+	// Write updated compose files into pod folder
+	err = fileUtils.WriteChangeToFiles(ctx)
+	if err != nil {
+		logger.Errorf("Failure writing updated compose files : %v", err)
+		pod.SetPodStatus(types.POD_FAILED)
+		cancel()
+		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+	}
+
+	//Validate Compose files
+	if err := validateComposeFiles(); err != nil {
+		pod.SetPodStatus(types.POD_COMPOSE_CHECK_FAILED)
+		cancel()
+		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		return
+	}
+
+	// Pull image
+	err = pullImage()
+	if err != nil {
+		pod.SetPodStatus(types.POD_PULL_FAILED)
+		cancel()
+		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		return
+	}
+
+	timeElapsed := time.Since(appStartTime)
+	logger.Printf("Time elapsed since App launch: %.3fs", timeElapsed.Seconds())
+
+	// Executing LaunchTaskPostImagePull in order
+	if _, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
 		for i, ext := range extpoints {
 			if ext == nil {
 				logger.Errorln("Error getting plugins from plugin registration pools")
 				return "", errors.New("plugin is nil")
 			}
-			err = ext.PreLaunchTask(&ctx, &pod.ComposeFiles, executorId, taskInfo)
+			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPostImagePull", ext.Name())
+			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
+
+			err = ext.LaunchTaskPostImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
 			if err != nil {
-				logger.Errorf("Error executing PreLaunchTask of plugin : %v\n", err)
+				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
+				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
 				return "", err
 			}
+
+			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
+
 			if config.EnableComposeTrace() {
-				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], i)
+				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPostImagePull", i)
 			}
 		}
 		return "", err
-	}))
-	if err != nil {
+	})); err != nil {
 		pod.SetPodStatus(types.POD_FAILED)
 		cancel()
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
@@ -169,20 +244,23 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
-	// Pulling image and launch pod
-	replyPodStatus := pullAndLaunchPod()
+	utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, "Launch_Pod", "Starting")
 
-	logger.Printf("Pod status returned by pullAndLaunchPod : %v", replyPodStatus)
+	// Launch pod
+	replyPodStatus, err := pod.LaunchPod(pod.ComposeFiles)
+	if err != nil {
+		utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", "Error")
+	} else {
+		utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", "Success")
+	}
+
+	logger.Printf("Pod status returned by LaunchPod : %s", replyPodStatus.String())
 
 	// Take an action depends on different status
 	switch replyPodStatus {
 	case types.POD_FAILED:
 		cancel()
 		pod.SendPodStatus(types.POD_FAILED)
-
-	case types.POD_PULL_FAILED:
-		cancel()
-		pod.SendPodStatus(types.POD_PULL_FAILED)
 
 	case types.POD_STARTING:
 		// Initial health check
@@ -198,13 +276,20 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			for _, ext := range extpoints {
 				logger.Println("Executing post launch task plugin")
 
+				granularMetricStepName := fmt.Sprintf("%s_PostLaunchTask", ext.Name())
+				utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
+
 				tempStatus, err = ext.PostLaunchTask(&ctx, pod.ComposeFiles, taskInfo)
 				if err != nil {
 					logger.Errorf("Error executing PostLaunchTask : %v", err)
+					utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
+				} else {
+					utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
 				}
+
 				logger.Printf("Get pod status : %s returned by PostLaunchTask", tempStatus)
 
-				if tempStatus == types.POD_FAILED {
+				if tempStatus == types.POD_FAILED.String() {
 					return tempStatus, nil
 				}
 			}
@@ -213,11 +298,11 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		if err != nil {
 			logger.Errorf("Error executing PostLaunchTask : %v", err)
 		}
-		if tempStatus == types.POD_FAILED {
+		if tempStatus == types.POD_FAILED.String() {
 			cancel()
 			pod.SendPodStatus(types.POD_FAILED)
+			return
 		}
-
 		if res == types.POD_RUNNING {
 			cancel()
 			if pod.GetPodStatus() != types.POD_RUNNING {
@@ -225,7 +310,6 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				go monitor.MonitorPoller()
 			}
 		}
-
 		//For adhoc job, send finished to mesos if job already finished during init health check
 		if res == types.POD_FINISHED {
 			cancel()
@@ -234,7 +318,6 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 
 	default:
 		logger.Printf("default: Unknown status -- %s from pullAndLaunchPod ", replyPodStatus)
-
 	}
 
 	logger.Println("====================Mesos LaunchTask Returned====================")
@@ -242,6 +325,12 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 
 func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *mesos.TaskID) {
 	log.Println("====================Mesos KillTask====================")
+
+	defer func() {
+		log.Println("====================Stop ExecutorDriver====================")
+		time.Sleep(5 * time.Second)
+		driver.Stop()
+	}()
 
 	logKill := log.WithFields(log.Fields{
 		"taskId": taskId,
@@ -266,9 +355,8 @@ func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *
 			logKill.Errorf("Error during kill Task : %v", err.Error())
 		}
 
-		log.Println("====================Stop ExecutorDriver====================")
-		time.Sleep(200 * time.Millisecond)
-		driver.Stop()
+	default:
+		log.Infof("current pod status %s, stop driver", status)
 
 	}
 
@@ -276,40 +364,61 @@ func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *
 }
 
 func (exec *dockerComposeExecutor) FrameworkMessage(driver exec.ExecutorDriver, msg string) {
-	fmt.Printf("Got framework message: %v\n", msg)
+	log.Printf("Got framework message: %s", msg)
 }
 
 func (exec *dockerComposeExecutor) Shutdown(driver exec.ExecutorDriver) {
 	// Execute shutdown plugin extensions in order
 	for _, ext := range extpoints {
-		ext.Shutdown(pod.ComposeExcutorDriver)
+		ext.Shutdown(pod.ComposeExecutorDriver)
 	}
-	fmt.Println("====================Stop ExecutorDriver====================")
+	log.Println("====================Stop ExecutorDriver====================")
 	driver.Stop()
 }
 
 func (exec *dockerComposeExecutor) Error(driver exec.ExecutorDriver, err string) {
-	fmt.Printf("Got error message : %v\n", err)
+	log.Printf("Got error message : %s", err)
 }
 
-func pullAndLaunchPod() string {
-	logger.Println("====================Pod Pull And Launch====================")
+func validateComposeFiles() error {
+	logger.Println("====================Validating Compose Files====================")
+
+	err := pod.ValidateCompose(pod.ComposeFiles)
+	if err != nil {
+		log.Print("POD_BAD_MANIFEST_FAILURE -- %v ", err)
+		return errors.Wrap(err, "compose validation failed")
+	}
+	return nil
+}
+
+func pullImage() error {
+	logger.Println("====================Pulling Image====================")
 
 	if !config.SkipPullImages() {
+		count := 0
 		err := wait.PollRetry(config.GetPullRetryCount(), time.Duration(config.GetPollInterval())*time.Millisecond, wait.ConditionFunc(func() (string, error) {
-			return "", pod.PullImage(pod.ComposeFiles)
+			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, fmt.Sprintf("Image_Pull_%v", count), "Starting")
+			err := pod.PullImage(pod.ComposeFiles)
+			if err != nil {
+				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), fmt.Sprintf("Image_Pull_%v", count), "Error")
+			} else {
+				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), fmt.Sprintf("Image_Pull_%v", count), "Success")
+			}
+			count++
+			return "", err
+
 		}))
 
 		if err != nil {
-			logger.Printf("POD_IMAGE_PULL_FAILED -- %v", err)
-			return types.POD_PULL_FAILED
+			logger.Errorf("POD_IMAGE_PULL_FAILED -- %v", err)
+			return errors.Wrap(err, "image pull failed")
 		}
 	}
 
-	return pod.LaunchPod(pod.ComposeFiles)
+	return nil
 }
 
-func initHealthCheck(podServices map[string]bool) (string, error) {
+func initHealthCheck(podServices map[string]bool) (types.PodStatus, error) {
 	res, err := wait.WaitUntil(config.GetLaunchTimeout()*time.Millisecond, wait.ConditionCHFunc(func(healthCheckReply chan string) {
 		pod.HealthCheck(pod.ComposeFiles, podServices, healthCheckReply)
 	}))
@@ -318,7 +427,7 @@ func initHealthCheck(podServices map[string]bool) (string, error) {
 		log.Printf("POD_INIT_HEALTH_CHECK_TIMEOUT -- %v", err)
 		return types.POD_FAILED, err
 	}
-	return res, err
+	return utils.ToPodStatus(res), err
 }
 
 func getServices(ctx context.Context) map[string]bool {
@@ -348,14 +457,16 @@ func init() {
 }
 
 func main() {
-	fmt.Println("====================Genesis Executor (Go)====================")
+	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
 
+	log.Println("====================Genesis Executor (Go)====================")
+	log.Println("created dce log file.")
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGUSR1)
 	go func() {
 		for {
 			sig := <-sig
-			fmt.Printf("Received signal %s\n", sig.String())
+			log.Printf("Received signal %s", sig.String())
 			if sig == syscall.SIGUSR1 {
 				switchDebugMode()
 			}
@@ -368,18 +479,21 @@ func main() {
 
 	driver, err := exec.NewMesosExecutorDriver(dConfig)
 	if err != nil {
-		fmt.Errorf("Unable to create a ExecutorDriver : %v\n", err.Error())
+		log.Errorf("Unable to create a ExecutorDriver : %v", err)
 	}
 
 	_, err = driver.Start()
 	if err != nil {
-		fmt.Errorf("Got error: %v\n", err.Error())
+		log.Errorf("Got error: %v", err)
 		return
 	}
 
-	fmt.Println("Executor : Executor process has started and running.")
-	driver.Join()
-
+	log.Println("Executor : Executor process has started and running.")
+	status, err := driver.Join()
+	if err != nil {
+		log.Errorf("error from driver.Join(): %v", err)
+	}
+	log.Printf("driver.Join() exits with status %s", status.String())
 }
 
 func switchDebugMode() {
