@@ -126,7 +126,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	ctx = context.Background()
 	ctx, cancel = context.WithTimeout(ctx, config.GetLaunchTimeout()*time.Millisecond)
 
-	go pod.WaitOnPod(&ctx)
+	go pod.WaitOnPod(ctx)
 
 	// Get order of plugins from config or mesos labels
 	pluginOrder, err := fileUtils.GetPluginOrder(taskInfo)
@@ -151,7 +151,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPreImagePull", ext.Name())
 			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
-			err = ext.LaunchTaskPreImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
+			err = ext.LaunchTaskPreImagePull(ctx, &pod.ComposeFiles, executorId, taskInfo)
 			if err != nil {
 				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
 				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
@@ -210,7 +210,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPostImagePull", ext.Name())
 			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
-			err = ext.LaunchTaskPostImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
+			err = ext.LaunchTaskPostImagePull(ctx, &pod.ComposeFiles, executorId, taskInfo)
 			if err != nil {
 				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
 				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
@@ -260,14 +260,14 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	switch replyPodStatus {
 	case types.POD_FAILED:
 		cancel()
-		pod.SendPodStatus(types.POD_FAILED)
+		pod.SendPodStatus(ctx, types.POD_FAILED)
 
 	case types.POD_STARTING:
 		// Initial health check
 		res, err := initHealthCheck(podServices)
 		if err != nil || res == types.POD_FAILED {
 			cancel()
-			pod.SendPodStatus(types.POD_FAILED)
+			pod.SendPodStatus(ctx, types.POD_FAILED)
 		}
 
 		// Temp status keeps the pod status returned by PostLaunchTask
@@ -279,7 +279,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				granularMetricStepName := fmt.Sprintf("%s_PostLaunchTask", ext.Name())
 				utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
-				tempStatus, err = ext.PostLaunchTask(&ctx, pod.ComposeFiles, taskInfo)
+				tempStatus, err = ext.PostLaunchTask(ctx, pod.ComposeFiles, taskInfo)
 				if err != nil {
 					logger.Errorf("Error executing PostLaunchTask : %v", err)
 					utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
@@ -300,20 +300,20 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		}
 		if tempStatus == types.POD_FAILED.String() {
 			cancel()
-			pod.SendPodStatus(types.POD_FAILED)
+			pod.SendPodStatus(ctx, types.POD_FAILED)
 			return
 		}
 		if res == types.POD_RUNNING {
 			cancel()
 			if pod.GetPodStatus() != types.POD_RUNNING {
-				pod.SendPodStatus(types.POD_RUNNING)
+				pod.SendPodStatus(ctx, types.POD_RUNNING)
 				go monitor.MonitorPoller()
 			}
 		}
 		//For adhoc job, send finished to mesos if job already finished during init health check
 		if res == types.POD_FINISHED {
 			cancel()
-			pod.SendPodStatus(types.POD_FINISHED)
+			pod.SendPodStatus(ctx, types.POD_FINISHED)
 		}
 
 	default:
@@ -345,7 +345,7 @@ func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *
 		logKill.Printf("Mesos Kill Task : Current task status is %s , continue killTask", status)
 		pod.SetPodStatus(types.POD_KILLED)
 
-		err := pod.StopPod(pod.ComposeFiles)
+		err := pod.StopPod(context.Background(), pod.ComposeFiles)
 		if err != nil {
 			logKill.Errorf("Error cleaning up pod : %v", err.Error())
 		}

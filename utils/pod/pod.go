@@ -345,7 +345,7 @@ func dockerLogToPodLogFile(files []string, retry bool) {
 
 // Stop pod
 // docker-compose stop
-func StopPod(files []string) error {
+func StopPod(ctx context.Context, files []string) error {
 	logger := log.WithFields(log.Fields{
 		"files": files,
 		"func":  "pod.StopPod",
@@ -360,7 +360,7 @@ func StopPod(files []string) error {
 	// Executing PreKillTask in order
 	_, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
 		for i, ext := range plugins {
-			if err := ext.PreKillTask(ComposeTaskInfo); err != nil {
+			if err := ext.PreKillTask(ctx, ComposeTaskInfo); err != nil {
 				logger.Errorf("Error executing PreKillTask in %dth plugin: %v", i, err)
 			}
 		}
@@ -396,7 +396,7 @@ func StopPod(files []string) error {
 		}
 	}
 
-	err = callAllPluginsPostKillTask()
+	err = callAllPluginsPostKillTask(ctx)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -404,7 +404,7 @@ func StopPod(files []string) error {
 	return nil
 }
 
-func callAllPluginsPostKillTask() error {
+func callAllPluginsPostKillTask(ctx context.Context) error {
 	// Select plugin extension points from plugin pools
 	plugins := plugin.GetOrderedExtpoints(PluginOrder)
 	log.Printf("Plugin order: %s", PluginOrder)
@@ -412,7 +412,7 @@ func callAllPluginsPostKillTask() error {
 	// Executing PostKillTask plugin extensions in order
 	utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
 		for _, ext := range plugins {
-			err := ext.PostKillTask(ComposeTaskInfo)
+			err := ext.PostKillTask(ctx, ComposeTaskInfo)
 			if err != nil {
 				log.Errorf("Error executing PostKillTask of plugin : %v", err)
 			}
@@ -814,7 +814,7 @@ func updatePodLaunched() {
 	log.Printf("Updated Current Pod Status with Pod Launched ")
 }
 
-func SendPodStatus(status types.PodStatus) {
+func SendPodStatus(ctx context.Context, status types.PodStatus) {
 	logger := log.WithFields(log.Fields{
 		"status": status,
 		"func":   "pod.SendPodStatus",
@@ -837,13 +837,13 @@ func SendPodStatus(status types.PodStatus) {
 		// To kill system proxy container
 		if len(MonitorContainerList) > 0 {
 			logger.Printf("Stop containers still running in the pod: %v", MonitorContainerList)
-			err := StopPod(ComposeFiles)
+			err := StopPod(ctx, ComposeFiles)
 			if err != nil {
 				logger.Errorf("Error stop pod: %v", err)
 			}
 		} else {
 			// Adding this else part to clean the adhoc tasks.
-			err := callAllPluginsPostKillTask()
+			err := callAllPluginsPostKillTask(ctx)
 			if err != nil {
 				logger.Error(err)
 			}
@@ -851,18 +851,18 @@ func SendPodStatus(status types.PodStatus) {
 		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FINISHED.Enum())
 	case types.POD_FAILED:
 		if LaunchCmdAttempted {
-			err := StopPod(ComposeFiles)
+			err := StopPod(ctx, ComposeFiles)
 			if err != nil {
 				logger.Errorf("Error cleaning up pod : %v\n", err.Error())
 			}
 		}
 		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	case types.POD_PULL_FAILED:
-		callAllPluginsPostKillTask()
+		callAllPluginsPostKillTask(ctx)
 		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 
 	case types.POD_COMPOSE_CHECK_FAILED:
-		callAllPluginsPostKillTask()
+		callAllPluginsPostKillTask(ctx)
 		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
@@ -913,16 +913,16 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 }
 
 // Wait for pod running/finished until timeout or failed
-func WaitOnPod(ctx *context.Context) {
+func WaitOnPod(ctx context.Context) {
 	select {
-	case <-(*ctx).Done():
-		if (*ctx).Err() == context.DeadlineExceeded {
+	case <-(ctx).Done():
+		if (ctx).Err() == context.DeadlineExceeded {
 			log.Println("POD_LAUNCH_TIMEOUT")
 			if dump, ok := config.GetConfig().GetStringMap("dockerdump")["enable"].(bool); ok && dump {
 				DockerDump()
 			}
-			SendPodStatus(types.POD_FAILED)
-		} else if (*ctx).Err() == context.Canceled {
+			SendPodStatus(ctx, types.POD_FAILED)
+		} else if (ctx).Err() == context.Canceled {
 			log.Println("Stop waitUtil on pod, since pod is running/finished/failed")
 		}
 	}
