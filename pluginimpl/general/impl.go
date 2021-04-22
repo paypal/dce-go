@@ -163,7 +163,7 @@ func (gp *generalExt) PostLaunchTask(ctx *context.Context, files []string, taskI
 	return "", nil
 }
 
-func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
+func (gp *generalExt) PreKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error {
 	logger.Println("PreKillTask begin")
 	return nil
 }
@@ -171,7 +171,7 @@ func (gp *generalExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
 // PostKillTask cleans up containers, volumes, images if task is killed by mesos
 // Failed tasks will be cleaned up based on config cleanpod.cleanvolumeandcontaineronmesoskill and cleanpod.cleanimageonmesoskill
 // Non pre-existing networks will always be removed
-func (gp *generalExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
+func (gp *generalExt) PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error {
 	logger.Println("PostKillTask begin, pod status:", pod.GetPodStatus())
 	var err error
 	if !pod.LaunchCmdAttempted {

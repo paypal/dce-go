@@ -16,6 +16,7 @@
 package monitor
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -123,7 +124,7 @@ func MonitorPoller() {
 		if err != nil {
 			logger.Errorf("Error getting container id of service %s: %v", types.INFRA_CONTAINER, err)
 			logger.Errorln("POD_MONITOR_FAILED -- Send Failed")
-			pod.SendPodStatus(types.POD_FAILED)
+			pod.SendPodStatus(context.TODO(), types.POD_FAILED)
 			return
 		}
 		logger.Printf("Infra container id: %s", infraContainerId)
@@ -144,15 +145,15 @@ func MonitorPoller() {
 	}
 
 	if err != nil {
-		pod.SendPodStatus(types.POD_FAILED)
+		pod.SendPodStatus(context.TODO(), types.POD_FAILED)
 		return
 	}
 
 	switch utils.ToPodStatus(res) {
 	case types.POD_FAILED:
-		pod.SendPodStatus(types.POD_FAILED)
+		pod.SendPodStatus(context.TODO(), types.POD_FAILED)
 
 	case types.POD_FINISHED:
-		pod.SendPodStatus(types.POD_FINISHED)
+		pod.SendPodStatus(context.TODO(), types.POD_FINISHED)
 	}
 }

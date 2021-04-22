@@ -15,6 +15,7 @@
 package pod
 
 import (
+	"context"
 	"log"
 	"strings"
 	"testing"
@@ -84,24 +85,25 @@ func TestRemoveNetwork(t *testing.T) {
 
 func TestForceKill(t *testing.T) {
 	files := []string{"testdata/docker-long.yml"}
-	res := LaunchPod(files)
+	res, err := LaunchPod(files)
+	assert.NoError(t, err)
 	if res != types.POD_STARTING {
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
-	err := ForceKill(files)
-	if err != nil {
-		t.Errorf("expected no errors, but got %v", err)
-	}
+	err = ForceKill(files)
+	assert.NoError(t, err)
 }
 
 func TestStopPod(t *testing.T) {
 	files := []string{"testdata/docker-long.yml"}
-	res := LaunchPod(files)
+	res, err := LaunchPod(files)
+	assert.NoError(t, err)
 	if res != types.POD_STARTING {
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
 	config.GetConfig().SetDefault(types.RM_INFRA_CONTAINER, true)
-	err := StopPod(files)
+	err = StopPod(context.TODO(), files)
+	assert.NoError(t, err)
 	if err != nil {
 		t.Errorf("expected no errors, but got %v", err)
 	}
@@ -109,7 +111,7 @@ func TestStopPod(t *testing.T) {
 
 func TestGetContainerIdByService(t *testing.T) {
 	files := []string{"testdata/docker-long.yml"}
-	res := LaunchPod(files)
+	res, err := LaunchPod(files)
 	if res != types.POD_STARTING {
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}

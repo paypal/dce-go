@@ -89,12 +89,12 @@ func (ex *exampleExt) PreStopPod() error {
 	return nil
 }
 
-func (ex *exampleExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
+func (ex *exampleExt) PreKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error {
 	logger.Println("PreKillTask begin")
 	return nil
 }
 
-func (ex *exampleExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
+func (ex *exampleExt) PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error {
 	logger.Println("PostKillTask begin")
 	return nil
 }

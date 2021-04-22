@@ -1,0 +1,79 @@
+time="2021-04-20T13:46:15-07:00" level=info msg="Plugin Registering" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="Plugin Merge Config : general.yaml"
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Remove restart"
+time="2021-04-20T13:46:15-07:00" level=info msg="Found extra_hosts section defined"
+time="2021-04-20T13:46:15-07:00" level=info msg="ENV is an array false of mysql : [MYSQL_ROOT_PASSWORD=root MYSQL_DATABASE=ghost MYSQL_USER=ghost MYSQL_PASSWORD=password]" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : update network mode" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated container_name as  taskId_mysql" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Tag containers in pod with taskId and executorId " serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Add cgroup parent /mesos/ general" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Set ports list :  [1000:3306]" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated ports as  [1000:3306]" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : update network mode" serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated container_name as  taskId_ghostlocal" serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Tag containers in pod with taskId and executorId " serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Add cgroup parent /mesos/ general" serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Set ports list :  [1000:3306 2000:2368]" serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated ports as  [1000:3306 2000:2368]" serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Updated compose files, current context: map[testdata/test.yml-generated.yml:map[services:map[ghost:map[cgroup_parent:/mesos/general container_name:taskId_ghostlocal depends_on:[mysql] environment:map[PYTHONUNBUFFERED:1] image:dockerhub.paypalcorp.com/kkrishna/ghostlocal:1.0 labels:[primary.container=true executorId=executorId taskId=taskId] network_mode:service:networkproxy] mysql:map[cgroup_parent:/mesos/general container_name:taskId_mysql environment:[MYSQL_ROOT_PASSWORD=root MYSQL_DATABASE=ghost MYSQL_USER=ghost MYSQL_PASSWORD=password PYTHONUNBUFFERED=1] image:mysql labels:map[executorId:executorId taskId:taskId] network_mode:service:networkproxy]] version:2.1]]\n" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="Write to file : testdata/test.yml-generated.yml\n"
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : update network mode" serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated container_name as  taskId_ghostlocal" serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Tag containers in pod with taskId and executorId " serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Add cgroup parent /mesos/ general" serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Set ports list :  [1000:3306 2000:2368 1000:2368]" serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated ports as  [1000:3306 2000:2368 1000:2368]" serviceName=ghost taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Remove restart"
+time="2021-04-20T13:46:15-07:00" level=info msg="Found extra_hosts section defined"
+time="2021-04-20T13:46:15-07:00" level=info msg="ENV is an array false of mysql : [MYSQL_ROOT_PASSWORD=root MYSQL_DATABASE=ghost MYSQL_USER=ghost MYSQL_PASSWORD=password]" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : update network mode" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated container_name as  taskId_mysql" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Tag containers in pod with taskId and executorId " serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Add cgroup parent /mesos/ general" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Set ports list :  [1000:3306 2000:2368 1000:2368 2000:3306]" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated ports as  [1000:3306 2000:2368 1000:2368 2000:3306]" serviceName=mysql taskId=taskId
+time="2021-04-20T13:46:15-07:00" level=info msg="Updated compose files, current context: map[testdata/test.yml-generated.yml:map[services:map[ghost:map[cgroup_parent:/mesos/general container_name:taskId_ghostlocal depends_on:[mysql] environment:map[PYTHONUNBUFFERED:1] image:dockerhub.paypalcorp.com/kkrishna/ghostlocal:1.0 labels:[primary.container=true executorId=executorId taskId=taskId] network_mode:service:networkproxy] mysql:map[cgroup_parent:/mesos/general container_name:taskId_mysql environment:[MYSQL_ROOT_PASSWORD=root MYSQL_DATABASE=ghost MYSQL_USER=ghost MYSQL_PASSWORD=password PYTHONUNBUFFERED=1] image:mysql labels:map[executorId:executorId taskId:taskId] network_mode:service:networkproxy]] version:2.1]]\n" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="Found extra_hosts section defined"
+time="2021-04-20T13:46:15-07:00" level=info msg="Found extra_hosts section defined"
+time="2021-04-20T13:46:15-07:00" level=info msg="Added extra_hosts section to the file testdata/docker-extra-host.yml under service redis" plugin=general
+time="2021-04-20T13:46:15-07:00" level=warning msg="Couldn't get service details from compose file testdata/docker-extra-host.yml"
+time="2021-04-20T13:46:15-07:00" level=info msg="map[networks:map[default:map[external:map[name:net]]] services:map[networkproxy:map[container_name:networkproxy_0.1 image:dcego/networkproxy:1.2]] version:2.1]"
+time="2021-04-20T13:46:15-07:00" level=info msg="Write to file : testdata/docker-infra-container.yml\n"
+time="2021-04-20T13:46:15-07:00" level=warning msg="SERVICE_DETAIL missing in context value"
+time="2021-04-20T13:46:15-07:00" level=info msg="LaunchTaskPreImagePull begin" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="LaunchTaskPreImagePull begin" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="====================context in====================" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="<nil>" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="Current compose files list: [testdata/test.yml]" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="Port Range : begin:  1000"
+time="2021-04-20T13:46:15-07:00" level=info msg="Port range : end:  1003"
+time="2021-04-20T13:46:15-07:00" level=info msg="map[networks:map[default:map[external:map[name:net]]] services:map[networkproxy:map[container_name:networkproxy_0.1 image:dcego/networkproxy:1.2]] version:2.1]"
+time="2021-04-20T13:46:15-07:00" level=info msg="Write to file : docker-infra-container.yml\n"
+time="2021-04-20T13:46:15-07:00" level=info msg="Starting Edit compose file testdata/test.yml" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Remove restart"
+time="2021-04-20T13:46:15-07:00" level=info msg="Found extra_hosts section defined"
+time="2021-04-20T13:46:15-07:00" level=info msg="ENV is an array false of mysql : [MYSQL_ROOT_PASSWORD=root MYSQL_DATABASE=ghost MYSQL_USER=ghost MYSQL_PASSWORD=password]" serviceName=mysql taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : update network mode" serviceName=mysql taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated container_name as  mysql" serviceName=mysql taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Tag containers in pod with taskId and executorId " serviceName=mysql taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Add cgroup parent /mesos/ general" serviceName=mysql taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Set ports list :  [1000:3306 2000:2368 1000:2368 2000:3306 1000:3306]" serviceName=mysql taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated ports as  [1000:3306 2000:2368 1000:2368 2000:3306 1000:3306]" serviceName=mysql taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : update network mode" serviceName=ghost taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated container_name as  ghostlocal" serviceName=ghost taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Tag containers in pod with taskId and executorId " serviceName=ghost taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Add cgroup parent /mesos/ general" serviceName=ghost taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Set ports list :  [1000:3306 2000:2368 1000:2368 2000:3306 1000:3306 1001:2368]" serviceName=ghost taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated ports as  [1000:3306 2000:2368 1000:2368 2000:3306 1000:3306 1001:2368]" serviceName=ghost taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Updated compose files, current context: map[docker-infra-container.yml:map[networks:map[default:map[external:map[name:net]]] services:map[networkproxy:map[container_name:networkproxy_0.1 image:dcego/networkproxy:1.2]] version:2.1] testdata/test.yml-generated.yml:map[services:map[ghost:map[cgroup_parent:/mesos/general container_name:ghostlocal depends_on:[mysql] environment:map[PYTHONUNBUFFERED:1] image:dockerhub.paypalcorp.com/kkrishna/ghostlocal:1.0 labels:[primary.container=true executorId=exeutorid taskId=] network_mode:service:networkproxy] mysql:map[cgroup_parent:/mesos/general container_name:mysql environment:[MYSQL_ROOT_PASSWORD=root MYSQL_DATABASE=ghost MYSQL_USER=ghost MYSQL_PASSWORD=password PYTHONUNBUFFERED=1] image:mysql labels:map[executorId:exeutorid taskId:] network_mode:service:networkproxy]] version:2.1]]\n" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="Starting Edit compose file docker-infra-container.yml" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Updated container_name as  networkproxy_0.1" serviceName=networkproxy taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Tag containers in pod with taskId and executorId " serviceName=networkproxy taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Edit Compose File : Add cgroup parent /mesos/ general" serviceName=networkproxy taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Add services ports mapping to infra container  [1000:3306 2000:2368 1000:2368 2000:3306 1000:3306 1001:2368]" serviceName=networkproxy taskId=
+time="2021-04-20T13:46:15-07:00" level=info msg="Updated compose files, current context: map[docker-infra-container.yml-generated.yml:map[networks:map[default:map[external:map[name:net]]] services:map[networkproxy:map[cgroup_parent:/mesos/general container_name:networkproxy_0.1 environment:map[PYTHONUNBUFFERED:1] image:dcego/networkproxy:1.2 labels:map[executorId:exeutorid taskId:] ports:[1000:3306 2000:2368 1000:2368 2000:3306 1000:3306 1001:2368]]] version:2.1] testdata/test.yml-generated.yml:map[services:map[ghost:map[cgroup_parent:/mesos/general container_name:ghostlocal depends_on:[mysql] environment:map[PYTHONUNBUFFERED:1] image:dockerhub.paypalcorp.com/kkrishna/ghostlocal:1.0 labels:[primary.container=true executorId=exeutorid taskId=] network_mode:service:networkproxy] mysql:map[cgroup_parent:/mesos/general container_name:mysql environment:[MYSQL_ROOT_PASSWORD=root MYSQL_DATABASE=ghost MYSQL_USER=ghost MYSQL_PASSWORD=password PYTHONUNBUFFERED=1] image:mysql labels:map[executorId:exeutorid taskId:] network_mode:service:networkproxy]] version:2.1]]\n" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="Added extra_hosts section to the file docker-infra-container.yml-generated.yml under service networkproxy" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="====================context out====================" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="map[docker-infra-container.yml-generated.yml:map[networks:map[default:map[external:map[name:net]]] services:map[networkproxy:map[cgroup_parent:/mesos/general container_name:networkproxy_0.1 environment:map[PYTHONUNBUFFERED:1] extra_hosts:[ip:0.0.0.0] image:dcego/networkproxy:1.2 labels:map[executorId:exeutorid taskId:] ports:[1000:3306 2000:2368 1000:2368 2000:3306 1000:3306 1001:2368]]] version:2.1] testdata/test.yml-generated.yml:map[services:map[ghost:map[cgroup_parent:/mesos/general container_name:ghostlocal depends_on:[mysql] environment:map[PYTHONUNBUFFERED:1] image:dockerhub.paypalcorp.com/kkrishna/ghostlocal:1.0 labels:[primary.container=true executorId=exeutorid taskId=] network_mode:service:networkproxy] mysql:map[cgroup_parent:/mesos/general container_name:mysql environment:[MYSQL_ROOT_PASSWORD=root MYSQL_DATABASE=ghost MYSQL_USER=ghost MYSQL_PASSWORD=password PYTHONUNBUFFERED=1] image:mysql labels:map[executorId:exeutorid taskId:] network_mode:service:networkproxy]] version:2.1]]" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="Return massaged file list (Required Compose File List),  [testdata/test.yml-generated.yml docker-infra-container.yml-generated.yml]" plugin=general
+time="2021-04-20T13:46:15-07:00" level=info msg="Current port is  1002" plugin=general
