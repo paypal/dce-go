@@ -42,7 +42,7 @@ type ComposePlugin interface {
 	PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error
 
 	// execute the task to shutdown the pod
-	Shutdown(executor.ExecutorDriver) error
+	Shutdown(taskInfo *mesos.TaskInfo, ed executor.ExecutorDriver) error
 }
 
 // PodStatusHook allows custom implementations to be plugged when a Pod (mesos task) status changes. Currently this is
