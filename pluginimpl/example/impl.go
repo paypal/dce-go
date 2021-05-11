@@ -99,7 +99,7 @@ func (ex *exampleExt) PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo
 	return nil
 }
 
-func (ex *exampleExt) Shutdown(executor.ExecutorDriver) error {
+func (ex *exampleExt) Shutdown(taskInfo *mesos.TaskInfo, ed executor.ExecutorDriver) error {
 	logger.Println("Shutdown begin")
 	return nil
 }

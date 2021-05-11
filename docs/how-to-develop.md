@@ -74,7 +74,7 @@ type ComposePlugin interface {
        PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error
        
        // Shutdown is invoked prior to executor shutdown in context of Shutdown callback. 
-       Shutdown(executor.ExecutorDriver) error
+       Shutdown(taskInfo *mesos.TaskInfo, ed executor.ExecutorDriver)
 }
 ```
 PreLaunchTask and PostLaunchTask have Context object as first parameter. This is used to pass around parsed compose files so as to avoid loading from files by individual plugins.
@@ -127,7 +127,7 @@ func (ex *exampleExt) PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo
 	return nil
 }
 
-func (ex *exampleExt) Shutdown(executor.ExecutorDriver) error {
+func (ex *exampleExt) Shutdown(taskInfo *mesos.TaskInfo, ed executor.ExecutorDriver) {
 	logger.Println("Shutdown Starting")
 	return nil
 }

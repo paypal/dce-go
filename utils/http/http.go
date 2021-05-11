@@ -38,7 +38,7 @@ func GenBody(t interface{}) io.Reader {
 }
 
 // http post
-func PostRequest(ctx context.Context, transport http.RoundTripper, url string, body io.Reader) ([]byte, error) {
+func PostRequest(ctx context.Context, transport http.RoundTripper, url string, body io.Reader, header map[string]string) ([]byte, error) {
 	if transport == nil {
 		transport = http.DefaultTransport
 	}
@@ -50,6 +50,9 @@ func PostRequest(ctx context.Context, transport http.RoundTripper, url string, b
 	if err != nil {
 		log.Println("Error creating http request : ", err.Error())
 		return nil, err
+	}
+	for k, v := range header {
+		req.Header.Add(k, v)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)

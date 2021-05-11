@@ -228,7 +228,7 @@ func (gp *generalExt) PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo
 	return err
 }
 
-func (gp *generalExt) Shutdown(executor.ExecutorDriver) error {
+func (gp *generalExt) Shutdown(taskInfo *mesos.TaskInfo, ed executor.ExecutorDriver) error {
 	logger.Println("Shutdown begin")
 	return nil
 }
