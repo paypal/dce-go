@@ -71,7 +71,7 @@ func (exec *dockerComposeExecutor) Disconnected(exec.ExecutorDriver) {
 }
 
 func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
-	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
+	initlogger()
 	appStartTime := time.Now()
 
 	log.Println("====================Mesos LaunchTask====================")
@@ -505,5 +505,17 @@ func switchDebugMode() {
 		config.GetConfig().Set(config.DEBUG_MODE, true)
 		log.Println("###Turn on debug mode###")
 		log.SetLevel(log.DebugLevel)
+	}
+}
+
+// redirect the output, and set the loglevel
+func initlogger() {
+	log.SetOutput(config.CreateFileAppendMode(types.DCE_OUT))
+	loglevel := config.GetConfig().GetString(types.LOGLEVEL)
+	ll, err := log.ParseLevel(loglevel)
+	if err == nil {
+		log.SetLevel(ll)
+	} else {
+		log.SetLevel(log.InfoLevel)
 	}
 }

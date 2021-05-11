@@ -84,6 +84,7 @@ func (status HealthStatus) String() string {
 }
 
 const (
+	LOGLEVEL                = "loglevel"
 	CONTAINER_NAME          = "container_name"
 	NETWORK_MODE            = "network_mode"
 	HEALTH_CHECK            = "healthcheck"
