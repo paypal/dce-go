@@ -22,6 +22,7 @@ import (
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
+	"github.com/paypal/dce-go/utils/pod"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -52,7 +53,7 @@ func (ex *exampleExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles 
 	// Then pass to next plugin.
 
 	// Get value from context
-	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	filesMap := pod.GetServiceDetail(taskInfo)
 
 	// Add label in each service, in each compose YML file
 	for _, file := range *composeFiles {
@@ -69,7 +70,7 @@ func (ex *exampleExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles 
 	}
 
 	// Save the changes back to context
-	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
+	pod.UpdateServiceDetail(taskInfo, filesMap)
 
 	return nil
 }

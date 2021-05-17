@@ -16,12 +16,13 @@ package general
 
 import (
 	"container/list"
-	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	mesos "github.com/mesos/mesos-go/mesosproto"
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
@@ -38,11 +39,11 @@ const (
 	DEFAULT_VERSION = "2.1"
 )
 
-func editComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element,
+func editComposeFile(taskInfo *mesos.TaskInfo, file string, executorId string, taskId string, ports *list.Element,
 	extraHosts map[interface{}]bool) (string, *list.Element, error) {
 	var err error
 
-	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	filesMap := pod.GetServiceDetail(taskInfo)
 	if filesMap[file][types.SERVICES] == nil {
 		log.Printf("Services is empty for file %s \n", file)
 		return "", ports, nil
@@ -69,7 +70,7 @@ func editComposeFile(ctx *context.Context, file string, executorId string, taskI
 		delete(filesMap, file)
 		file = file + utils.FILE_POSTFIX
 	}
-	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
+	pod.UpdateServiceDetail(taskInfo, filesMap)
 
 	logger.Printf("Updated compose files, current context: %v\n", filesMap)
 	return file, ports, err
@@ -240,9 +241,9 @@ func updateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	return ports, nil
 }
 
-func postEditComposeFile(ctx *context.Context, file string) error {
+func postEditComposeFile(taskInfo *mesos.TaskInfo, file string) error {
 	var err error
-	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	filesMap := pod.GetServiceDetail(taskInfo)
 	if filesMap[file][types.SERVICES] == nil {
 		return nil
 	}
@@ -254,9 +255,8 @@ func postEditComposeFile(ctx *context.Context, file string) error {
 			return err
 		}
 	}
-	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
-
-	err = utils.WriteChangeToFiles(*ctx)
+	pod.UpdateServiceDetail(taskInfo, filesMap)
+	err = utils.WriteChangeToFiles(taskInfo)
 	if err != nil {
 		log.Errorf("Failure writing updated compose files : %v", err)
 		return err
@@ -304,12 +304,8 @@ func scanForExtraHostsSection(containerDetails map[interface{}]interface{}, extr
 	}
 }
 
-func addExtraHostsSection(ctx *context.Context, file, svcName string, extraHostsCollection map[interface{}]bool) {
-	filesMap, ok := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
-	if !ok {
-		log.Warnln("Couldn't get service detail")
-		return
-	}
+func addExtraHostsSection(taskInfo *mesos.TaskInfo, file, svcName string, extraHostsCollection map[interface{}]bool) {
+	filesMap := pod.GetServiceDetail(taskInfo)
 	servMap, ok := filesMap[file][types.SERVICES].(map[interface{}]interface{})
 	if !ok {
 		log.Warnf("Couldn't get content of compose file %s\n", file)

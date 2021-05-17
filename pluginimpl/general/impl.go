@@ -69,11 +69,11 @@ func (ge *generalExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles 
 	var err error
 
 	logger.Println("====================context in====================")
-	logger.Println((*ctx).Value(types.SERVICE_DETAIL))
+	logger.Printf("SERVICE_DETAIL: %+v", pod.GetServiceDetail(taskInfo))
 
 	logger.Printf("Current compose files list: %v", *composeFiles)
 
-	if (*ctx).Value(types.SERVICE_DETAIL) == nil {
+	if len(pod.GetServiceDetail(taskInfo)) == 0 {
 		var servDetail types.ServiceDetail
 		servDetail, err = utils.ParseYamls(composeFiles)
 		if err != nil {
@@ -81,13 +81,13 @@ func (ge *generalExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles 
 			return err
 		}
 
-		*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, servDetail)
+		pod.UpdateServiceDetail(taskInfo, servDetail)
 	}
 
 	currentPort := pod.GetPorts(taskInfo)
 
 	// Create infra container yml file
-	infrayml, err := CreateInfraContainer(ctx, types.INFRA_CONTAINER_YML)
+	infrayml, err := CreateInfraContainer(taskInfo, types.INFRA_CONTAINER_YML)
 	if err != nil {
 		logger.Errorln("Error creating infra container : ", err.Error())
 		return err
@@ -100,7 +100,7 @@ func (ge *generalExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles 
 	for i, file := range *composeFiles {
 		logger.Printf("Starting Edit compose file %s", file)
 		var editedFile string
-		editedFile, currentPort, err = editComposeFile(ctx, file, executorId, taskInfo.GetTaskId().GetValue(), currentPort, extraHosts)
+		editedFile, currentPort, err = editComposeFile(taskInfo, file, executorId, taskInfo.GetTaskId().GetValue(), currentPort, extraHosts)
 		if err != nil {
 			logger.Errorln("Error editing compose file : ", err.Error())
 			return err
@@ -119,9 +119,9 @@ func (ge *generalExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles 
 	// Remove infra container yml file if network mode is host
 	if config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
 		logger.Printf("Remove file: %s\n", types.INFRA_CONTAINER_GEN_YML)
-		filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+		filesMap := pod.GetServiceDetail(taskInfo)
 		delete(filesMap, editedFiles[indexInfra])
-		*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
+		pod.UpdateServiceDetail(taskInfo, filesMap)
 		editedFiles = append(editedFiles[:indexInfra], editedFiles[indexInfra+1:]...)
 		err = utils.DeleteFile(types.INFRA_CONTAINER_YML)
 		if err != nil {
@@ -129,11 +129,11 @@ func (ge *generalExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles 
 		}
 	} else {
 		// Move extra_hosts from other compose files to infra container
-		addExtraHostsSection(ctx, infraYmlPath, types.INFRA_CONTAINER, extraHosts)
+		addExtraHostsSection(taskInfo, infraYmlPath, types.INFRA_CONTAINER, extraHosts)
 	}
 
 	logger.Println("====================context out====================")
-	logger.Println((*ctx).Value(types.SERVICE_DETAIL))
+	logger.Printf("SERVICE_DETAIL: %+v", pod.GetServiceDetail(taskInfo))
 
 	*composeFiles = editedFiles
 
@@ -154,7 +154,7 @@ func (gp *generalExt) LaunchTaskPostImagePull(ctx *context.Context, composeFiles
 func (gp *generalExt) PostLaunchTask(ctx *context.Context, files []string, taskInfo *mesos.TaskInfo) (string, error) {
 	logger.Println("PostLaunchTask begin")
 	if pod.SinglePort {
-		err := postEditComposeFile(ctx, infraYmlPath)
+		err := postEditComposeFile(taskInfo, infraYmlPath)
 		if err != nil {
 			log.Errorf("PostLaunchTask: Error editing compose file : %v", err)
 			return types.POD_FAILED.String(), err
@@ -233,7 +233,7 @@ func (gp *generalExt) Shutdown(taskInfo *mesos.TaskInfo, ed executor.ExecutorDri
 	return nil
 }
 
-func CreateInfraContainer(ctx *context.Context, path string) (string, error) {
+func CreateInfraContainer(taskInfo *mesos.TaskInfo, path string) (string, error) {
 	containerDetail := make(map[interface{}]interface{})
 	service := make(map[interface{}]interface{})
 	_yaml := make(map[interface{}]interface{})
@@ -284,13 +284,10 @@ func CreateInfraContainer(ctx *context.Context, path string) (string, error) {
 		return "", err
 	}
 
-	fileMap, ok := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
-	if !ok {
-		log.Warningln("SERVICE_DETAIL missing in context value")
-		fileMap = types.ServiceDetail{}
-	}
+	fileMap := pod.GetServiceDetail(taskInfo)
 
 	fileMap[fileName] = _yaml
-	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, fileMap)
+
+	pod.UpdateServiceDetail(taskInfo, fileMap)
 	return fileName, nil
 }

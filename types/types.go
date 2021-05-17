@@ -17,6 +17,8 @@ package types
 import (
 	exec_cmd "os/exec"
 
+	jsoniter "github.com/json-iterator/go"
+
 	"github.com/mesos/mesos-go/mesosproto"
 )
 
@@ -117,15 +119,36 @@ const (
 	NO_FOLDER               = "dontcreatefolder"
 	RM_INFRA_CONTAINER      = "rm_infra_container"
 	COMPOSE_HTTP_TIMEOUT    = "COMPOSE_HTTP_TIMEOUT"
-	SERVICE_DETAIL          = "serviceDetail"
-	INFRA_CONTAINER         = "networkproxy"
-	IS_SERVICE              = "isService"
-	FOREVER                 = 1<<63 - 1
-	DCE_OUT                 = "dce.out"
-	DCE_ERR                 = "dce.err"
+	//todo: move it from context to taskInfo
+	SERVICE_DETAIL  = "serviceDetail"
+	INFRA_CONTAINER = "networkproxy"
+	IS_SERVICE      = "isService"
+	FOREVER         = 1<<63 - 1
+	DCE_OUT         = "dce.out"
+	DCE_ERR         = "dce.err"
 )
 
-type ServiceDetail map[interface{}](map[interface{}]interface{})
+type ServiceDetail map[interface{}]map[interface{}]interface{}
+
+func (sd *ServiceDetail) UnmarshalJSON(data []byte) error {
+	var decoder = jsoniter.ConfigCompatibleWithStandardLibrary
+	err := decoder.Unmarshal(data, sd)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sd ServiceDetail) MarshalJSON() ([]byte, error) {
+	if sd == nil {
+		return []byte{}, nil
+	}
+	var encoder = jsoniter.ConfigCompatibleWithStandardLibrary
+
+	val := map[interface{}]map[interface{}]interface{}(sd)
+	return encoder.Marshal(val)
+}
 
 type CmdResult struct {
 	Result  error
