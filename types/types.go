@@ -126,7 +126,8 @@ const (
 	DCE_ERR         = "dce.err"
 )
 
-type ServiceDetail map[interface{}]map[interface{}]interface{}
+// ServiceDetail key is filepath, value is map to store Unmarshal the docker-compose.yaml
+type ServiceDetail map[string]map[string]interface{}
 
 type CmdResult struct {
 	Result  error

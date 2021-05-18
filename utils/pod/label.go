@@ -22,7 +22,7 @@ func GetServiceDetail(taskInfo *mesos.TaskInfo) types.ServiceDetail {
 	}
 
 	if sd == nil {
-		sd = make(map[interface{}]map[interface{}]interface{})
+		sd = make(map[string]map[string]interface{})
 	}
 	return sd
 }

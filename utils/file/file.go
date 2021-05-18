@@ -229,7 +229,7 @@ func WriteChangeToFiles(taskInfo *mesos.TaskInfo) error {
 		if err != nil {
 			log.Errorf("error occured while marshalling file from fileMap: %s", err)
 		}
-		_, err = WriteToFile(file.(string), content)
+		_, err = WriteToFile(file, content)
 		if err != nil {
 			return err
 		}
@@ -241,7 +241,7 @@ func DumpPluginModifiedComposeFiles(taskInfo *mesos.TaskInfo, plugin, funcName s
 	filesMap := pod.GetServiceDetail(taskInfo)
 	for file := range filesMap {
 		content, _ := yaml.Marshal(filesMap[file])
-		fParts := strings.Split(file.(string), PATH_DELIMITER)
+		fParts := strings.Split(file, PATH_DELIMITER)
 		if len(fParts) < 2 {
 			log.Printf("Skip dumping modified compose file by plugin %s, since file name is invalid %s", plugin, file)
 			return
@@ -486,14 +486,15 @@ func DeFolderPath(filepaths []string) []string {
 	return filenames
 }
 
-func ParseYamls(files *[]string) (map[interface{}](map[interface{}]interface{}), error) {
-	res := make(map[interface{}](map[interface{}]interface{}))
+func ParseYamls(files *[]string) (map[string]map[string]interface{}, error) {
+	res := make(map[string]map[string]interface{})
 	for _, file := range *files {
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
 			log.Errorf("Error reading file %s : %v", file, err)
 		}
-		m := make(map[interface{}]interface{})
+		// unmarshal the docker-compose.yaml
+		m := make(map[string]interface{})
 		err = yaml.Unmarshal(data, &m)
 		if err != nil {
 			log.Errorf("Error unmarshalling %v", err)

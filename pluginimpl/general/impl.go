@@ -236,7 +236,7 @@ func (gp *generalExt) Shutdown(taskInfo *mesos.TaskInfo, ed executor.ExecutorDri
 func CreateInfraContainer(taskInfo *mesos.TaskInfo, path string) (string, error) {
 	containerDetail := make(map[interface{}]interface{})
 	service := make(map[interface{}]interface{})
-	_yaml := make(map[interface{}]interface{})
+	_yaml := make(map[string]interface{})
 
 	containerDetail[types.CONTAINER_NAME] = config.GetConfigSection(config.INFRA_CONTAINER)[types.CONTAINER_NAME]
 	containerDetail[types.IMAGE] = config.GetConfigSection(config.INFRA_CONTAINER)[types.IMAGE]
