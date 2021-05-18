@@ -15,9 +15,6 @@
 package http
 
 import (
-	"context"
-	"encoding/json"
-	"net/http"
 	"testing"
 )
 
@@ -31,25 +28,6 @@ type Label struct {
 	ServiceName string
 	Mobile      bool
 	Id          string
-}
-
-func TestGetRequest(t *testing.T) {
-	tr := &http.Transport{}
-	data, err := GetRequest(context.Background(), tr, "http://www.mocky.io/v2/589bb17d100000701266e5e1")
-	if err != nil {
-		t.Error(err.Error())
-	}
-	type AllocateIPReply struct {
-		IpAddress        string
-		LinkLocalAddress string
-		Error            string
-		XXX_unrecognized []byte `json:"-"`
-	}
-	var aip AllocateIPReply
-	json.Unmarshal(data, &aip)
-	if aip.IpAddress == "" || aip.LinkLocalAddress == "" {
-		t.Fatal("expected IpAddress and LinkLocalAddress, but got empty")
-	}
 }
 
 func TestGenBody(t *testing.T) {

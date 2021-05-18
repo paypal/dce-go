@@ -16,13 +16,9 @@ package http
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
-	"net/http"
 
-	"github.com/paypal/dce-go/config"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -35,74 +31,4 @@ func GenBody(t interface{}) io.Reader {
 	}
 	log.Println("Request Body : ", string(tjson))
 	return bytes.NewReader(tjson)
-}
-
-// http post
-func PostRequest(ctx context.Context, transport http.RoundTripper, url string, body io.Reader, header map[string]string) ([]byte, error) {
-	if transport == nil {
-		transport = http.DefaultTransport
-	}
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   config.GetHttpTimeout(),
-	}
-	req, err := http.NewRequestWithContext(ctx, "POST", url, body)
-	if err != nil {
-		log.Println("Error creating http request : ", err.Error())
-		return nil, err
-	}
-	for k, v := range header {
-		req.Header.Add(k, v)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println("Error posting http request : ", err.Error())
-		return nil, err
-	}
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println("Error reading http response : ", err.Error())
-		return nil, err
-	}
-	err = resp.Body.Close()
-	if err != nil {
-		log.Errorf("Failure to close response body :%v", err)
-		return nil, err
-	}
-	return respBody, nil
-}
-
-// http get
-func GetRequest(ctx context.Context, transport http.RoundTripper, url string) ([]byte, error) {
-	if transport == nil {
-		transport = http.DefaultTransport
-	}
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   config.GetHttpTimeout(),
-	}
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		log.Println("Error creating http request : ", err.Error())
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println("Error getting http request : ", err.Error())
-		return nil, err
-	}
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println("Error reading http response : ", err.Error())
-		return nil, err
-	}
-	err = resp.Body.Close()
-	err = resp.Body.Close()
-	if err != nil {
-		log.Errorf("Failed to close response body :%v", err)
-		return nil, err
-	}
-	return respBody, nil
 }

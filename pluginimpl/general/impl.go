@@ -58,7 +58,7 @@ func (p *generalExt) Name() string {
 	return "general"
 }
 
-func (ge *generalExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
+func (ge *generalExt) LaunchTaskPreImagePull(ctx context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
 	logger.Println("LaunchTaskPreImagePull begin")
 
 	if composeFiles == nil || len(*composeFiles) == 0 {
@@ -146,12 +146,12 @@ func (ge *generalExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles 
 	return nil
 }
 
-func (gp *generalExt) LaunchTaskPostImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
+func (gp *generalExt) LaunchTaskPostImagePull(ctx context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
 	logger.Println("LaunchTaskPostImagePull begin")
 	return nil
 }
 
-func (gp *generalExt) PostLaunchTask(ctx *context.Context, files []string, taskInfo *mesos.TaskInfo) (string, error) {
+func (gp *generalExt) PostLaunchTask(ctx context.Context, files []string, taskInfo *mesos.TaskInfo) (string, error) {
 	logger.Println("PostLaunchTask begin")
 	if pod.SinglePort {
 		err := postEditComposeFile(taskInfo, infraYmlPath)
