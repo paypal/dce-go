@@ -17,8 +17,6 @@ package types
 import (
 	exec_cmd "os/exec"
 
-	jsoniter "github.com/json-iterator/go"
-
 	"github.com/mesos/mesos-go/mesosproto"
 )
 
@@ -129,26 +127,6 @@ const (
 )
 
 type ServiceDetail map[interface{}]map[interface{}]interface{}
-
-func (sd *ServiceDetail) UnmarshalJSON(data []byte) error {
-	var decoder = jsoniter.ConfigCompatibleWithStandardLibrary
-	err := decoder.Unmarshal(data, sd)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (sd ServiceDetail) MarshalJSON() ([]byte, error) {
-	if sd == nil {
-		return []byte{}, nil
-	}
-	var encoder = jsoniter.ConfigCompatibleWithStandardLibrary
-
-	val := map[interface{}]map[interface{}]interface{}(sd)
-	return encoder.Marshal(val)
-}
 
 type CmdResult struct {
 	Result  error

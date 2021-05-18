@@ -56,10 +56,10 @@ func UpdateServiceDetail(taskInfo *mesos.TaskInfo, sd types.ServiceDetail) error
 }
 
 func marshalToString(sd types.ServiceDetail) (string, error) {
-	bt, err := sd.MarshalJSON()
+	out, err := yaml.Marshal(sd)
 	if err != nil {
 		return "", errors.Wrapf(err, "fail to marshal %+v", sd)
 	}
-	val := string(bt)
+	val := string(out)
 	return val, nil
 }

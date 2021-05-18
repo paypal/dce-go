@@ -446,24 +446,6 @@ func IndexArray(array []string, element string) int {
 	return -1
 }
 
-func SearchInArray(array []interface{}, key string) string {
-	for _, e := range array {
-		if s := strings.Split(e.(string), MAP_DELIMITER); len(s) > 1 && s[0] == key {
-			return s[1]
-		}
-	}
-	return ""
-}
-
-// []string to []interface{}
-func FormatInterfaceArray(s []string) []interface{} {
-	t := make([]interface{}, len(s))
-	for i, v := range s {
-		t[i] = v
-	}
-	return t
-}
-
 // generate directories
 func GenerateFileDirs(paths []string) error {
 	log.Println("Generate Folders (0777): ", paths)
