@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"container/list"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,6 +28,7 @@ import (
 	"strings"
 
 	mesos "github.com/mesos/mesos-go/mesosproto"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
@@ -522,7 +522,10 @@ func ParseYamls(files *[]string) (map[interface{}](map[interface{}]interface{}),
 		m := make(map[interface{}]interface{})
 		err = yaml.Unmarshal(data, &m)
 		if err != nil {
-			log.Errorf("Error unmarshalling %v", err)
+			return res, errors.Errorf("Error unmarshalling %v", err)
+		}
+		if len(FolderPath(strings.Fields(file))[0]) == 0 {
+			return res, errors.Errorf("folder %s under %+v is empty", strings.Fields(file), FolderPath)
 		}
 		res[FolderPath(strings.Fields(file))[0]] = m
 	}
