@@ -60,7 +60,7 @@ const (
 	CONFIG_OVERRIDE_PREFIX               = "config."
 
 	// monitor
-	EnableTrace   = "monitor.trace.enabled"
+	EnableTrace   = "monitor.traces.enabled"
 	EnableMetrics = "monitor.metrics.enabled"
 )
 
