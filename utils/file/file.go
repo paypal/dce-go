@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"bytes"
 	"container/list"
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -223,14 +222,14 @@ func DeleteFile(file string) error {
 	return os.Remove(file)
 }
 
-func WriteChangeToFiles(ctx context.Context) error {
-	filesMap := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+func WriteChangeToFiles(taskInfo *mesos.TaskInfo) error {
+	filesMap := pod.GetServiceDetail(taskInfo)
 	for file := range filesMap {
 		content, err := yaml.Marshal(filesMap[file])
 		if err != nil {
 			log.Errorf("error occured while marshalling file from fileMap: %s", err)
 		}
-		_, err = WriteToFile(file.(string), content)
+		_, err = WriteToFile(file, content)
 		if err != nil {
 			return err
 		}
@@ -238,18 +237,11 @@ func WriteChangeToFiles(ctx context.Context) error {
 	return nil
 }
 
-func DumpPluginModifiedComposeFiles(ctx context.Context, plugin, funcName string, pluginOrder int) {
-	if ctx.Value(types.SERVICE_DETAIL) == nil {
-
-	}
-	filesMap, ok := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
-	if !ok {
-		log.Printf("Skip dumping modified compose file by plugin %s", plugin)
-		return
-	}
+func DumpPluginModifiedComposeFiles(taskInfo *mesos.TaskInfo, plugin, funcName string, pluginOrder int) {
+	filesMap := pod.GetServiceDetail(taskInfo)
 	for file := range filesMap {
 		content, _ := yaml.Marshal(filesMap[file])
-		fParts := strings.Split(file.(string), PATH_DELIMITER)
+		fParts := strings.Split(file, PATH_DELIMITER)
 		if len(fParts) < 2 {
 			log.Printf("Skip dumping modified compose file by plugin %s, since file name is invalid %s", plugin, file)
 			return
@@ -454,24 +446,6 @@ func IndexArray(array []string, element string) int {
 	return -1
 }
 
-func SearchInArray(array []interface{}, key string) string {
-	for _, e := range array {
-		if s := strings.Split(e.(string), MAP_DELIMITER); len(s) > 1 && s[0] == key {
-			return s[1]
-		}
-	}
-	return ""
-}
-
-// []string to []interface{}
-func FormatInterfaceArray(s []string) []interface{} {
-	t := make([]interface{}, len(s))
-	for i, v := range s {
-		t[i] = v
-	}
-	return t
-}
-
 // generate directories
 func GenerateFileDirs(paths []string) error {
 	log.Println("Generate Folders (0777): ", paths)
@@ -512,14 +486,15 @@ func DeFolderPath(filepaths []string) []string {
 	return filenames
 }
 
-func ParseYamls(files *[]string) (map[interface{}](map[interface{}]interface{}), error) {
-	res := make(map[interface{}](map[interface{}]interface{}))
+func ParseYamls(files *[]string) (map[string]map[string]interface{}, error) {
+	res := make(map[string]map[string]interface{})
 	for _, file := range *files {
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
 			log.Errorf("Error reading file %s : %v", file, err)
 		}
-		m := make(map[interface{}]interface{})
+		// unmarshal the docker-compose.yaml
+		m := make(map[string]interface{})
 		err = yaml.Unmarshal(data, &m)
 		if err != nil {
 			return res, errors.Errorf("Error unmarshalling %v", err)

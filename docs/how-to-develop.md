@@ -65,7 +65,7 @@ type ComposePlugin interface {
        PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error
        
        // PostLaunchTask is invoked after pod launch in context of executor LaunchTask callback.
-       PostLaunchTask(ctx *context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error)
+       PostLaunchTask(ctx context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error)
        
        // PreKillTask is invoked prior to killing pod in context of executor KillTask callback. 
        PreKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error
@@ -112,7 +112,7 @@ func (ex *exampleExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 	return nil
 }
 
-func (ex *exampleExt) PostLaunchTask(ctx *context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error) {
+func (ex *exampleExt) PostLaunchTask(ctx context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error) {
 	logger.Println("PostLaunchTask Starting")
 	return "", nil
 }

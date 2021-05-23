@@ -151,7 +151,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPreImagePull", ext.Name())
 			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
-			err = ext.LaunchTaskPreImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
+			err = ext.LaunchTaskPreImagePull(ctx, &pod.ComposeFiles, executorId, taskInfo)
 			if err != nil {
 				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
 				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
@@ -160,7 +160,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
 
 			if config.EnableComposeTrace() {
-				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPreImagePull", i)
+				fileUtils.DumpPluginModifiedComposeFiles(taskInfo, pluginOrder[i], "LaunchTaskPreImagePull", i)
 			}
 		}
 		return "", err
@@ -172,7 +172,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		return
 	}
 	// Write updated compose files into pod folder
-	err = fileUtils.WriteChangeToFiles(ctx)
+	err = fileUtils.WriteChangeToFiles(taskInfo)
 	if err != nil {
 		logger.Errorf("Failure writing updated compose files : %v", err)
 		pod.SetPodStatus(types.POD_FAILED)
@@ -210,7 +210,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPostImagePull", ext.Name())
 			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
-			err = ext.LaunchTaskPostImagePull(&ctx, &pod.ComposeFiles, executorId, taskInfo)
+			err = ext.LaunchTaskPostImagePull(ctx, &pod.ComposeFiles, executorId, taskInfo)
 			if err != nil {
 				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
 				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
@@ -220,7 +220,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
 
 			if config.EnableComposeTrace() {
-				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPostImagePull", i)
+				fileUtils.DumpPluginModifiedComposeFiles(taskInfo, pluginOrder[i], "LaunchTaskPostImagePull", i)
 			}
 		}
 		return "", err
@@ -232,11 +232,11 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	}
 
 	// Service list from all compose files
-	podServices := getServices(ctx)
+	podServices := getServices(taskInfo)
 	logger.Printf("pod service list: %v", podServices)
 
 	// Write updated compose files into pod folder
-	err = fileUtils.WriteChangeToFiles(ctx)
+	err = fileUtils.WriteChangeToFiles(taskInfo)
 	if err != nil {
 		logger.Errorf("Failure writing updated compose files : %v", err)
 		pod.SetPodStatus(types.POD_FAILED)
@@ -279,7 +279,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				granularMetricStepName := fmt.Sprintf("%s_PostLaunchTask", ext.Name())
 				utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
 
-				tempStatus, err = ext.PostLaunchTask(&ctx, pod.ComposeFiles, taskInfo)
+				tempStatus, err = ext.PostLaunchTask(ctx, pod.ComposeFiles, taskInfo)
 				if err != nil {
 					logger.Errorf("Error executing PostLaunchTask : %v", err)
 					utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
@@ -430,9 +430,9 @@ func initHealthCheck(podServices map[string]bool) (types.PodStatus, error) {
 	return utils.ToPodStatus(res), err
 }
 
-func getServices(ctx context.Context) map[string]bool {
+func getServices(taskinfo *mesos.TaskInfo) map[string]bool {
+	filesMap := pod.GetServiceDetail(taskinfo)
 	podService := make(map[string]bool)
-	filesMap := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 
 	for _, file := range pod.ComposeFiles {
 		servMap := filesMap[file][types.SERVICES].(map[interface{}]interface{})

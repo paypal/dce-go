@@ -22,6 +22,7 @@ import (
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
+	"github.com/paypal/dce-go/utils/pod"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,14 +46,14 @@ func (p *exampleExt) Name() string {
 	return "example"
 }
 
-func (ex *exampleExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
+func (ex *exampleExt) LaunchTaskPreImagePull(ctx context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
 	logger.Println("LaunchTaskPreImagePull begin")
 	// docker compose YML files are saved in context as type SERVICE_DETAIL which is map[interface{}]interface{}.
 	// Massage YML files and save it in context.
 	// Then pass to next plugin.
 
 	// Get value from context
-	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	filesMap := pod.GetServiceDetail(taskInfo)
 
 	// Add label in each service, in each compose YML file
 	for _, file := range *composeFiles {
@@ -69,17 +70,17 @@ func (ex *exampleExt) LaunchTaskPreImagePull(ctx *context.Context, composeFiles 
 	}
 
 	// Save the changes back to context
-	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
+	pod.UpdateServiceDetail(taskInfo, filesMap)
 
 	return nil
 }
 
-func (ex *exampleExt) LaunchTaskPostImagePull(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
+func (ex *exampleExt) LaunchTaskPostImagePull(ctx context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error {
 	logger.Println("LaunchTaskPostImagePull begin")
 	return nil
 }
 
-func (ex *exampleExt) PostLaunchTask(ctx *context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error) {
+func (ex *exampleExt) PostLaunchTask(ctx context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error) {
 	logger.Println("PostLaunchTask begin")
 	return "", nil
 }

@@ -117,15 +117,17 @@ const (
 	NO_FOLDER               = "dontcreatefolder"
 	RM_INFRA_CONTAINER      = "rm_infra_container"
 	COMPOSE_HTTP_TIMEOUT    = "COMPOSE_HTTP_TIMEOUT"
-	SERVICE_DETAIL          = "serviceDetail"
-	INFRA_CONTAINER         = "networkproxy"
-	IS_SERVICE              = "isService"
-	FOREVER                 = 1<<63 - 1
-	DCE_OUT                 = "dce.out"
-	DCE_ERR                 = "dce.err"
+	//todo: move it from context to taskInfo
+	SERVICE_DETAIL  = "serviceDetail"
+	INFRA_CONTAINER = "networkproxy"
+	IS_SERVICE      = "isService"
+	FOREVER         = 1<<63 - 1
+	DCE_OUT         = "dce.out"
+	DCE_ERR         = "dce.err"
 )
 
-type ServiceDetail map[interface{}](map[interface{}]interface{})
+// ServiceDetail key is filepath, value is map to store Unmarshal the docker-compose.yaml
+type ServiceDetail map[string]map[string]interface{}
 
 type CmdResult struct {
 	Result  error

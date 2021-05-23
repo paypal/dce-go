@@ -34,28 +34,24 @@ import (
 func TestLaunchPod(t *testing.T) {
 	// file doesn't exist, should fail
 	files := []string{"docker-fail.yml"}
-	res := LaunchPod(files)
-	if res != types.POD_FAILED {
-		t.Fatalf("expected pod status to be POD_FAILED, but got %s", res)
-	}
+	res, err := LaunchPod(files)
+	assert.NoError(t, err)
+	assert.EqualValues(t, res, types.POD_FAILED)
 
 	// adhoc job
 	files = []string{"testdata/docker-adhoc.yml"}
-	res = LaunchPod(files)
-	if res != types.POD_STARTING {
-		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
-	}
+	res, err = LaunchPod(files)
+	assert.NoError(t, err)
+	assert.EqualValues(t, res, types.POD_STARTING)
 
 	// long running job
 	files = []string{"testdata/docker-long.yml"}
-	res = LaunchPod(files)
-	if res != types.POD_STARTING {
-		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
-	}
-	err := ForceKill(files)
-	if err != nil {
-		t.Errorf("expected no errors, but got %v", err)
-	}
+	res, err = LaunchPod(files)
+	assert.NoError(t, err)
+	assert.EqualValues(t, res, types.POD_STARTING)
+
+	err = ForceKill(files)
+	assert.NoError(t, err)
 }
 
 func TestGetContainerNetwork(t *testing.T) {
@@ -136,7 +132,8 @@ func TestKillContainer(t *testing.T) {
 	assert.Error(t, err, "test kill invalid container")
 
 	files := []string{"testdata/docker-long.yml"}
-	res := LaunchPod(files)
+	res, err := LaunchPod(files)
+	assert.NoError(t, err)
 	if res != types.POD_STARTING {
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
@@ -146,9 +143,11 @@ func TestKillContainer(t *testing.T) {
 	err = KillContainer("SIGUSR1", id)
 	assert.NoError(t, err, "Test sending kill signal to container")
 	err = KillContainer("", id)
+	assert.NoError(t, err)
 
 	config.GetConfig().Set(types.RM_INFRA_CONTAINER, true)
-	StopPod(files)
+	err = StopPod(context.Background(), files)
+	assert.NoError(t, err)
 }
 
 func TestGetAndRemoveLabel(t *testing.T) {
