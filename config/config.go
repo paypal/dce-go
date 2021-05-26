@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -131,7 +132,7 @@ func setDefaultConfig(conf *viper.Viper) {
 	conf.SetDefault(MAX_RETRY, 3)
 	conf.SetDefault(PULL_RETRY, 3)
 	conf.SetDefault(RETRY_INTERVAL, 10000)
-	conf.SetDefault(TIMEOUT, 500000)
+	conf.SetDefault(TIMEOUT, "500s")
 	conf.SetDefault(COMPOSE_STOP_TIMEOUT, 10)
 	conf.SetDefault(HTTP_TIMEOUT, 20000)
 }
@@ -148,8 +149,25 @@ func GetPullRetryCount() int {
 	return GetConfig().GetInt(PULL_RETRY)
 }
 
+// GetLaunchTimeout returns maximum time to wait until a pod becomes healthy.
+// Support value type as duration string.
+// A duration string is a possibly signed sequence of
+// decimal numbers, each with optional fraction and a unit suffix,
+// such as "300ms", "-1.5h" or "2h45m".
+// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
 func GetLaunchTimeout() time.Duration {
-	return time.Duration(GetConfig().GetInt(TIMEOUT))
+	// Making backward compatible change to support config value of `launchtask.timeout` as duration (e.g. 500s),
+	// as well as integer which is existing value type
+	valStr := GetConfig().GetString(TIMEOUT)
+	if valInt, err := strconv.Atoi(valStr); err == nil {
+		return time.Duration(valInt)
+	}
+	duration, err := time.ParseDuration(valStr)
+	if err != nil {
+		log.Warningf("unable to parse launchtask.timeout from %s to duration, using 500s as default value", valStr)
+		return 500 * time.Second
+	}
+	return duration
 }
 
 func GetStopTimeout() int {

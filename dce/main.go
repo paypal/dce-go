@@ -124,7 +124,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 
 	var cancel context.CancelFunc
 	ctx = context.Background()
-	ctx, cancel = context.WithTimeout(ctx, config.GetLaunchTimeout()*time.Millisecond)
+	ctx, cancel = context.WithTimeout(ctx, config.GetLaunchTimeout())
 
 	go pod.WaitOnPod(&ctx)
 
@@ -419,9 +419,9 @@ func pullImage() error {
 }
 
 func initHealthCheck(podServices map[string]bool) (types.PodStatus, error) {
-	res, err := wait.WaitUntil(config.GetLaunchTimeout()*time.Millisecond, wait.ConditionCHFunc(func(healthCheckReply chan string) {
+	res, err := wait.WaitUntil(config.GetLaunchTimeout(), func(healthCheckReply chan string) {
 		pod.HealthCheck(pod.ComposeFiles, podServices, healthCheckReply)
-	}))
+	})
 
 	if err != nil {
 		log.Printf("POD_INIT_HEALTH_CHECK_TIMEOUT -- %v", err)

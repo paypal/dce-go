@@ -167,7 +167,7 @@ func (ex *exampleExt) Shutdown(executor.ExecutorDriver) error {
        pullretry: 3
        maxretry: 3
        retryinterval: 10000
-       timeout: 500000
+       timeout: 500s
     plugins:
        pluginorder: general,example
     cleanpod:

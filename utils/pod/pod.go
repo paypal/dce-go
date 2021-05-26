@@ -549,7 +549,7 @@ func ValidateCompose(files []string) error {
 		return err
 	}
 
-	err = waitUtil.WaitCmd(config.GetLaunchTimeout()*time.Millisecond, &types.CmdResult{
+	err = waitUtil.WaitCmd(config.GetLaunchTimeout(), &types.CmdResult{
 		Command: cmd,
 	})
 
@@ -584,7 +584,7 @@ func PullImage(files []string) error {
 		return err
 	}
 
-	err = waitUtil.WaitCmd(config.GetLaunchTimeout()*time.Millisecond, &types.CmdResult{
+	err = waitUtil.WaitCmd(config.GetLaunchTimeout(), &types.CmdResult{
 		Command: cmd,
 	})
 	if err != nil {
