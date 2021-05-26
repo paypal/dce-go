@@ -43,7 +43,7 @@ func editComposeFile(taskInfo *mesos.TaskInfo, file string, executorId string, t
 	extraHosts map[interface{}]bool) (string, *list.Element, error) {
 	var err error
 
-	filesMap := pod.GetServiceDetail(taskInfo)
+	filesMap := pod.GetServiceDetail()
 	if filesMap[file][types.SERVICES] == nil {
 		log.Printf("Services is empty for file %s \n", file)
 		return "", ports, nil
@@ -70,7 +70,7 @@ func editComposeFile(taskInfo *mesos.TaskInfo, file string, executorId string, t
 		delete(filesMap, file)
 		file = file + utils.FILE_POSTFIX
 	}
-	pod.UpdateServiceDetail(taskInfo, filesMap)
+	pod.SetServiceDetail(filesMap)
 
 	logger.Printf("Updated compose files, current context: %v\n", filesMap)
 	return file, ports, err
@@ -243,7 +243,7 @@ func updateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 
 func postEditComposeFile(taskInfo *mesos.TaskInfo, file string) error {
 	var err error
-	filesMap := pod.GetServiceDetail(taskInfo)
+	filesMap := pod.GetServiceDetail()
 	if filesMap[file][types.SERVICES] == nil {
 		return nil
 	}
@@ -255,7 +255,7 @@ func postEditComposeFile(taskInfo *mesos.TaskInfo, file string) error {
 			return err
 		}
 	}
-	pod.UpdateServiceDetail(taskInfo, filesMap)
+	pod.SetServiceDetail(filesMap)
 	err = utils.WriteChangeToFiles(taskInfo)
 	if err != nil {
 		log.Errorf("Failure writing updated compose files : %v", err)
@@ -305,7 +305,7 @@ func scanForExtraHostsSection(containerDetails map[interface{}]interface{}, extr
 }
 
 func addExtraHostsSection(taskInfo *mesos.TaskInfo, file, svcName string, extraHostsCollection map[interface{}]bool) {
-	filesMap := pod.GetServiceDetail(taskInfo)
+	filesMap := pod.GetServiceDetail()
 	servMap, ok := filesMap[file][types.SERVICES].(map[interface{}]interface{})
 	if !ok {
 		log.Warnf("Couldn't get content of compose file %s\n", file)

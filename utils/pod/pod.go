@@ -61,6 +61,9 @@ var MonitorContainerList []string
 var SinglePort bool
 var StepMetrics = make(map[interface{}]interface{})
 
+// store all docker-composed yaml file, key is filepath, value is the yaml unmarshelled object
+var ServiceDetail = make(map[string]map[string]interface{})
+
 // LaunchCmdAttempted indicates that an attempt to run the command to launch the pod (docker compose up with params) was
 // made. This does not indicate that the result of the command execution.
 var LaunchCmdAttempted = false

@@ -16,7 +16,7 @@ func TestUpdateServiceDetail(t *testing.T) {
 			Labels: &mesos.Labels{},
 		}
 
-		s := GetServiceDetail(taskInfo)
+		s := GetServiceDetail()
 		assert.Empty(t, s)
 
 		s["a1"] = make(map[string]interface{})
@@ -24,10 +24,10 @@ func TestUpdateServiceDetail(t *testing.T) {
 		s["a1"]["b2"] = 2
 		s["a1"]["b3"] = []interface{}{"c1, c2"}
 
-		err := UpdateServiceDetail(taskInfo, s)
+		err := SetServiceDetail(s)
 		assert.NoError(t, err)
 
-		s1 := GetServiceDetail(taskInfo)
+		s1 := GetServiceDetail()
 		assert.EqualValues(t, s, s1)
 	})
 
@@ -37,7 +37,7 @@ func TestUpdateServiceDetail(t *testing.T) {
 		}
 
 		m := make(map[string]interface{})
-		sd := GetServiceDetail(taskInfo)
+		sd := GetServiceDetail()
 
 		var yamlFile = []byte(`
 Hacker: true
@@ -59,10 +59,10 @@ beard: true
 
 		sd["f1"] = m
 
-		err = UpdateServiceDetail(taskInfo, sd)
+		err = SetServiceDetail(sd)
 		assert.NoError(t, err)
 
-		s1 := GetServiceDetail(taskInfo)
+		s1 := GetServiceDetail()
 		assert.EqualValues(t, sd, s1)
 	})
 

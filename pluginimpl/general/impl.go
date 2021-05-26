@@ -69,11 +69,11 @@ func (ge *generalExt) LaunchTaskPreImagePull(ctx context.Context, composeFiles *
 	var err error
 
 	logger.Println("====================context in====================")
-	logger.Printf("SERVICE_DETAIL: %+v", pod.GetServiceDetail(taskInfo))
+	logger.Printf("SERVICE_DETAIL: %+v", pod.GetServiceDetail())
 
 	logger.Printf("Current compose files list: %v", *composeFiles)
 
-	if len(pod.GetServiceDetail(taskInfo)) == 0 {
+	if len(pod.GetServiceDetail()) == 0 {
 		var servDetail types.ServiceDetail
 		servDetail, err = utils.ParseYamls(composeFiles)
 		if err != nil {
@@ -81,7 +81,7 @@ func (ge *generalExt) LaunchTaskPreImagePull(ctx context.Context, composeFiles *
 			return err
 		}
 
-		pod.UpdateServiceDetail(taskInfo, servDetail)
+		pod.SetServiceDetail(servDetail)
 	}
 
 	currentPort := pod.GetPorts(taskInfo)
@@ -119,9 +119,9 @@ func (ge *generalExt) LaunchTaskPreImagePull(ctx context.Context, composeFiles *
 	// Remove infra container yml file if network mode is host
 	if config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
 		logger.Printf("Remove file: %s\n", types.INFRA_CONTAINER_GEN_YML)
-		filesMap := pod.GetServiceDetail(taskInfo)
+		filesMap := pod.GetServiceDetail()
 		delete(filesMap, editedFiles[indexInfra])
-		pod.UpdateServiceDetail(taskInfo, filesMap)
+		pod.SetServiceDetail(filesMap)
 		editedFiles = append(editedFiles[:indexInfra], editedFiles[indexInfra+1:]...)
 		err = utils.DeleteFile(types.INFRA_CONTAINER_YML)
 		if err != nil {
@@ -133,7 +133,7 @@ func (ge *generalExt) LaunchTaskPreImagePull(ctx context.Context, composeFiles *
 	}
 
 	logger.Println("====================context out====================")
-	logger.Printf("SERVICE_DETAIL: %+v", pod.GetServiceDetail(taskInfo))
+	logger.Printf("SERVICE_DETAIL: %+v", pod.GetServiceDetail())
 
 	*composeFiles = editedFiles
 
@@ -284,10 +284,10 @@ func CreateInfraContainer(taskInfo *mesos.TaskInfo, path string) (string, error)
 		return "", err
 	}
 
-	fileMap := pod.GetServiceDetail(taskInfo)
+	fileMap := pod.GetServiceDetail()
 
 	fileMap[fileName] = _yaml
 
-	pod.UpdateServiceDetail(taskInfo, fileMap)
+	pod.SetServiceDetail(fileMap)
 	return fileName, nil
 }

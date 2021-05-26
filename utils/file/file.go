@@ -223,7 +223,7 @@ func DeleteFile(file string) error {
 }
 
 func WriteChangeToFiles(taskInfo *mesos.TaskInfo) error {
-	filesMap := pod.GetServiceDetail(taskInfo)
+	filesMap := pod.GetServiceDetail()
 	for file := range filesMap {
 		content, err := yaml.Marshal(filesMap[file])
 		if err != nil {
@@ -238,7 +238,7 @@ func WriteChangeToFiles(taskInfo *mesos.TaskInfo) error {
 }
 
 func DumpPluginModifiedComposeFiles(taskInfo *mesos.TaskInfo, plugin, funcName string, pluginOrder int) {
-	filesMap := pod.GetServiceDetail(taskInfo)
+	filesMap := pod.GetServiceDetail()
 	for file := range filesMap {
 		content, _ := yaml.Marshal(filesMap[file])
 		fParts := strings.Split(file, PATH_DELIMITER)

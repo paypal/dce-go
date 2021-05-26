@@ -53,7 +53,7 @@ func (ex *exampleExt) LaunchTaskPreImagePull(ctx context.Context, composeFiles *
 	// Then pass to next plugin.
 
 	// Get value from context
-	filesMap := pod.GetServiceDetail(taskInfo)
+	filesMap := pod.GetServiceDetail()
 
 	// Add label in each service, in each compose YML file
 	for _, file := range *composeFiles {
@@ -70,7 +70,7 @@ func (ex *exampleExt) LaunchTaskPreImagePull(ctx context.Context, composeFiles *
 	}
 
 	// Save the changes back to context
-	pod.UpdateServiceDetail(taskInfo, filesMap)
+	pod.SetServiceDetail(filesMap)
 
 	return nil
 }

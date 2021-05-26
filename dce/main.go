@@ -232,7 +232,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	}
 
 	// Service list from all compose files
-	podServices := getServices(taskInfo)
+	podServices := getServices()
 	logger.Printf("pod service list: %v", podServices)
 
 	// Write updated compose files into pod folder
@@ -430,8 +430,8 @@ func initHealthCheck(podServices map[string]bool) (types.PodStatus, error) {
 	return utils.ToPodStatus(res), err
 }
 
-func getServices(taskinfo *mesos.TaskInfo) map[string]bool {
-	filesMap := pod.GetServiceDetail(taskinfo)
+func getServices() map[string]bool {
+	filesMap := pod.GetServiceDetail()
 	podService := make(map[string]bool)
 
 	for _, file := range pod.ComposeFiles {
