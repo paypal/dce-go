@@ -1,14 +1,14 @@
 launchtask:
-   podmonitorinterval: 10000
+   podmonitorinterval: 10s
    composehttptimeout: 300
    pullretry: 3
    maxretry: 3
-   retryinterval: 10000
+   retryinterval: 10s
    timeout: 500s
    skippull: true
    composetrace: true
    debug: false
-   httptimeout: 20000
+   httptimeout: 20s
 plugins:
    pluginorder: general
 podStatusHooks:

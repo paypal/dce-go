@@ -1,5 +1,5 @@
 launchtask:
-   podmonitorinterval: 10000
+   podmonitorinterval: 10s
    pullretry: 3
    maxretry: 10
    timeout: 500s

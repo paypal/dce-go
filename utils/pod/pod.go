@@ -1081,7 +1081,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	var containers []string
 	var healthCount int
 
-	interval := time.Duration(config.GetPollInterval())
+	interval := config.GetPollInterval()
 
 	// Convert pod services from map to array
 	var services []string
