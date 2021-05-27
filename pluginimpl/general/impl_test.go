@@ -29,7 +29,7 @@ import (
 func TestCreateInfraContainer(t *testing.T) {
 	config.GetConfig().SetDefault(types.NO_FOLDER, true)
 	ctx := context.Background()
-	_, err := CreateInfraContainer(&ctx, "testdata/docker-infra-container.yml")
+	_, err := CreateInfraContainer(ctx, "testdata/docker-infra-container.yml")
 	if err != nil {
 		t.Errorf("expected no error, but got %v", err)
 	}

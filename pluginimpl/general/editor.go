@@ -16,13 +16,12 @@ package general
 
 import (
 	"container/list"
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	mesos "github.com/mesos/mesos-go/mesosproto"
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
@@ -39,7 +38,7 @@ const (
 	DEFAULT_VERSION = "2.1"
 )
 
-func editComposeFile(taskInfo *mesos.TaskInfo, file string, executorId string, taskId string, ports *list.Element,
+func editComposeFile(ctx context.Context, file string, executorId string, taskId string, ports *list.Element,
 	extraHosts map[interface{}]bool) (string, *list.Element, error) {
 	var err error
 
@@ -241,7 +240,7 @@ func updateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	return ports, nil
 }
 
-func postEditComposeFile(taskInfo *mesos.TaskInfo, file string) error {
+func postEditComposeFile(ctx context.Context, file string) error {
 	var err error
 	filesMap := pod.GetServiceDetail()
 	if filesMap[file][types.SERVICES] == nil {
@@ -256,7 +255,7 @@ func postEditComposeFile(taskInfo *mesos.TaskInfo, file string) error {
 		}
 	}
 	pod.SetServiceDetail(filesMap)
-	err = utils.WriteChangeToFiles(taskInfo)
+	err = utils.WriteChangeToFiles(ctx)
 	if err != nil {
 		log.Errorf("Failure writing updated compose files : %v", err)
 		return err
@@ -304,7 +303,7 @@ func scanForExtraHostsSection(containerDetails map[interface{}]interface{}, extr
 	}
 }
 
-func addExtraHostsSection(taskInfo *mesos.TaskInfo, file, svcName string, extraHostsCollection map[interface{}]bool) {
+func addExtraHostsSection(ctx context.Context, file, svcName string, extraHostsCollection map[interface{}]bool) {
 	filesMap := pod.GetServiceDetail()
 	servMap, ok := filesMap[file][types.SERVICES].(map[interface{}]interface{})
 	if !ok {

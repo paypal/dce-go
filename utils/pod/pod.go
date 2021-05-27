@@ -174,7 +174,7 @@ func GetPodContainerIds(files []string) ([]string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		//log.Errorln(os.Stderr, "reading standard input:", err)
+		log.Errorln(os.Stderr, "reading standard input:", err)
 	}
 	return containerIds, nil
 }
@@ -229,7 +229,7 @@ func GetContainerIdByService(files []string, service string) (string, error) {
 		id += scanner.Text()
 	}
 	if err := scanner.Err(); err != nil {
-		//logger.Errorln(os.Stderr, "stderr: ", err)
+		logger.Errorln(os.Stderr, "stderr: ", err)
 		return "", err
 	}
 
@@ -255,7 +255,7 @@ func GetPodDetail(files []string, primaryContainerId string, healthcheck bool) {
 		log.Println(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
-		//log.Errorln(os.Stderr, "reading standard input:", err)
+		log.Errorln(os.Stderr, "reading standard input:", err)
 	}
 
 	if primaryContainerId != "" {

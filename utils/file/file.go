@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"bytes"
 	"container/list"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -222,7 +223,7 @@ func DeleteFile(file string) error {
 	return os.Remove(file)
 }
 
-func WriteChangeToFiles(taskInfo *mesos.TaskInfo) error {
+func WriteChangeToFiles(ctx context.Context) error {
 	filesMap := pod.GetServiceDetail()
 	for file := range filesMap {
 		content, err := yaml.Marshal(filesMap[file])
@@ -237,7 +238,7 @@ func WriteChangeToFiles(taskInfo *mesos.TaskInfo) error {
 	return nil
 }
 
-func DumpPluginModifiedComposeFiles(taskInfo *mesos.TaskInfo, plugin, funcName string, pluginOrder int) {
+func DumpPluginModifiedComposeFiles(ctx context.Context, plugin, funcName string, pluginOrder int) {
 	filesMap := pod.GetServiceDetail()
 	for file := range filesMap {
 		content, _ := yaml.Marshal(filesMap[file])

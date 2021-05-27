@@ -160,7 +160,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
 
 			if config.EnableComposeTrace() {
-				fileUtils.DumpPluginModifiedComposeFiles(taskInfo, pluginOrder[i], "LaunchTaskPreImagePull", i)
+				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPreImagePull", i)
 			}
 		}
 		return "", err
@@ -172,7 +172,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		return
 	}
 	// Write updated compose files into pod folder
-	err = fileUtils.WriteChangeToFiles(taskInfo)
+	err = fileUtils.WriteChangeToFiles(ctx)
 	if err != nil {
 		logger.Errorf("Failure writing updated compose files : %v", err)
 		pod.SetPodStatus(types.POD_FAILED)
@@ -220,7 +220,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
 
 			if config.EnableComposeTrace() {
-				fileUtils.DumpPluginModifiedComposeFiles(taskInfo, pluginOrder[i], "LaunchTaskPostImagePull", i)
+				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPostImagePull", i)
 			}
 		}
 		return "", err
@@ -236,7 +236,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	logger.Printf("pod service list: %v", podServices)
 
 	// Write updated compose files into pod folder
-	err = fileUtils.WriteChangeToFiles(taskInfo)
+	err = fileUtils.WriteChangeToFiles(ctx)
 	if err != nil {
 		logger.Errorf("Failure writing updated compose files : %v", err)
 		pod.SetPodStatus(types.POD_FAILED)

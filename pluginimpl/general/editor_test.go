@@ -48,7 +48,7 @@ func TestGenerateEditComposeFile(t *testing.T) {
 
 	var extraHosts = make(map[interface{}]bool)
 	ctx = context.WithValue(ctx, types.SERVICE_DETAIL, servDetail)
-	_, curPort, _ := editComposeFile(&ctx, "testdata/test.yml", "executorId", "taskId", ports.Front(), extraHosts)
+	_, curPort, _ := editComposeFile(ctx, "testdata/test.yml", "executorId", "taskId", ports.Front(), extraHosts)
 
 	if curPort == nil || strconv.FormatUint(curPort.Value.(uint64), 10) != "3000" {
 		t.Errorf("expected current port to be 3000 but got %v", curPort)
@@ -83,7 +83,7 @@ func Test_editComposeFile(t *testing.T) {
 	assert.Equal(t, nil, containerDetails[types.LABELS], "Before editing compose file")
 
 	var extraHosts = make(map[interface{}]bool)
-	_, curPort, _ := editComposeFile(&ctx, "testdata/test.yml", "executorId", "taskId", ports.Front(), extraHosts)
+	_, curPort, _ := editComposeFile(ctx, "testdata/test.yml", "executorId", "taskId", ports.Front(), extraHosts)
 
 	// After edit compose file
 	if curPort == nil || strconv.FormatUint(curPort.Value.(uint64), 10) != "3000" {
@@ -136,7 +136,7 @@ func Test_addExtraHostsSection(t *testing.T) {
 	containerDetail := make(map[interface{}]interface{})
 	containerDetail[types.EXTRA_HOSTS] = []interface{}{"redis2:0.0.0.2"}
 	scanForExtraHostsSection(containerDetail, extraHosts)
-	addExtraHostsSection(&ctx, "testdata/docker-extra-host.yml", "redis", extraHosts)
+	addExtraHostsSection(ctx, "testdata/docker-extra-host.yml", "redis", extraHosts)
 	filesMap, ok := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
 	if !ok {
 		t.Error("Couldn't get service detail")
@@ -157,6 +157,6 @@ func Test_addExtraHostsSection(t *testing.T) {
 	}
 
 	preCtx := ctx
-	addExtraHostsSection(&ctx, "testdata/docker-extra-host.yml", "fake", extraHosts)
+	addExtraHostsSection(ctx, "testdata/docker-extra-host.yml", "fake", extraHosts)
 	assert.Equal(t, preCtx, ctx, "Adding extra host to non exist service")
 }
