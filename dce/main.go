@@ -71,6 +71,7 @@ func (exec *dockerComposeExecutor) Disconnected(exec.ExecutorDriver) {
 }
 
 func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
+	ctx := context.Background()
 	initlogger()
 	appStartTime := time.Now()
 
@@ -104,7 +105,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	pod.SetPodStatus(types.POD_STARTING)
 
 	// Update mesos state TO STARTING
-	pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_STARTING.Enum())
+	pod.SendMesosStatus(ctx, driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_STARTING.Enum())
 
 	// Get required compose file list
 	pod.ComposeFiles, _ = fileUtils.GetFiles(taskInfo)
@@ -120,10 +121,9 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 
 	// Create context with timeout
 	// Wait for pod launching until timeout
-	var ctx context.Context
 
 	var cancel context.CancelFunc
-	ctx = context.Background()
+	//todo: add a prehook to generate root context
 	ctx, cancel = context.WithTimeout(ctx, config.GetLaunchTimeout()*time.Millisecond)
 
 	go pod.WaitOnPod(ctx)
@@ -160,7 +160,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
 
 			if config.EnableComposeTrace() {
-				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPreImagePull", i)
+				fileUtils.DumpPluginModifiedComposeFiles(pluginOrder[i], "LaunchTaskPreImagePull", i)
 			}
 		}
 		return "", err
@@ -168,23 +168,23 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		logger.Errorf("error while executing task pre image pull: %s", err)
 		pod.SetPodStatus(types.POD_FAILED)
 		cancel()
-		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		pod.SendMesosStatus(ctx, driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 		return
 	}
 	// Write updated compose files into pod folder
-	err = fileUtils.WriteChangeToFiles(ctx)
+	err = fileUtils.WriteChangeToFiles()
 	if err != nil {
 		logger.Errorf("Failure writing updated compose files : %v", err)
 		pod.SetPodStatus(types.POD_FAILED)
 		cancel()
-		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		pod.SendMesosStatus(ctx, driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
 	//Validate Compose files
 	if err := validateComposeFiles(); err != nil {
 		pod.SetPodStatus(types.POD_COMPOSE_CHECK_FAILED)
 		cancel()
-		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		pod.SendMesosStatus(ctx, driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 		return
 	}
 
@@ -193,7 +193,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	if err != nil {
 		pod.SetPodStatus(types.POD_PULL_FAILED)
 		cancel()
-		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		pod.SendMesosStatus(ctx, driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 		return
 	}
 
@@ -220,14 +220,14 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
 
 			if config.EnableComposeTrace() {
-				fileUtils.DumpPluginModifiedComposeFiles(ctx, pluginOrder[i], "LaunchTaskPostImagePull", i)
+				fileUtils.DumpPluginModifiedComposeFiles(pluginOrder[i], "LaunchTaskPostImagePull", i)
 			}
 		}
 		return "", err
 	})); err != nil {
 		pod.SetPodStatus(types.POD_FAILED)
 		cancel()
-		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		pod.SendMesosStatus(ctx, driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 		return
 	}
 
@@ -236,12 +236,12 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	logger.Printf("pod service list: %v", podServices)
 
 	// Write updated compose files into pod folder
-	err = fileUtils.WriteChangeToFiles(ctx)
+	err = fileUtils.WriteChangeToFiles()
 	if err != nil {
 		logger.Errorf("Failure writing updated compose files : %v", err)
 		pod.SetPodStatus(types.POD_FAILED)
 		cancel()
-		pod.SendMesosStatus(driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		pod.SendMesosStatus(ctx, driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
 	utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, "Launch_Pod", "Starting")
@@ -307,7 +307,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			cancel()
 			if pod.GetPodStatus() != types.POD_RUNNING {
 				pod.SendPodStatus(ctx, types.POD_RUNNING)
-				go monitor.MonitorPoller()
+				go monitor.MonitorPoller(ctx)
 			}
 		}
 		//For adhoc job, send finished to mesos if job already finished during init health check
@@ -324,6 +324,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 }
 
 func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *mesos.TaskID) {
+	ctx := context.Background()
 	log.Println("====================Mesos KillTask====================")
 
 	defer func() {
@@ -350,7 +351,7 @@ func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *
 			logKill.Errorf("Error cleaning up pod : %v", err.Error())
 		}
 
-		err = pod.SendMesosStatus(driver, taskId, mesos.TaskState_TASK_KILLED.Enum())
+		err = pod.SendMesosStatus(ctx, driver, taskId, mesos.TaskState_TASK_KILLED.Enum())
 		if err != nil {
 			logKill.Errorf("Error during kill Task : %v", err.Error())
 		}

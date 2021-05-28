@@ -38,7 +38,7 @@ const (
 	DEFAULT_VERSION = "2.1"
 )
 
-func editComposeFile(ctx context.Context, file string, executorId string, taskId string, ports *list.Element,
+func editComposeFile(file string, executorId string, taskId string, ports *list.Element,
 	extraHosts map[interface{}]bool) (string, *list.Element, error) {
 	var err error
 
@@ -240,7 +240,7 @@ func updateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	return ports, nil
 }
 
-func postEditComposeFile(ctx context.Context, file string) error {
+func postEditComposeFile(file string) error {
 	var err error
 	filesMap := pod.GetServiceDetail()
 	if filesMap[file][types.SERVICES] == nil {
@@ -255,7 +255,7 @@ func postEditComposeFile(ctx context.Context, file string) error {
 		}
 	}
 	pod.SetServiceDetail(filesMap)
-	err = utils.WriteChangeToFiles(ctx)
+	err = utils.WriteChangeToFiles()
 	if err != nil {
 		log.Errorf("Failure writing updated compose files : %v", err)
 		return err

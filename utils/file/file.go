@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"bytes"
 	"container/list"
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -223,7 +222,7 @@ func DeleteFile(file string) error {
 	return os.Remove(file)
 }
 
-func WriteChangeToFiles(ctx context.Context) error {
+func WriteChangeToFiles() error {
 	filesMap := pod.GetServiceDetail()
 	for file := range filesMap {
 		content, err := yaml.Marshal(filesMap[file])
@@ -238,7 +237,7 @@ func WriteChangeToFiles(ctx context.Context) error {
 	return nil
 }
 
-func DumpPluginModifiedComposeFiles(ctx context.Context, plugin, funcName string, pluginOrder int) {
+func DumpPluginModifiedComposeFiles(plugin, funcName string, pluginOrder int) {
 	filesMap := pod.GetServiceDetail()
 	for file := range filesMap {
 		content, _ := yaml.Marshal(filesMap[file])
@@ -445,6 +444,24 @@ func IndexArray(array []string, element string) int {
 		}
 	}
 	return -1
+}
+
+func SearchInArray(array []interface{}, key string) string {
+	for _, e := range array {
+		if s := strings.Split(e.(string), MAP_DELIMITER); len(s) > 1 && s[0] == key {
+			return s[1]
+		}
+	}
+	return ""
+}
+
+// []string to []interface{}
+func FormatInterfaceArray(s []string) []interface{} {
+	t := make([]interface{}, len(s))
+	for i, v := range s {
+		t[i] = v
+	}
+	return t
 }
 
 // generate directories

@@ -53,7 +53,7 @@ func TestGenerateEditComposeFile(t *testing.T) {
 	if curPort == nil || strconv.FormatUint(curPort.Value.(uint64), 10) != "3000" {
 		t.Errorf("expected current port to be 3000 but got %v", curPort)
 	}
-	err = file.WriteChangeToFiles(ctx)
+	err = file.WriteChangeToFiles()
 	if err != nil {
 		t.Fatalf("Failed to write to files %v", err)
 	}

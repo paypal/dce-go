@@ -58,10 +58,6 @@ const (
 	HTTP_TIMEOUT                         = "launchtask.httptimeout"
 	COMPOSE_STOP_TIMEOUT                 = "cleanpod.timeout"
 	CONFIG_OVERRIDE_PREFIX               = "config."
-
-	// monitor
-	EnableTrace   = "monitor.traces.enabled"
-	EnableMetrics = "monitor.metrics.enabled"
 )
 
 // Read from default configuration file and set config as key/values
@@ -201,14 +197,6 @@ func EnableVerbose() bool {
 
 func SkipPullImages() bool {
 	return GetConfig().GetBool(SKIP_PULL_IMAGES)
-}
-
-func IsMetricsEnable() bool {
-	return GetConfig().GetBool(EnableMetrics)
-}
-
-func IsTraceEnabled() bool {
-	return GetConfig().GetBool(EnableTrace)
 }
 
 func EnableComposeTrace() bool {
