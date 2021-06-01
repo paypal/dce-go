@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -126,14 +127,14 @@ func GetConfig() *viper.Viper {
 }
 
 func setDefaultConfig(conf *viper.Viper) {
-	conf.SetDefault(POD_MONITOR_INTERVAL, 10000)
+	conf.SetDefault(POD_MONITOR_INTERVAL, "10s")
 	conf.SetDefault(COMPOSE_HTTP_TIMEOUT, 300)
 	conf.SetDefault(MAX_RETRY, 3)
 	conf.SetDefault(PULL_RETRY, 3)
-	conf.SetDefault(RETRY_INTERVAL, 10000)
-	conf.SetDefault(TIMEOUT, 500000)
+	conf.SetDefault(RETRY_INTERVAL, "10s")
+	conf.SetDefault(TIMEOUT, "500s")
 	conf.SetDefault(COMPOSE_STOP_TIMEOUT, 10)
-	conf.SetDefault(HTTP_TIMEOUT, 20000)
+	conf.SetDefault(HTTP_TIMEOUT, "20s")
 }
 
 func GetAppFolder() string {
@@ -148,8 +149,26 @@ func GetPullRetryCount() int {
 	return GetConfig().GetInt(PULL_RETRY)
 }
 
+// GetLaunchTimeout returns maximum time to wait until a pod becomes healthy.
+// Support value type as duration string.
+// A duration string is a possibly signed sequence of
+// decimal numbers, each with optional fraction and a unit suffix,
+// such as "300ms", "-1.5h" or "2h45m".
+// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
 func GetLaunchTimeout() time.Duration {
-	return time.Duration(GetConfig().GetInt(TIMEOUT))
+	// Making backward compatible change to support config value of `launchtask.timeout` as duration (e.g. 500s),
+	// as well as integer which is existing value type
+	valStr := GetConfig().GetString(TIMEOUT)
+	if valInt, err := strconv.Atoi(valStr); err == nil {
+		return time.Duration(valInt)
+	}
+	duration, err := time.ParseDuration(valStr)
+	if err != nil {
+		log.Warningf("unable to parse launchtask.timeout from %s to duration, using 500s as default value",
+			valStr)
+		return 500 * time.Second
+	}
+	return duration
 }
 
 func GetStopTimeout() int {
@@ -157,7 +176,14 @@ func GetStopTimeout() int {
 }
 
 func GetRetryInterval() time.Duration {
-	return time.Duration(GetConfig().GetInt(RETRY_INTERVAL))
+	intervalStr := GetConfig().GetString(RETRY_INTERVAL)
+	duration, err := time.ParseDuration(intervalStr)
+	if err != nil {
+		log.Warningf("unable to parse launchtask.retryinterval from %s to duration, using 10s as default value",
+			intervalStr)
+		return 10 * time.Second
+	}
+	return duration
 }
 
 func GetMaxRetry() int {
@@ -203,12 +229,25 @@ func EnableComposeTrace() bool {
 	return GetConfig().GetBool(COMPOSE_TRACE)
 }
 
-func GetPollInterval() int {
-	return GetConfig().GetInt(POD_MONITOR_INTERVAL)
+func GetPollInterval() time.Duration {
+	intervalStr := GetConfig().GetString(POD_MONITOR_INTERVAL)
+	duration, err := time.ParseDuration(intervalStr)
+	if err != nil {
+		log.Warningf("unable to parse launchtask.podmonitorinterval %s to duration, using 10s as default value",
+			intervalStr)
+		return 10 * time.Second
+	}
+	return duration
 }
 
 func GetHttpTimeout() time.Duration {
-	return time.Duration(GetConfig().GetInt(HTTP_TIMEOUT)) * time.Millisecond
+	timeoutStr := GetConfig().GetString(HTTP_TIMEOUT)
+	duration, err := time.ParseDuration(timeoutStr)
+	if err != nil {
+		log.Warningf("unable to parse launchtask.httptimeout %s to duration, using 20s as default value", timeoutStr)
+		return 20 * time.Second
+	}
+	return duration
 }
 
 func GetComposeHttpTimeout() int {

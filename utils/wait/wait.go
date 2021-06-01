@@ -172,7 +172,7 @@ func RetryCmd(retry int, cmd *exec.Cmd) ([]byte, error) {
 			if strings.Contains(err.Error(), "already started") {
 				return out, nil
 			}
-			time.Sleep(retryInterval * time.Duration((i+1)*factor) * time.Millisecond)
+			time.Sleep(retryInterval * time.Duration((i+1)*factor))
 			continue
 		}
 
@@ -221,7 +221,7 @@ func RetryCmdLogs(cmd *exec.Cmd, retry bool) ([]byte, error) {
 			}
 		}
 		log.Printf("cmd %s exits, retry...", _cmd.Args)
-		time.Sleep(retryInterval * time.Millisecond)
+		time.Sleep(retryInterval)
 	}
 	return out, err
 }
