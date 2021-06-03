@@ -26,80 +26,71 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// generate body for http request
-// parse interface{} to io.Reader
-func GenBody(t interface{}) io.Reader {
-	tjson, err := json.Marshal(&t)
+// GenBody : generate body for http request, convert body from interface{}  to io.Reader
+func GenBody(body interface{}) io.Reader {
+	jsonBody, err := json.Marshal(&body)
 	if err != nil {
-		log.Panic("Error marshalling : ", err.Error())
+		log.Panic("error marshalling : ", err.Error())
 	}
-	log.Println("Request Body : ", string(tjson))
-	return bytes.NewReader(tjson)
+	log.Infof("request body : %s", string(jsonBody))
+	return bytes.NewReader(jsonBody)
 }
 
-// http post
+// PostRequest : http POST request
 func PostRequest(ctx context.Context, transport http.RoundTripper, url string, body io.Reader) ([]byte, error) {
-	if transport == nil {
-		transport = http.DefaultTransport
-	}
+	headers := map[string]string{"Content-Type": "application/json"}
+	return getHttpResponse(ctx, transport, url, "POST", headers, body)
+}
+
+// GetRequest :  http GET request
+func GetRequest(ctx context.Context, transport http.RoundTripper, url string) ([]byte, error) {
+	headers := map[string]string{"Accept": "application/json"}
+	return getHttpResponse(ctx, transport, url, "GET", headers, nil)
+}
+
+func getHttpResponse(ctx context.Context, transport http.RoundTripper, url, methodType string, headers map[string]string,
+	body io.Reader) ([]byte, error) {
+	
 	client := &http.Client{
-		Transport: transport,
+		Transport: getTransportValue(transport),
 		Timeout:   config.GetHttpTimeout(),
 	}
-	req, err := http.NewRequestWithContext(ctx, "POST", url, body)
+
+	req, err := http.NewRequestWithContext(ctx, methodType, url, body)
 	if err != nil {
-		log.Println("Error creating http request : ", err.Error())
+		log.Errorf("error creating http %s request for: %s", methodType, err.Error())
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
+
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("Error posting http request : ", err.Error())
+		log.Errorf("http %s request failed: %s", methodType, err.Error())
 		return nil, err
 	}
+
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Errorf("failed to close response body: %s", err.Error())
+		}
+	}()
+
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("Error reading http response : ", err.Error())
+		log.Errorf("error reading http response : %s", err.Error())
 		return nil, err
 	}
-	err = resp.Body.Close()
-	if err != nil {
-		log.Errorf("Failure to close response body :%v", err)
-		return nil, err
-	}
+
 	return respBody, nil
 }
 
-// http get
-func GetRequest(ctx context.Context, transport http.RoundTripper, url string) ([]byte, error) {
-	if transport == nil {
-		transport = http.DefaultTransport
+// returns the http.DefaultTransport if transport is nil
+func getTransportValue(transport http.RoundTripper) http.RoundTripper {
+	if transport != nil {
+		return transport
 	}
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   config.GetHttpTimeout(),
-	}
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		log.Println("Error creating http request : ", err.Error())
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println("Error getting http request : ", err.Error())
-		return nil, err
-	}
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println("Error reading http response : ", err.Error())
-		return nil, err
-	}
-	err = resp.Body.Close()
-	err = resp.Body.Close()
-	if err != nil {
-		log.Errorf("Failed to close response body :%v", err)
-		return nil, err
-	}
-	return respBody, nil
+	return http.DefaultTransport
 }
