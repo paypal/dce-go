@@ -558,7 +558,7 @@ func ValidateCompose(files []string) error {
 		return err
 	}
 
-	err = waitUtil.WaitCmd(config.GetLaunchTimeout()*time.Millisecond, &types.CmdResult{
+	err = waitUtil.WaitCmd(config.GetLaunchTimeout(), &types.CmdResult{
 		Command: cmd,
 	})
 
@@ -593,7 +593,7 @@ func PullImage(files []string) error {
 		return err
 	}
 
-	err = waitUtil.WaitCmd(config.GetLaunchTimeout()*time.Millisecond, &types.CmdResult{
+	err = waitUtil.WaitCmd(config.GetLaunchTimeout(), &types.CmdResult{
 		Command: cmd,
 	})
 	if err != nil {
@@ -1093,7 +1093,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	var containers []string
 	var healthCount int
 
-	interval := time.Duration(config.GetPollInterval())
+	interval := config.GetPollInterval()
 
 	// Convert pod services from map to array
 	var services []string

@@ -123,8 +123,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	// Wait for pod launching until timeout
 
 	var cancel context.CancelFunc
-	//todo: add a prehook to generate root context
-	ctx, cancel = context.WithTimeout(ctx, config.GetLaunchTimeout()*time.Millisecond)
+	ctx, cancel = context.WithTimeout(ctx, config.GetLaunchTimeout())
 
 	go pod.WaitOnPod(ctx)
 
@@ -397,7 +396,7 @@ func pullImage() error {
 
 	if !config.SkipPullImages() {
 		count := 0
-		err := wait.PollRetry(config.GetPullRetryCount(), time.Duration(config.GetPollInterval())*time.Millisecond, wait.ConditionFunc(func() (string, error) {
+		err := wait.PollRetry(config.GetPullRetryCount(), config.GetPollInterval(), func() (string, error) {
 			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, fmt.Sprintf("Image_Pull_%v", count), "Starting")
 			err := pod.PullImage(pod.ComposeFiles)
 			if err != nil {
@@ -408,7 +407,7 @@ func pullImage() error {
 			count++
 			return "", err
 
-		}))
+		})
 
 		if err != nil {
 			logger.Errorf("POD_IMAGE_PULL_FAILED -- %v", err)
@@ -420,9 +419,9 @@ func pullImage() error {
 }
 
 func initHealthCheck(podServices map[string]bool) (types.PodStatus, error) {
-	res, err := wait.WaitUntil(config.GetLaunchTimeout()*time.Millisecond, wait.ConditionCHFunc(func(healthCheckReply chan string) {
+	res, err := wait.WaitUntil(config.GetLaunchTimeout(), func(healthCheckReply chan string) {
 		pod.HealthCheck(pod.ComposeFiles, podServices, healthCheckReply)
-	}))
+	})
 
 	if err != nil {
 		log.Printf("POD_INIT_HEALTH_CHECK_TIMEOUT -- %v", err)
