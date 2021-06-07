@@ -345,7 +345,7 @@ func (exec *dockerComposeExecutor) KillTask(driver exec.ExecutorDriver, taskId *
 		logKill.Printf("Mesos Kill Task : Current task status is %s , continue killTask", status)
 		pod.SetPodStatus(types.POD_KILLED)
 
-		err := pod.StopPod(context.Background(), pod.ComposeFiles)
+		err := pod.StopPod(ctx, pod.ComposeFiles)
 		if err != nil {
 			logKill.Errorf("Error cleaning up pod : %v", err.Error())
 		}
