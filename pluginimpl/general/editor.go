@@ -38,11 +38,11 @@ const (
 	DEFAULT_VERSION = "2.1"
 )
 
-func editComposeFile(ctx *context.Context, file string, executorId string, taskId string, ports *list.Element,
+func editComposeFile(file string, executorId string, taskId string, ports *list.Element,
 	extraHosts map[interface{}]bool) (string, *list.Element, error) {
 	var err error
 
-	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	filesMap := pod.GetServiceDetail()
 	if filesMap[file][types.SERVICES] == nil {
 		log.Printf("Services is empty for file %s \n", file)
 		return "", ports, nil
@@ -69,7 +69,7 @@ func editComposeFile(ctx *context.Context, file string, executorId string, taskI
 		delete(filesMap, file)
 		file = file + utils.FILE_POSTFIX
 	}
-	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
+	pod.SetServiceDetail(filesMap)
 
 	logger.Printf("Updated compose files, current context: %v\n", filesMap)
 	return file, ports, err
@@ -240,9 +240,9 @@ func updateServiceSessions(serviceName, file, executorId, taskId string, filesMa
 	return ports, nil
 }
 
-func postEditComposeFile(ctx *context.Context, file string) error {
+func postEditComposeFile(file string) error {
 	var err error
-	filesMap := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+	filesMap := pod.GetServiceDetail()
 	if filesMap[file][types.SERVICES] == nil {
 		return nil
 	}
@@ -254,9 +254,8 @@ func postEditComposeFile(ctx *context.Context, file string) error {
 			return err
 		}
 	}
-	*ctx = context.WithValue(*ctx, types.SERVICE_DETAIL, filesMap)
-
-	err = utils.WriteChangeToFiles(*ctx)
+	pod.SetServiceDetail(filesMap)
+	err = utils.WriteChangeToFiles()
 	if err != nil {
 		log.Errorf("Failure writing updated compose files : %v", err)
 		return err
@@ -304,12 +303,8 @@ func scanForExtraHostsSection(containerDetails map[interface{}]interface{}, extr
 	}
 }
 
-func addExtraHostsSection(ctx *context.Context, file, svcName string, extraHostsCollection map[interface{}]bool) {
-	filesMap, ok := (*ctx).Value(types.SERVICE_DETAIL).(types.ServiceDetail)
-	if !ok {
-		log.Warnln("Couldn't get service detail")
-		return
-	}
+func addExtraHostsSection(ctx context.Context, file, svcName string, extraHostsCollection map[interface{}]bool) {
+	filesMap := pod.GetServiceDetail()
 	servMap, ok := filesMap[file][types.SERVICES].(map[interface{}]interface{})
 	if !ok {
 		log.Warnf("Couldn't get content of compose file %s\n", file)

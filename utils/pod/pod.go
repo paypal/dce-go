@@ -61,12 +61,21 @@ var MonitorContainerList []string
 var SinglePort bool
 var StepMetrics = make(map[interface{}]interface{})
 
+// store all docker-composed yaml file, key is filepath, value is the yaml unmarshelled object
+var ServiceDetail = make(map[string]map[string]interface{})
+
 // LaunchCmdAttempted indicates that an attempt to run the command to launch the pod (docker compose up with params) was
 // made. This does not indicate that the result of the command execution.
 var LaunchCmdAttempted = false
 
 // taskStatusCh is pushed with the task status sent to Mesos, so any custom pod task status hooks can be executed
-var taskStatusCh = make(chan string, 1)
+
+type TaskStatus struct {
+	Ctx    context.Context
+	Status string
+}
+
+var taskStatusCh = make(chan TaskStatus, 1)
 
 // Check exit code of all the containers in the pod.
 // If all the exit codes are zero, then assign zero as pod's exit code,
@@ -345,7 +354,7 @@ func dockerLogToPodLogFile(files []string, retry bool) {
 
 // Stop pod
 // docker-compose stop
-func StopPod(files []string) error {
+func StopPod(ctx context.Context, files []string) error {
 	logger := log.WithFields(log.Fields{
 		"files": files,
 		"func":  "pod.StopPod",
@@ -360,7 +369,7 @@ func StopPod(files []string) error {
 	// Executing PreKillTask in order
 	_, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
 		for i, ext := range plugins {
-			if err := ext.PreKillTask(ComposeTaskInfo); err != nil {
+			if err := ext.PreKillTask(ctx, ComposeTaskInfo); err != nil {
 				logger.Errorf("Error executing PreKillTask in %dth plugin: %v", i, err)
 			}
 		}
@@ -396,7 +405,7 @@ func StopPod(files []string) error {
 		}
 	}
 
-	err = callAllPluginsPostKillTask()
+	err = callAllPluginsPostKillTask(ctx)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -404,7 +413,7 @@ func StopPod(files []string) error {
 	return nil
 }
 
-func callAllPluginsPostKillTask() error {
+func callAllPluginsPostKillTask(ctx context.Context) error {
 	// Select plugin extension points from plugin pools
 	plugins := plugin.GetOrderedExtpoints(PluginOrder)
 	log.Printf("Plugin order: %s", PluginOrder)
@@ -412,7 +421,7 @@ func callAllPluginsPostKillTask() error {
 	// Executing PostKillTask plugin extensions in order
 	utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
 		for _, ext := range plugins {
-			err := ext.PostKillTask(ComposeTaskInfo)
+			err := ext.PostKillTask(ctx, ComposeTaskInfo)
 			if err != nil {
 				log.Errorf("Error executing PostKillTask of plugin : %v", err)
 			}
@@ -814,7 +823,7 @@ func updatePodLaunched() {
 	log.Printf("Updated Current Pod Status with Pod Launched ")
 }
 
-func SendPodStatus(status types.PodStatus) {
+func SendPodStatus(ctx context.Context, status types.PodStatus) {
 	logger := log.WithFields(log.Fields{
 		"status": status,
 		"func":   "pod.SendPodStatus",
@@ -831,46 +840,46 @@ func SendPodStatus(status types.PodStatus) {
 	switch status {
 	case types.POD_RUNNING:
 		updatePodLaunched()
-		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_RUNNING.Enum())
+		SendMesosStatus(ctx, ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_RUNNING.Enum())
 	case types.POD_FINISHED:
 		// Stop pod after sending status to mesos
 		// To kill system proxy container
 		if len(MonitorContainerList) > 0 {
 			logger.Printf("Stop containers still running in the pod: %v", MonitorContainerList)
-			err := StopPod(ComposeFiles)
+			err := StopPod(ctx, ComposeFiles)
 			if err != nil {
 				logger.Errorf("Error stop pod: %v", err)
 			}
 		} else {
 			// Adding this else part to clean the adhoc tasks.
-			err := callAllPluginsPostKillTask()
+			err := callAllPluginsPostKillTask(ctx)
 			if err != nil {
 				logger.Error(err)
 			}
 		}
-		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FINISHED.Enum())
+		SendMesosStatus(ctx, ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FINISHED.Enum())
 	case types.POD_FAILED:
 		if LaunchCmdAttempted {
-			err := StopPod(ComposeFiles)
+			err := StopPod(ctx, ComposeFiles)
 			if err != nil {
 				logger.Errorf("Error cleaning up pod : %v\n", err.Error())
 			}
 		}
-		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		SendMesosStatus(ctx, ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	case types.POD_PULL_FAILED:
-		callAllPluginsPostKillTask()
-		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		callAllPluginsPostKillTask(ctx)
+		SendMesosStatus(ctx, ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 
 	case types.POD_COMPOSE_CHECK_FAILED:
-		callAllPluginsPostKillTask()
-		SendMesosStatus(ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
+		callAllPluginsPostKillTask(ctx)
+		SendMesosStatus(ctx, ComposeExecutorDriver, ComposeTaskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
 	logger.Printf("MesosStatus %s completed", status)
 }
 
 //Update mesos and pod status
-func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state *mesos.TaskState) error {
+func SendMesosStatus(ctx context.Context, driver executor.ExecutorDriver, taskId *mesos.TaskID, state *mesos.TaskState) error {
 	logger := log.WithFields(log.Fields{
 		"state": state.Enum().String(),
 		"func":  "pod.SendMesosStatus",
@@ -907,22 +916,25 @@ func SendMesosStatus(driver executor.ExecutorDriver, taskId *mesos.TaskID, state
 	time.Sleep(5 * time.Second)
 
 	// Push the state to Task status channel so any further steps on a given task status can be executed
-	taskStatusCh <- state.Enum().String()
+	taskStatusCh <- TaskStatus{
+		Ctx:    ctx,
+		Status: state.Enum().String(),
+	}
 
 	return nil
 }
 
 // Wait for pod running/finished until timeout or failed
-func WaitOnPod(ctx *context.Context) {
+func WaitOnPod(ctx context.Context) {
 	select {
-	case <-(*ctx).Done():
-		if (*ctx).Err() == context.DeadlineExceeded {
+	case <-(ctx).Done():
+		if (ctx).Err() == context.DeadlineExceeded {
 			log.Println("POD_LAUNCH_TIMEOUT")
 			if dump, ok := config.GetConfig().GetStringMap("dockerdump")["enable"].(bool); ok && dump {
 				DockerDump()
 			}
-			SendPodStatus(types.POD_FAILED)
-		} else if (*ctx).Err() == context.Canceled {
+			SendPodStatus(ctx, types.POD_FAILED)
+		} else if (ctx).Err() == context.Canceled {
 			log.Println("Stop waitUtil on pod, since pod is running/finished/failed")
 		}
 	}
@@ -1240,11 +1252,11 @@ func ListenOnTaskStatus(driver executor.ExecutorDriver, taskInfo *mesos.TaskInfo
 	cachedTaskInfo := &taskInfo
 	for {
 		select {
-		case status, ok := <-taskStatusCh: // wait for task status from LaunchTask
+		case taskStatus, ok := <-taskStatusCh: // wait for task status from LaunchTask
 			if ok {
-				switch status {
+				switch taskStatus.Status {
 				case mesos.TaskState_TASK_RUNNING.String():
-					if err := execPodStatusHooks(status, *cachedTaskInfo); err != nil {
+					if err := execPodStatusHooks(taskStatus.Ctx, taskStatus.Status, *cachedTaskInfo); err != nil {
 						logger.Errorf("executing hooks failed %v ", err)
 					}
 				case mesos.TaskState_TASK_FAILED.String():
@@ -1254,7 +1266,7 @@ func ListenOnTaskStatus(driver executor.ExecutorDriver, taskInfo *mesos.TaskInfo
 						2. Health Monitor or any plugin monitors and fails after the task has been running for
 						   a longtime (PodStatus.Launched = true, and marked as failed later)
 					*/
-					if err := execPodStatusHooks(status, *cachedTaskInfo); err != nil {
+					if err := execPodStatusHooks(taskStatus.Ctx, taskStatus.Status, *cachedTaskInfo); err != nil {
 						logger.Errorf("executing hooks failed %v ", err)
 					}
 					stopDriver(driver)
@@ -1263,7 +1275,7 @@ func ListenOnTaskStatus(driver executor.ExecutorDriver, taskInfo *mesos.TaskInfo
 					stopDriver(driver)
 					break
 				default:
-					log.Infof("Nothing to do on task status %s", status)
+					log.Infof("Nothing to do on task status %s", taskStatus.Status)
 				}
 			} else {
 				log.Errorln("failure reading from task status channel")
@@ -1274,7 +1286,7 @@ func ListenOnTaskStatus(driver executor.ExecutorDriver, taskInfo *mesos.TaskInfo
 
 // execPodStatusHooks finds the hooks (implementations of ExecutorHook interface) configured for executor phase and executes them
 // error is returned if any of the hooks failed, and ExecutorHook.BestEffort() returns true
-func execPodStatusHooks(status string, taskInfo *mesos.TaskInfo) error {
+func execPodStatusHooks(ctx context.Context, status string, taskInfo *mesos.TaskInfo) error {
 	logger := log.WithFields(log.Fields{
 		"requuid":   GetLabel("requuid", taskInfo),
 		"tenant":    GetLabel("tenant", taskInfo),
@@ -1295,7 +1307,7 @@ func execPodStatusHooks(status string, taskInfo *mesos.TaskInfo) error {
 				logger.Errorf("Hook %s is nil, not initialized? still continuing with available hooks", name)
 				continue
 			}
-			if failExec, pherr := hook.Execute(status, taskInfo); pherr != nil {
+			if failExec, pherr := hook.Execute(ctx, status, taskInfo); pherr != nil {
 				logger.Errorf(
 					"PodStatusHook %s failed with %v and is not best effort, so stopping further execution ",
 					name, pherr)
