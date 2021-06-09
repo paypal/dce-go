@@ -160,7 +160,7 @@ func GetLaunchTimeout() time.Duration {
 	// as well as integer which is existing value type
 	valStr := GetConfig().GetString(TIMEOUT)
 	if valInt, err := strconv.Atoi(valStr); err == nil {
-		return time.Duration(valInt)
+		return time.Duration(valInt) * time.Millisecond
 	}
 	duration, err := time.ParseDuration(valStr)
 	if err != nil {
