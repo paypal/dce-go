@@ -17,7 +17,6 @@ package monitor
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
@@ -129,9 +128,9 @@ func MonitorPoller() {
 		logger.Printf("Infra container id: %s", infraContainerId)
 	}
 
-	res, err := wait.PollForever(time.Duration(config.GetPollInterval())*time.Millisecond, nil, wait.ConditionFunc(func() (string, error) {
+	res, err := wait.PollForever(config.GetPollInterval(), nil, func() (string, error) {
 		return podMonitor(infraContainerId).String(), nil
-	}))
+	})
 
 	logger.Printf("Pod Monitor Receiver : Received  message %s", res)
 
