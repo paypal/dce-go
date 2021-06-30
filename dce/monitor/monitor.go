@@ -21,7 +21,6 @@ import (
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
-	"github.com/paypal/dce-go/utils"
 	"github.com/paypal/dce-go/utils/pod"
 	"github.com/paypal/dce-go/utils/wait"
 	log "github.com/sirupsen/logrus"
@@ -148,7 +147,7 @@ func MonitorPoller(ctx context.Context) {
 		return
 	}
 
-	switch utils.ToPodStatus(res) {
+	switch pod.ToPodStatus(res) {
 	case types.POD_FAILED:
 		pod.SendPodStatus(ctx, types.POD_FAILED)
 

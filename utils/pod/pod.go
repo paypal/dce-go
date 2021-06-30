@@ -31,7 +31,6 @@ import (
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
-	"github.com/paypal/dce-go/utils"
 	waitUtil "github.com/paypal/dce-go/utils/wait"
 	"github.com/paypal/gorealis/gen-go/apache/aurora"
 	"github.com/pkg/errors"
@@ -59,7 +58,7 @@ var PluginOrder []string
 var HealthCheckListId = make(map[string]bool)
 var MonitorContainerList []string
 var SinglePort bool
-var StepMetrics = make(map[interface{}]interface{})
+var StepMetrics = make(map[string][]*types.StepData)
 
 // store all docker-composed yaml file, key is filepath, value is the yaml unmarshelled object
 var ServiceDetail = make(map[string]map[string]interface{})
@@ -367,7 +366,7 @@ func StopPod(ctx context.Context, files []string) error {
 	logger.Printf("Plugin order: %s", PluginOrder)
 
 	// Executing PreKillTask in order
-	_, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+	_, err := PluginPanicHandler(ConditionFunc(func() (string, error) {
 		for i, ext := range plugins {
 			if err := ext.PreKillTask(ctx, ComposeTaskInfo); err != nil {
 				logger.Errorf("Error executing PreKillTask in %dth plugin: %v", i, err)
@@ -419,7 +418,7 @@ func callAllPluginsPostKillTask(ctx context.Context) error {
 	log.Printf("Plugin order: %s", PluginOrder)
 
 	// Executing PostKillTask plugin extensions in order
-	utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+	PluginPanicHandler(ConditionFunc(func() (string, error) {
 		for _, ext := range plugins {
 			err := ext.PostKillTask(ctx, ComposeTaskInfo)
 			if err != nil {
@@ -619,9 +618,9 @@ func CheckContainer(containerId string, healthCheck bool) (types.HealthStatus, b
 	if healthCheck {
 		if containerDetail.IsRunning {
 			//log.Printf("CheckContainer : Primary container %s is running , %s\n", containerId, containerDetail.HealthStatus)
-			return utils.ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
+			return ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
 		}
-		return utils.ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
+		return ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
 	}
 
 	if containerDetail.IsRunning {
@@ -1300,7 +1299,7 @@ func execPodStatusHooks(ctx context.Context, status string, taskInfo *mesos.Task
 		return nil
 	}
 	logger.Infof("Executor Post Hooks found: %v", podStatusHooks)
-	if _, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+	if _, err := PluginPanicHandler(ConditionFunc(func() (string, error) {
 		for _, name := range podStatusHooks {
 			hook := plugin.PodStatusHooks.Lookup(name)
 			if hook == nil {

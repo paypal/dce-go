@@ -162,3 +162,14 @@ func (c *ContainerStatusDetails) SetComposeTaskId(composeTaskId *mesosproto.Task
 type err string
 
 const NoComposeFile err = "no compose file specified"
+
+type StepData struct {
+	RetryID    int               `json:"retryID,omitempty"`
+	StepName   string            `json:"stepName,omitempty"`
+	ErrorMsg   error             `json:"errorMsg,omitempty"`
+	Status     string            `json:"status,omitempty"`
+	Tags       map[string]string `json:"tags,omitempty"`
+	StartTime  int64             `json:"startTime,omitempty"`
+	EndTime    int64             `json:"endTime,omitempty"`
+	ExecTimeMS int64             `json:"execTimeMS,omitempty"`
+}
