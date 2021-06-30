@@ -87,7 +87,7 @@ func StartStep(stepData map[string][]*types.StepData, stepName string) {
 
 // EndStep ends the current dce step, and update the result, duraiton.
 // current dce step can be fetch from stepData, key is the stepName, value is each retry results. Update the latest result
-func EndStep(stepData map[string][]*types.StepData, stepName string, err error) {
+func EndStep(stepData map[string][]*types.StepData, stepName string, tag map[string]interface{}, err error) {
 	if len(stepName) == 0 {
 		log.Error("error while updating step data for Granular Metrics: step name can't be empty for stepData")
 		return
@@ -105,6 +105,7 @@ func EndStep(stepData map[string][]*types.StepData, stepName string, err error) 
 	}
 
 	step := stepValues[len(stepValues)-1]
+	step.Tags = tag
 	step.EndTime = time.Now().Unix()
 	step.ErrorMsg = err
 	step.ExecTimeMS = (step.EndTime - step.StartTime) * 1000

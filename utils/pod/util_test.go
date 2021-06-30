@@ -42,13 +42,13 @@ func TestSetStepData(t *testing.T) {
 		},
 	}
 	StartStep(StepMetrics, "Image_Pull")
-	EndStep(StepMetrics, "Image_Pull", testErr)
+	EndStep(StepMetrics, "Image_Pull", nil, testErr)
 
 	StartStep(StepMetrics, "Image_Pull")
-	EndStep(StepMetrics, "Image_Pull", nil)
+	EndStep(StepMetrics, "Image_Pull", nil, nil)
 
 	StartStep(StepMetrics, "HealthCheck")
-	EndStep(StepMetrics, "HealthCheck", nil)
+	EndStep(StepMetrics, "HealthCheck", nil, nil)
 
 	for k, v1 := range example {
 		v2, ok := StepMetrics[k]

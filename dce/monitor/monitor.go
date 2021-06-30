@@ -40,11 +40,11 @@ func podMonitor(systemProxyId string) types.PodStatus {
 		var running bool
 
 		if hc, ok := pod.HealthCheckListId[pod.MonitorContainerList[i]]; ok && hc {
-			healthy, running, exitCode, err = pod.CheckContainer(pod.MonitorContainerList[i], true)
+			_, healthy, running, exitCode, err = pod.CheckContainer(pod.MonitorContainerList[i], true)
 			logger.Debugf("container %s has health check, health status: %s, exitCode: %d, err : %v",
 				pod.MonitorContainerList[i], healthy.String(), exitCode, err)
 		} else {
-			healthy, running, exitCode, err = pod.CheckContainer(pod.MonitorContainerList[i], false)
+			_, healthy, running, exitCode, err = pod.CheckContainer(pod.MonitorContainerList[i], false)
 			log.Debugf("container %s doesn't have health check, status: %s, exitCode: %d, err : %v",
 				pod.MonitorContainerList[i], healthy.String(), exitCode, err)
 		}

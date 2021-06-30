@@ -603,32 +603,32 @@ func PullImage(files []string) error {
 
 //CheckContainer does check container details
 //return healthy,run,err
-func CheckContainer(containerId string, healthCheck bool) (types.HealthStatus, bool, int, error) {
+func CheckContainer(containerId string, healthCheck bool) (types.ContainerStatusDetails, types.HealthStatus, bool, int, error) {
 	containerDetail, err := InspectContainerDetails(containerId, healthCheck)
 	if err != nil {
 		log.Printf("CheckContainer : Error inspecting container with id : %s, %v", containerId, err.Error())
-		return types.UNHEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, err
+		return containerDetail, types.UNHEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, err
 	}
 
 	if containerDetail.ExitCode != 0 {
 		log.Printf("CheckContainer : Container %s is finished with exit code %v\n", containerId, containerDetail.ExitCode)
-		return types.UNHEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
+		return containerDetail, types.UNHEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
 	}
 
 	if healthCheck {
 		if containerDetail.IsRunning {
 			//log.Printf("CheckContainer : Primary container %s is running , %s\n", containerId, containerDetail.HealthStatus)
-			return ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
+			return containerDetail, ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
 		}
-		return ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
+		return containerDetail, ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
 	}
 
 	if containerDetail.IsRunning {
 		//log.Printf("CheckContainer : Regular container %s is running\n", containerId)
-		return types.HEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
+		return containerDetail, types.HEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
 	}
 
-	return types.HEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
+	return containerDetail, types.HEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
 }
 
 func KillContainer(sig string, containerId string) error {
@@ -1136,6 +1136,8 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 
 healthCheck:
 	for len(containers) != healthCount {
+		StartStep(StepMetrics, "HealthCheck")
+		tag := make(map[string]interface{})
 		healthCount = 0
 
 		for i := 0; i < len(containers); i++ {
@@ -1145,12 +1147,12 @@ healthCheck:
 			var running bool
 
 			if hc, ok := HealthCheckListId[containers[i]]; ok && hc {
-				healthy, running, exitCode, err = CheckContainer(containers[i], true)
+				tag[containers[i]], healthy, running, exitCode, err = CheckContainer(containers[i], true)
 			} else {
 				if hc, err = isHealthCheckConfigured(containers[i]); hc {
-					healthy, running, exitCode, err = CheckContainer(containers[i], true)
+					tag[containers[i]], healthy, running, exitCode, err = CheckContainer(containers[i], true)
 				} else {
-					healthy, running, exitCode, err = CheckContainer(containers[i], false)
+					tag[containers[i]], healthy, running, exitCode, err = CheckContainer(containers[i], false)
 				}
 			}
 
@@ -1180,6 +1182,7 @@ healthCheck:
 				break healthCheck
 			}
 		}
+		EndStep(StepMetrics, "HealthCheck", tag, err)
 
 		if len(containers) != healthCount {
 			time.Sleep(interval)
