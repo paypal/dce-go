@@ -18,8 +18,6 @@ import (
 	"bufio"
 	"bytes"
 	"container/list"
-	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,6 +27,7 @@ import (
 	"strings"
 
 	mesos "github.com/mesos/mesos-go/mesosproto"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
@@ -223,14 +222,14 @@ func DeleteFile(file string) error {
 	return os.Remove(file)
 }
 
-func WriteChangeToFiles(ctx context.Context) error {
-	filesMap := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
+func WriteChangeToFiles() error {
+	filesMap := pod.GetServiceDetail()
 	for file := range filesMap {
 		content, err := yaml.Marshal(filesMap[file])
 		if err != nil {
 			log.Errorf("error occured while marshalling file from fileMap: %s", err)
 		}
-		_, err = WriteToFile(file.(string), content)
+		_, err = WriteToFile(file, content)
 		if err != nil {
 			return err
 		}
@@ -238,18 +237,11 @@ func WriteChangeToFiles(ctx context.Context) error {
 	return nil
 }
 
-func DumpPluginModifiedComposeFiles(ctx context.Context, plugin, funcName string, pluginOrder int) {
-	if ctx.Value(types.SERVICE_DETAIL) == nil {
-
-	}
-	filesMap, ok := ctx.Value(types.SERVICE_DETAIL).(types.ServiceDetail)
-	if !ok {
-		log.Printf("Skip dumping modified compose file by plugin %s", plugin)
-		return
-	}
+func DumpPluginModifiedComposeFiles(plugin, funcName string, pluginOrder int) {
+	filesMap := pod.GetServiceDetail()
 	for file := range filesMap {
 		content, _ := yaml.Marshal(filesMap[file])
-		fParts := strings.Split(file.(string), PATH_DELIMITER)
+		fParts := strings.Split(file, PATH_DELIMITER)
 		if len(fParts) < 2 {
 			log.Printf("Skip dumping modified compose file by plugin %s, since file name is invalid %s", plugin, file)
 			return
@@ -512,17 +504,21 @@ func DeFolderPath(filepaths []string) []string {
 	return filenames
 }
 
-func ParseYamls(files *[]string) (map[interface{}](map[interface{}]interface{}), error) {
-	res := make(map[interface{}](map[interface{}]interface{}))
+func ParseYamls(files *[]string) (map[string]map[string]interface{}, error) {
+	res := make(map[string]map[string]interface{})
 	for _, file := range *files {
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
 			log.Errorf("Error reading file %s : %v", file, err)
 		}
-		m := make(map[interface{}]interface{})
+		// unmarshal the docker-compose.yaml
+		m := make(map[string]interface{})
 		err = yaml.Unmarshal(data, &m)
 		if err != nil {
-			log.Errorf("Error unmarshalling %v", err)
+			return res, errors.Errorf("Error unmarshalling %v", err)
+		}
+		if len(FolderPath(strings.Fields(file))[0]) == 0 {
+			return res, errors.Errorf("folder %s under %+v is empty", strings.Fields(file), FolderPath)
 		}
 		res[FolderPath(strings.Fields(file))[0]] = m
 	}

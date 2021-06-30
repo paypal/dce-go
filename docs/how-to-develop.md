@@ -65,16 +65,16 @@ type ComposePlugin interface {
        PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error
        
        // PostLaunchTask is invoked after pod launch in context of executor LaunchTask callback.
-       PostLaunchTask(ctx *context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error)
+       PostLaunchTask(ctx context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error)
        
        // PreKillTask is invoked prior to killing pod in context of executor KillTask callback. 
-       PreKillTask(taskInfo *mesos.TaskInfo) error
+       PreKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error
        
        // PostKillTask is invoked after killing pod in context of executor KillTask callback. 
-       PostKillTask(taskInfo *mesos.TaskInfo) error
+       PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error
        
        // Shutdown is invoked prior to executor shutdown in context of Shutdown callback. 
-       Shutdown(executor.ExecutorDriver) error
+       Shutdown(taskInfo *mesos.TaskInfo, ed executor.ExecutorDriver)
 }
 ```
 PreLaunchTask and PostLaunchTask have Context object as first parameter. This is used to pass around parsed compose files so as to avoid loading from files by individual plugins.
@@ -112,22 +112,22 @@ func (ex *exampleExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 	return nil
 }
 
-func (ex *exampleExt) PostLaunchTask(ctx *context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error) {
+func (ex *exampleExt) PostLaunchTask(ctx context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error) {
 	logger.Println("PostLaunchTask Starting")
 	return "", nil
 }
 
-func (ex *exampleExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
+func (ex *exampleExt) PreKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error {
 	logger.Println("PreKillTask Starting")
 	return nil
 }
 
-func (ex *exampleExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
+func (ex *exampleExt) PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error {
 	logger.Println("PostKillTask Starting")
 	return nil
 }
 
-func (ex *exampleExt) Shutdown(executor.ExecutorDriver) error {
+func (ex *exampleExt) Shutdown(taskInfo *mesos.TaskInfo, ed executor.ExecutorDriver) {
 	logger.Println("Shutdown Starting")
 	return nil
 }
@@ -163,11 +163,11 @@ func (ex *exampleExt) Shutdown(executor.ExecutorDriver) error {
     Here is an example of config.yaml
     ```
     launchtask:
-       podmonitorinterval: 10000
+       podmonitorinterval: 10s
        pullretry: 3
        maxretry: 3
-       retryinterval: 10000
-       timeout: 500000
+       retryinterval: 10s
+       timeout: 500s
     plugins:
        pluginorder: general,example
     cleanpod:
@@ -308,14 +308,14 @@ There are 2 types of configuration files:
 Main configuration file captures generic information relevant to compose executor. Details are outlined below.
 ```
 launchtask:
-   podmonitorinterval: 10000 # Periodic interval (in milisecond) at which pod is monitored. (Required)
+   podmonitorinterval: 10s   # Periodic interval at which pod is monitored. (Required)
    pullretry: 3              # Maximum retry count for pulling images. retry with backoff is 
                              # used on failure.(Optional, default value is 1.)
    maxretry: 3               # Maximum retry count for retrieving list of containers in a pod. 
                              # (Optional, defaults to 1) 
-   retryinterval: 10000      # Interval between each cmd retry
+   retryinterval: 10s        # Interval between each cmd retry
                              # (Optional, defaults to 10s)
-   timeout: 100000           # Timeout for pods get running. (Required)
+   timeout: 500s             # Timeout for pods get running. (Required)
 plugins:
    pluginorder: general      # Define the order of plugins will be executed. If you register your 
                              # plugin with name "example", you will have "general,example" as pluginorder. 
@@ -346,13 +346,13 @@ dockercomposeverbose: true                       # enable verbose mode for each 
  
 ```
 <!--
-podmonitorinterval: Periodic interval (in milisecond) at which pod is monitored. (Required)
+podmonitorinterval: Periodic interval at which pod is monitored. (Required, default is 10s)
 
 pullretry: Maximum retry count for pulling images. retry with backoff is used on failure.(Optional, default value is 1.)
 
 maxretry: Maximum retry count for retrieving list of containers in a pod. (Optional, default value is 1)
 
-timeout: Timeout for pods get running. (Required)
+timeout: Timeout for pods get running. (Required, default is 500s)
 
 pluginorder: Define the order of plugins will be executed. If you register your plugin with name "example", you will have "general,example" as pluginorder. This will be a critical configuration to get pod running successfully. (Required)
 

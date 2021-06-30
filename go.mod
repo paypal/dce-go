@@ -7,6 +7,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.2.0 // indirect
+	github.com/json-iterator/go v1.1.6
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mesos/mesos-go v0.0.3-0.20161004192122-7228b13084ce
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
