@@ -55,6 +55,7 @@ func UnregisterExtension(name string) []string {
 	return ifaces
 }
 
+
 // Base extension point
 
 type extensionPoint struct {
@@ -176,6 +177,7 @@ func (ep *composePluginExt) Names() []string {
 	return names
 }
 
+
 // PodStatusHook
 
 var PodStatusHooks = &podStatusHookExt{
@@ -225,3 +227,56 @@ func (ep *podStatusHookExt) Names() []string {
 	}
 	return names
 }
+
+
+// Monitor
+
+var Monitors = &monitorExt{
+	newExtensionPoint(new(Monitor)),
+}
+
+type monitorExt struct {
+	*extensionPoint
+}
+
+func (ep *monitorExt) Unregister(name string) bool {
+	return ep.unregister(name)
+}
+
+func (ep *monitorExt) Register(extension Monitor, name string) bool {
+	return ep.register(extension, name)
+}
+
+func (ep *monitorExt) Lookup(name string) Monitor {
+	ext := ep.lookup(name)
+	if ext == nil {
+		return nil
+	}
+	return ext.(Monitor)
+}
+
+func (ep *monitorExt) Select(names []string) []Monitor {
+	var selected []Monitor
+	for _, name := range names {
+		selected = append(selected, ep.Lookup(name))
+	}
+	return selected
+}
+
+func (ep *monitorExt) All() map[string]Monitor {
+	all := make(map[string]Monitor)
+	for k, v := range ep.all() {
+		all[k] = v.(Monitor)
+	}
+	return all
+}
+
+func (ep *monitorExt) Names() []string {
+	var names []string
+	for k := range ep.all() {
+		names = append(names, k)
+	}
+	return names
+}
+
+

@@ -31,6 +31,7 @@ import (
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/dce/monitor"
+	_ "github.com/paypal/dce-go/dce/monitor/plugin/default"
 	"github.com/paypal/dce-go/plugin"
 	_ "github.com/paypal/dce-go/pluginimpl/example"
 	_ "github.com/paypal/dce-go/pluginimpl/general"
@@ -299,7 +300,13 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			cancel()
 			if pod.GetPodStatus() != types.POD_RUNNING {
 				pod.SendPodStatus(ctx, types.POD_RUNNING)
-				go monitor.MonitorPoller(ctx)
+				go func() {
+					status, err := monitor.MonitorPoller(ctx)
+					if err != nil {
+						log.Errorf("failure from monitor: %s", err)
+					}
+					pod.SendPodStatus(status)
+				}()
 			}
 		}
 		//For adhoc job, send finished to mesos if job already finished during init health check
