@@ -28,7 +28,6 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 	logger := log.WithFields(log.Fields{
 		"monitor": name,
 	})
-	logger.Print("enter monitor plugin")
 	// Get infra container ID
 	var infraContainerId string
 	var err error
