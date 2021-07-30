@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-//go:generate go-extpoints . ComposePlugin PodStatusHook
+//go:generate go-extpoints . ComposePlugin PodStatusHook Monitor
 package plugin
 
 import (
@@ -20,10 +20,11 @@ import (
 
 	"github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
+	"github.com/paypal/dce-go/types"
 )
 
 type ComposePlugin interface {
-	// Get the name of the plugin
+	// Name gets the name of the plugin
 	Name() string
 
 	// execute some tasks before the Image is pulled
@@ -52,4 +53,11 @@ type PodStatusHook interface {
 	// and also a flag "failExec" indicating if the error needs to fail the execution when a series of hooks are executed
 	// This is to support cases where a few hooks can be executed in a best effort manner and need not fail the executor
 	Execute(ctx context.Context, podStatus string, data interface{}) (failExec bool, err error)
+}
+
+// Monitor inspects pods periodically until pod failed or terminated It also defines when to consider a pod as failed.
+// Move monitor as a plugin provides flexibility to replace default monitor logic.
+// Monitor name presents in config `monitorName` will be used, otherwise, default monitor will be used.
+type Monitor interface {
+	Start(ctx context.Context) (types.PodStatus, error)
 }
