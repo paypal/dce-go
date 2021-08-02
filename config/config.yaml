@@ -28,3 +28,5 @@ dockerdump:
    containerpidfile: /run/docker/libcontainerd/docker-containerd.pid
    dockerlogpath: /var/log/upstart/docker.log
 dockercomposeverbose: false
+podMonitor:
+   monitorName: default

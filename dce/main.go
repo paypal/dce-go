@@ -31,11 +31,11 @@ import (
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/dce/monitor"
+	_ "github.com/paypal/dce-go/dce/monitor/plugin/default"
 	"github.com/paypal/dce-go/plugin"
 	_ "github.com/paypal/dce-go/pluginimpl/example"
 	_ "github.com/paypal/dce-go/pluginimpl/general"
 	"github.com/paypal/dce-go/types"
-	"github.com/paypal/dce-go/utils"
 	fileUtils "github.com/paypal/dce-go/utils/file"
 	"github.com/paypal/dce-go/utils/pod"
 	"github.com/paypal/dce-go/utils/wait"
@@ -140,7 +140,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	extpoints = plugin.GetOrderedExtpoints(pluginOrder)
 
 	// Executing LaunchTaskPreImagePull in order
-	if _, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+	if _, err := pod.PluginPanicHandler(pod.ConditionFunc(func() (string, error) {
 		for i, ext := range extpoints {
 
 			if ext == nil {
@@ -148,15 +148,15 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 				return "", errors.New("plugin is nil")
 			}
 			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPreImagePull", ext.Name())
-			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
+			pod.StartStep(pod.StepMetrics, granularMetricStepName)
 
 			err = ext.LaunchTaskPreImagePull(ctx, &pod.ComposeFiles, executorId, taskInfo)
 			if err != nil {
 				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
-				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
+				pod.EndStep(pod.StepMetrics, granularMetricStepName, nil, err)
 				return "", err
 			}
-			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
+			pod.EndStep(pod.StepMetrics, granularMetricStepName, nil, nil)
 
 			if config.EnableComposeTrace() {
 				fileUtils.DumpPluginModifiedComposeFiles(pluginOrder[i], "LaunchTaskPreImagePull", i)
@@ -200,23 +200,23 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 	logger.Printf("Time elapsed since App launch: %.3fs", timeElapsed.Seconds())
 
 	// Executing LaunchTaskPostImagePull in order
-	if _, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+	if _, err := pod.PluginPanicHandler(pod.ConditionFunc(func() (string, error) {
 		for i, ext := range extpoints {
 			if ext == nil {
 				logger.Errorln("Error getting plugins from plugin registration pools")
 				return "", errors.New("plugin is nil")
 			}
 			granularMetricStepName := fmt.Sprintf("%s_LaunchTaskPostImagePull", ext.Name())
-			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
+			pod.StartStep(pod.StepMetrics, granularMetricStepName)
 
 			err = ext.LaunchTaskPostImagePull(ctx, &pod.ComposeFiles, executorId, taskInfo)
 			if err != nil {
 				logger.Errorf("Error executing LaunchTaskPreImagePull of plugin : %v", err)
-				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
+				pod.EndStep(pod.StepMetrics, granularMetricStepName, nil, err)
 				return "", err
 			}
 
-			utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
+			pod.EndStep(pod.StepMetrics, granularMetricStepName, nil, nil)
 
 			if config.EnableComposeTrace() {
 				fileUtils.DumpPluginModifiedComposeFiles(pluginOrder[i], "LaunchTaskPostImagePull", i)
@@ -243,15 +243,11 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		pod.SendMesosStatus(ctx, driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
-	utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, "Launch_Pod", "Starting")
+	pod.StartStep(pod.StepMetrics, "Launch_Pod")
 
 	// Launch pod
 	replyPodStatus, err := pod.LaunchPod(pod.ComposeFiles)
-	if err != nil {
-		utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", "Error")
-	} else {
-		utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), "Launch_Pod", "Success")
-	}
+	pod.EndStep(pod.StepMetrics, "Launch_Pod", nil, err)
 
 	logger.Printf("Pod status returned by LaunchPod : %s", replyPodStatus.String())
 
@@ -270,20 +266,18 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		}
 
 		// Temp status keeps the pod status returned by PostLaunchTask
-		tempStatus, err := utils.PluginPanicHandler(utils.ConditionFunc(func() (string, error) {
+		tempStatus, err := pod.PluginPanicHandler(pod.ConditionFunc(func() (string, error) {
 			var tempStatus string
 			for _, ext := range extpoints {
 				logger.Println("Executing post launch task plugin")
 
 				granularMetricStepName := fmt.Sprintf("%s_PostLaunchTask", ext.Name())
-				utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, granularMetricStepName, "Starting")
+				pod.StartStep(pod.StepMetrics, granularMetricStepName)
 
 				tempStatus, err = ext.PostLaunchTask(ctx, pod.ComposeFiles, taskInfo)
+				pod.EndStep(pod.StepMetrics, granularMetricStepName, nil, err)
 				if err != nil {
 					logger.Errorf("Error executing PostLaunchTask : %v", err)
-					utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Error")
-				} else {
-					utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), granularMetricStepName, "Success")
 				}
 
 				logger.Printf("Get pod status : %s returned by PostLaunchTask", tempStatus)
@@ -306,7 +300,13 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 			cancel()
 			if pod.GetPodStatus() != types.POD_RUNNING {
 				pod.SendPodStatus(ctx, types.POD_RUNNING)
-				go monitor.MonitorPoller(ctx)
+				go func() {
+					status, err := monitor.MonitorPoller(ctx)
+					if err != nil {
+						log.Errorf("failure from monitor: %s", err)
+					}
+					pod.SendPodStatus(status)
+				}()
 			}
 		}
 		//For adhoc job, send finished to mesos if job already finished during init health check
@@ -395,18 +395,11 @@ func pullImage() error {
 	logger.Println("====================Pulling Image====================")
 
 	if !config.SkipPullImages() {
-		count := 0
 		err := wait.PollRetry(config.GetPullRetryCount(), config.GetPollInterval(), func() (string, error) {
-			utils.SetStepData(pod.StepMetrics, time.Now().Unix(), 0, fmt.Sprintf("Image_Pull_%v", count), "Starting")
+			pod.StartStep(pod.StepMetrics, "Image_Pull")
 			err := pod.PullImage(pod.ComposeFiles)
-			if err != nil {
-				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), fmt.Sprintf("Image_Pull_%v", count), "Error")
-			} else {
-				utils.SetStepData(pod.StepMetrics, 0, time.Now().Unix(), fmt.Sprintf("Image_Pull_%v", count), "Success")
-			}
-			count++
+			pod.EndStep(pod.StepMetrics, "Image_Pull", nil, err)
 			return "", err
-
 		})
 
 		if err != nil {
@@ -420,6 +413,8 @@ func pullImage() error {
 
 func initHealthCheck(podServices map[string]bool) (types.PodStatus, error) {
 	res, err := wait.WaitUntil(config.GetLaunchTimeout(), func(healthCheckReply chan string) {
+		// wait until timeout or receive any result from healthCheckReply
+		// healthCheckReply is to stored the pod status
 		pod.HealthCheck(pod.ComposeFiles, podServices, healthCheckReply)
 	})
 
@@ -427,7 +422,7 @@ func initHealthCheck(podServices map[string]bool) (types.PodStatus, error) {
 		log.Printf("POD_INIT_HEALTH_CHECK_TIMEOUT -- %v", err)
 		return types.POD_FAILED, err
 	}
-	return utils.ToPodStatus(res), err
+	return pod.ToPodStatus(res), err
 }
 
 func getServices() map[string]bool {

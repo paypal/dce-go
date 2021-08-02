@@ -216,6 +216,7 @@ func TestGetAndRemoveLabel(t *testing.T) {
 }
 
 func TestExecHooks(t *testing.T) {
+	ctx := context.Background()
 	//Register plugin with name
 	if ok := plugin.PodStatusHooks.Register(&happyHook{}, "happyHook"); !ok {
 		log.Fatalf("failed to register plugin %s", "happyHook")
@@ -230,13 +231,13 @@ func TestExecHooks(t *testing.T) {
 	}
 
 	config.GetConfig().Set("podstatushooks.TASK_RUNNING", []string{"happyHook"})
-	assert.NoError(t, execPodStatusHooks("TASK_RUNNING", nil), "happy hook can't fail")
+	assert.NoError(t, execPodStatusHooks(ctx, "TASK_RUNNING", nil), "happy hook can't fail")
 
 	config.GetConfig().Set("podstatushooks.TASK_FAILED", []string{"happyHook", "mandatoryHook"})
-	assert.Error(t, execPodStatusHooks("TASK_FAILED", nil), "mandatory hook can't succeed")
+	assert.Error(t, execPodStatusHooks(ctx, "TASK_FAILED", nil), "mandatory hook can't succeed")
 
 	config.GetConfig().Set("podstatushooks.TASK_FAILED", []string{"panicHook"})
-	assert.Error(t, execPodStatusHooks("TASK_FAILED", nil), "panicHook hook can't succeed")
+	assert.Error(t, execPodStatusHooks(ctx, "TASK_FAILED", nil), "panicHook hook can't succeed")
 }
 
 // dummy executor hooks for unit test
@@ -244,15 +245,15 @@ type happyHook struct{}
 type mandatoryHook struct{}
 type panicHook struct{}
 
-func (p *happyHook) Execute(podStatus string, data interface{}) (failExec bool, err error) {
+func (p *happyHook) Execute(ctx context.Context, podStatus string, data interface{}) (failExec bool, err error) {
 	return true, nil
 }
 
-func (p *mandatoryHook) Execute(status string, data interface{}) (failExec bool, err error) {
+func (p *mandatoryHook) Execute(ctx context.Context, status string, data interface{}) (failExec bool, err error) {
 	return true, errors.New("failure test case")
 }
 
-func (p *panicHook) Execute(status string, data interface{}) (failExec bool, err error) {
+func (p *panicHook) Execute(ctx context.Context, status string, data interface{}) (failExec bool, err error) {
 	panic("unit test panic")
 	return false, errors.New("panic test case")
 }
