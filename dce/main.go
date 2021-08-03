@@ -305,7 +305,7 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 					if err != nil {
 						log.Errorf("failure from monitor: %s", err)
 					}
-					pod.SendPodStatus(status)
+					pod.SendPodStatus(ctx, status)
 				}()
 			}
 		}
