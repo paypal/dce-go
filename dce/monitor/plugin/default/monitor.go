@@ -6,7 +6,6 @@ import (
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
-	"github.com/paypal/dce-go/utils"
 	"github.com/paypal/dce-go/utils/pod"
 	"github.com/paypal/dce-go/utils/wait"
 	"github.com/pkg/errors"
@@ -42,7 +41,7 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 	run := func() (types.PodStatus, error) {
 		for i := 0; i < len(pod.MonitorContainerList); i++ {
 			hc, ok := pod.HealthCheckListId[pod.MonitorContainerList[i]]
-			healthy, running, exitCode, err := pod.CheckContainer(pod.MonitorContainerList[i], ok && hc)
+			_, healthy, running, exitCode, err := pod.CheckContainer(pod.MonitorContainerList[i], ok && hc)
 			if err != nil {
 				return types.POD_FAILED, err
 			}
@@ -103,5 +102,5 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 		return status.String(), nil
 	})
 
-	return utils.ToPodStatus(res), err
+	return pod.ToPodStatus(res), err
 }
