@@ -947,12 +947,12 @@ func WaitOnPod(ctx context.Context) {
 			if dump, ok := config.GetConfig().GetStringMap("dockerdump")["enable"].(bool); ok && dump {
 				DockerDump()
 			}
-			log.Println("Dumping containers state...")
+			log.Debug("Dumping containers state...")
 			// dump docker inspect for each for container
 			if err := dumpContainerInspect(); err != nil {
 				log.Warnf("unable to inspect containers --%v", err)
 			}
-			log.Println("Completed dumping containers state")
+			log.Debug("Completed dumping containers state")
 			SendPodStatus(ctx, types.POD_FAILED)
 		} else if (ctx).Err() == context.Canceled {
 			log.Println("Stop waitUtil on pod, since pod is running/finished/failed")
