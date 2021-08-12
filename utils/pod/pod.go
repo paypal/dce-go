@@ -923,43 +923,17 @@ func SendMesosStatus(ctx context.Context, driver executor.ExecutorDriver, taskId
 	return nil
 }
 
-// dumpComposePS prints docker compose files
-func dumpComposePS() error {
-	parts, err := GenerateCmdParts(ComposeFiles, " ps")
-	if err != nil {
-		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL unable to generate -- %v", err)
-		return err
-	}
-	cmd := exec.Command("docker-compose", parts...)
-	dceLogs := config.CreateFileAppendMode(types.DCE_OUT)
-	dceErrs := config.CreateFileAppendMode(types.DCE_ERR)
-	cmd.Stdout = dceLogs
-	cmd.Stderr = dceErrs
-	log.Println("command to get container ps : docker-compose ", parts)
-	if err = cmd.Start(); err != nil {
-		return err
-	}
-	if err = waitUtil.WaitCmd(config.GetLaunchTimeout(), &types.CmdResult{Command: cmd}); err != nil {
-		return err
-	}
-	return nil
-}
-
-// inspect unhealthy computer
-func dockerCompose() error {
+// dumpContainerInspect dumps docker inspect output of containers
+func dumpContainerInspect() error {
 	ids, err := GetPodContainerIds(ComposeFiles)
 	if err != nil {
 		return err
 	}
+	log.Debugf("found container ids %+v", ids)
 	for i := range ids {
-		hc := false
-		if _, ok := HealthCheckListId[ids[i]]; ok {
-			hc = true
-		} else {
-			// ignore soft error
-			hc, _ = isHealthCheckConfigured(ids[i])
+		if err := PrintInspectDetail(ids[i]); err != nil {
+			log.Warnf("unable to inspect container %s", ids[i])
 		}
-		InspectContainerDetails(ids[i], hc)
 	}
 	return nil
 }
@@ -973,14 +947,12 @@ func WaitOnPod(ctx context.Context) {
 			if dump, ok := config.GetConfig().GetStringMap("dockerdump")["enable"].(bool); ok && dump {
 				DockerDump()
 			}
-			// dump docker-compose ps out put && dump docker inspect for each for container
-			if err := dumpComposePS(); err != nil {
-				log.Printf("docker ps command --%v", err)
+			log.Debug("Dumping containers state...")
+			// dump docker inspect for each for container
+			if err := dumpContainerInspect(); err != nil {
+				log.Warnf("unable to inspect containers --%v", err)
 			}
-			if err := dockerCompose(); err != nil {
-				log.Printf("docker ps command --%v", err)
-			}
-
+			log.Debug("Completed dumping containers state")
 			SendPodStatus(ctx, types.POD_FAILED)
 		} else if (ctx).Err() == context.Canceled {
 			log.Println("Stop waitUtil on pod, since pod is running/finished/failed")
