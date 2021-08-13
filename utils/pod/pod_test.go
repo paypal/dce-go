@@ -150,6 +150,94 @@ func TestKillContainer(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestGetLabelByFullSuffix(t *testing.T) {
+	key1 := "org.apache.aurora.metadata.port"
+	value1 := "9090"
+	key2 := "org.apache.aurora.metadata.com.genesis.registrator.port"
+	value2 := "9090"
+
+	var labels []*mesos.Label
+	labels = append(labels, &mesos.Label{
+		Key:   &key1,
+		Value: &value1,
+	})
+	labels = append(labels, &mesos.Label{
+		Key:   &key2,
+		Value: &value2,
+	})
+
+	taskInfo := &mesos.TaskInfo{
+		Labels: &mesos.Labels{
+			Labels: labels,
+		},
+	}
+	type args struct {
+		key      string
+		taskInfo *mesos.TaskInfo
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "testSuccessShortLabel",
+			args: args{
+				key:      key1,
+				taskInfo: taskInfo,
+			},
+			want: value1,
+		},
+		{
+			name: "testSuccessLongLabel",
+			args: args{
+				key:      key2,
+				taskInfo: taskInfo,
+			},
+			want: value2,
+		},
+		{
+			name: "testInvalidLabel1",
+			args: args{
+				key:      "org.apache.aurora.metadata.comINVALID.genesis.registrator.port",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+		{
+			name: "testInvalidLabel2",
+			args: args{
+				key:      "org.apache.aurora.metadata.INVALIDcom.genesis.registrator.port",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+		{
+			name: "testInvalidLabel3",
+			args: args{
+				key:      "org.apache.aurora.metadata.INVALID",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+		{
+			name: "testInvalidLabel4",
+			args: args{
+				key:      "org.apache.aurora.metadata",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetLabelByFullSuffix(tt.args.key, taskInfo); got != tt.want {
+				t.Errorf("GetLabelByFullSuffix() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetAndRemoveLabel(t *testing.T) {
 	key1 := "org.apache.aurora.metadata.nsvip"
 	value1 := "1.1.1.1"

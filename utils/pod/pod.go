@@ -179,7 +179,7 @@ func GetPodContainerIds(files []string) ([]string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Errorln(os.Stderr, "reading standard input:", err)
+		log.Errorln("reading standard input:", err)
 	}
 	return containerIds, nil
 }
@@ -234,7 +234,7 @@ func GetContainerIdByService(files []string, service string) (string, error) {
 		id += scanner.Text()
 	}
 	if err := scanner.Err(); err != nil {
-		logger.Errorln(os.Stderr, "stderr: ", err)
+		logger.Errorln("stderr: ", err)
 		return "", err
 	}
 
@@ -260,7 +260,7 @@ func GetPodDetail(files []string, primaryContainerId string, healthcheck bool) {
 		log.Println(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
-		log.Errorln(os.Stderr, "reading standard input:", err)
+		log.Errorln("reading standard input:", err)
 	}
 
 	if primaryContainerId != "" {
@@ -773,6 +773,20 @@ func GetLabel(key string, taskInfo *mesos.TaskInfo) string {
 			if arr[len(arr)-1] == key {
 				return label.GetValue()
 			}
+		}
+	}
+	return ""
+}
+
+// get label by full key suffix match
+func GetLabelByFullSuffix(key string, taskInfo *mesos.TaskInfo) string {
+	labelsList := taskInfo.GetLabels().GetLabels()
+	for _, label := range labelsList {
+		lKey, lVal := label.GetKey(), label.GetValue()
+		if lKey == key {
+			return lVal
+		} else if len(lKey) > len(key) && lKey[len(lKey)-len(key):] == key && lKey[len(lKey)-len(key)-1] == '.' {
+			return lVal
 		}
 	}
 	return ""
