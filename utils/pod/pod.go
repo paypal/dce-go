@@ -786,7 +786,7 @@ func GetLabelByFullSuffix(key string, taskInfo *mesos.TaskInfo) string {
 		lKey, lVal := label.GetKey(), label.GetValue()
 		if lKey == key {
 			return lVal
-		} else if len(lKey) > len(key) && lKey[len(lKey)-len(key):] == key && lKey[len(lKey)-len(key)-1] == '.' {
+		} else if len(lKey) > len(key) && strings.HasSuffix(lKey, key) && lKey[len(lKey)-len(key)-1] == '.' {
 			return lVal
 		}
 	}

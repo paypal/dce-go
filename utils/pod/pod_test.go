@@ -150,6 +150,8 @@ func TestKillContainer(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// TestGetLabelByFullSuffix tests whether GetLabelByFullSuffix()
+// will break in case of an invalid key
 func TestGetLabelByFullSuffix(t *testing.T) {
 	key1 := "org.apache.aurora.metadata.port"
 	value1 := "9090"
@@ -199,7 +201,7 @@ func TestGetLabelByFullSuffix(t *testing.T) {
 		{
 			name: "testInvalidLabel1",
 			args: args{
-				key:      "org.apache.aurora.metadata.comINVALID.genesis.registrator.port",
+				key:      "comINVALID.genesis.registrator.port",
 				taskInfo: taskInfo,
 			},
 			want: "",
@@ -207,7 +209,7 @@ func TestGetLabelByFullSuffix(t *testing.T) {
 		{
 			name: "testInvalidLabel2",
 			args: args{
-				key:      "org.apache.aurora.metadata.INVALIDcom.genesis.registrator.port",
+				key:      "INVALIDcom.genesis.registrator.port",
 				taskInfo: taskInfo,
 			},
 			want: "",
