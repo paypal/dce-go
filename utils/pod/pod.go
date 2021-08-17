@@ -759,28 +759,9 @@ func ParseToContainerDetail(output string, healthcheck bool) (types.ContainerSta
 	return containerStatusDetails, nil
 }
 
-// GetLabel gets label by name
-func GetLabel(key string, taskInfo *mesos.TaskInfo) string {
-	var labelsList []*mesos.Label
-	labelsList = taskInfo.GetLabels().GetLabels()
-	var label *mesos.Label
-	for _, label = range labelsList {
-		if label.GetKey() == key {
-			return label.GetValue()
-		}
-		if strings.Contains(label.GetKey(), key) && strings.Contains(label.GetKey(), ".") {
-			arr := strings.Split(label.GetKey(), ".")
-			if arr[len(arr)-1] == key {
-				return label.GetValue()
-			}
-		}
-	}
-	return ""
-}
-
-// GetLabelByFullSuffix checks if the whole key is the suffix of a label
+// GetLabel checks if the whole key is the suffix of a label
 // and fetches the value of that label
-func GetLabelByFullSuffix(key string, taskInfo *mesos.TaskInfo) string {
+func GetLabel(key string, taskInfo *mesos.TaskInfo) string {
 	labelsList := taskInfo.GetLabels().GetLabels()
 	for _, label := range labelsList {
 		lKey, lVal := label.GetKey(), label.GetValue()

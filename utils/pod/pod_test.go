@@ -150,9 +150,9 @@ func TestKillContainer(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestGetLabelByFullSuffix tests whether GetLabelByFullSuffix()
+// TestGetLabel tests whether GetLabel()
 // will break in case of an invalid key
-func TestGetLabelByFullSuffix(t *testing.T) {
+func TestGetLabel(t *testing.T) {
 	key1 := "org.apache.aurora.metadata.port"
 	value1 := "9090"
 	key2 := "org.apache.aurora.metadata.com.genesis.registrator.port"
@@ -199,7 +199,22 @@ func TestGetLabelByFullSuffix(t *testing.T) {
 			want: value2,
 		},
 		{
-			name: "testInvalidLabel1",
+			name: "testOneWordKey",
+			args: args{
+				key:      "port",
+				taskInfo: taskInfo,
+			},
+			want: "9090",
+		}, {
+			name: "testMultiWordsKey",
+			args: args{
+				key:      "registrator.port",
+				taskInfo: taskInfo,
+			},
+			want: "9090",
+		},
+		{
+			name: "testInvalidKey1",
 			args: args{
 				key:      "comINVALID.genesis.registrator.port",
 				taskInfo: taskInfo,
@@ -207,7 +222,7 @@ func TestGetLabelByFullSuffix(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "testInvalidLabel2",
+			name: "testInvalidKey2",
 			args: args{
 				key:      "INVALIDcom.genesis.registrator.port",
 				taskInfo: taskInfo,
@@ -215,7 +230,7 @@ func TestGetLabelByFullSuffix(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "testInvalidLabel3",
+			name: "testInvalidKey3",
 			args: args{
 				key:      "org.apache.aurora.metadata.INVALID",
 				taskInfo: taskInfo,
@@ -223,9 +238,17 @@ func TestGetLabelByFullSuffix(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "testInvalidLabel4",
+			name: "testInvalidKey4",
 			args: args{
 				key:      "org.apache.aurora.metadata",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+		{
+			name: "testInvalidKey5",
+			args: args{
+				key:      ".port",
 				taskInfo: taskInfo,
 			},
 			want: "",
@@ -233,8 +256,8 @@ func TestGetLabelByFullSuffix(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetLabelByFullSuffix(tt.args.key, taskInfo); got != tt.want {
-				t.Errorf("GetLabelByFullSuffix() = %v, want %v", got, tt.want)
+			if got := GetLabel(tt.args.key, taskInfo); got != tt.want {
+				t.Errorf("GetLabel() = %v, want %v", got, tt.want)
 			}
 		})
 	}
