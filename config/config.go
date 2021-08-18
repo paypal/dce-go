@@ -59,6 +59,7 @@ const (
 	HTTP_TIMEOUT                         = "launchtask.httptimeout"
 	COMPOSE_STOP_TIMEOUT                 = "cleanpod.timeout"
 	CONFIG_OVERRIDE_PREFIX               = "config."
+	monitorName                          = "podMonitor.monitorName"
 )
 
 // Read from default configuration file and set config as key/values
@@ -135,6 +136,7 @@ func setDefaultConfig(conf *viper.Viper) {
 	conf.SetDefault(TIMEOUT, "500s")
 	conf.SetDefault(COMPOSE_STOP_TIMEOUT, 10)
 	conf.SetDefault(HTTP_TIMEOUT, "20s")
+	conf.SetDefault(monitorName, "default")
 }
 
 func GetAppFolder() string {

@@ -96,7 +96,6 @@ func GetRequest(ctx context.Context, transport http.RoundTripper, url string) ([
 		return nil, err
 	}
 	err = resp.Body.Close()
-	err = resp.Body.Close()
 	if err != nil {
 		log.Errorf("Failed to close response body :%v", err)
 		return nil, err

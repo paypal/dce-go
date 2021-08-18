@@ -65,16 +65,16 @@ type ComposePlugin interface {
        PreLaunchTask(ctx *context.Context, composeFiles *[]string, executorId string, taskInfo *mesos.TaskInfo) error
        
        // PostLaunchTask is invoked after pod launch in context of executor LaunchTask callback.
-       PostLaunchTask(ctx *context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error)
+       PostLaunchTask(ctx context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error)
        
        // PreKillTask is invoked prior to killing pod in context of executor KillTask callback. 
-       PreKillTask(taskInfo *mesos.TaskInfo) error
+       PreKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error
        
        // PostKillTask is invoked after killing pod in context of executor KillTask callback. 
-       PostKillTask(taskInfo *mesos.TaskInfo) error
+       PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error
        
        // Shutdown is invoked prior to executor shutdown in context of Shutdown callback. 
-       Shutdown(executor.ExecutorDriver) error
+       Shutdown(taskInfo *mesos.TaskInfo, ed executor.ExecutorDriver)
 }
 ```
 PreLaunchTask and PostLaunchTask have Context object as first parameter. This is used to pass around parsed compose files so as to avoid loading from files by individual plugins.
@@ -112,22 +112,22 @@ func (ex *exampleExt) PreLaunchTask(ctx *context.Context, composeFiles *[]string
 	return nil
 }
 
-func (ex *exampleExt) PostLaunchTask(ctx *context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error) {
+func (ex *exampleExt) PostLaunchTask(ctx context.Context, composeFiles []string, taskInfo *mesos.TaskInfo) (string, error) {
 	logger.Println("PostLaunchTask Starting")
 	return "", nil
 }
 
-func (ex *exampleExt) PreKillTask(taskInfo *mesos.TaskInfo) error {
+func (ex *exampleExt) PreKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error {
 	logger.Println("PreKillTask Starting")
 	return nil
 }
 
-func (ex *exampleExt) PostKillTask(taskInfo *mesos.TaskInfo) error {
+func (ex *exampleExt) PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo) error {
 	logger.Println("PostKillTask Starting")
 	return nil
 }
 
-func (ex *exampleExt) Shutdown(executor.ExecutorDriver) error {
+func (ex *exampleExt) Shutdown(taskInfo *mesos.TaskInfo, ed executor.ExecutorDriver) {
 	logger.Println("Shutdown Starting")
 	return nil
 }
