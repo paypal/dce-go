@@ -15,6 +15,7 @@
 package pod
 
 import (
+	"context"
 	"log"
 	"strings"
 	"testing"
@@ -33,28 +34,24 @@ import (
 func TestLaunchPod(t *testing.T) {
 	// file doesn't exist, should fail
 	files := []string{"docker-fail.yml"}
-	res := LaunchPod(files)
-	if res != types.POD_FAILED {
-		t.Fatalf("expected pod status to be POD_FAILED, but got %s", res)
-	}
+	res, err := LaunchPod(files)
+	assert.NoError(t, err)
+	assert.EqualValues(t, res, types.POD_FAILED)
 
 	// adhoc job
 	files = []string{"testdata/docker-adhoc.yml"}
-	res = LaunchPod(files)
-	if res != types.POD_STARTING {
-		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
-	}
+	res, err = LaunchPod(files)
+	assert.NoError(t, err)
+	assert.EqualValues(t, res, types.POD_STARTING)
 
 	// long running job
 	files = []string{"testdata/docker-long.yml"}
-	res = LaunchPod(files)
-	if res != types.POD_STARTING {
-		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
-	}
-	err := ForceKill(files)
-	if err != nil {
-		t.Errorf("expected no errors, but got %v", err)
-	}
+	res, err = LaunchPod(files)
+	assert.NoError(t, err)
+	assert.EqualValues(t, res, types.POD_STARTING)
+
+	err = ForceKill(files)
+	assert.NoError(t, err)
 }
 
 func TestGetContainerNetwork(t *testing.T) {
@@ -84,24 +81,25 @@ func TestRemoveNetwork(t *testing.T) {
 
 func TestForceKill(t *testing.T) {
 	files := []string{"testdata/docker-long.yml"}
-	res := LaunchPod(files)
+	res, err := LaunchPod(files)
+	assert.NoError(t, err)
 	if res != types.POD_STARTING {
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
-	err := ForceKill(files)
-	if err != nil {
-		t.Errorf("expected no errors, but got %v", err)
-	}
+	err = ForceKill(files)
+	assert.NoError(t, err)
 }
 
 func TestStopPod(t *testing.T) {
 	files := []string{"testdata/docker-long.yml"}
-	res := LaunchPod(files)
+	res, err := LaunchPod(files)
+	assert.NoError(t, err)
 	if res != types.POD_STARTING {
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
 	config.GetConfig().SetDefault(types.RM_INFRA_CONTAINER, true)
-	err := StopPod(files)
+	err = StopPod(context.TODO(), files)
+	assert.NoError(t, err)
 	if err != nil {
 		t.Errorf("expected no errors, but got %v", err)
 	}
@@ -109,7 +107,7 @@ func TestStopPod(t *testing.T) {
 
 func TestGetContainerIdByService(t *testing.T) {
 	files := []string{"testdata/docker-long.yml"}
-	res := LaunchPod(files)
+	res, err := LaunchPod(files)
 	if res != types.POD_STARTING {
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
@@ -134,7 +132,8 @@ func TestKillContainer(t *testing.T) {
 	assert.Error(t, err, "test kill invalid container")
 
 	files := []string{"testdata/docker-long.yml"}
-	res := LaunchPod(files)
+	res, err := LaunchPod(files)
+	assert.NoError(t, err)
 	if res != types.POD_STARTING {
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
@@ -144,9 +143,11 @@ func TestKillContainer(t *testing.T) {
 	err = KillContainer("SIGUSR1", id)
 	assert.NoError(t, err, "Test sending kill signal to container")
 	err = KillContainer("", id)
+	assert.NoError(t, err)
 
 	config.GetConfig().Set(types.RM_INFRA_CONTAINER, true)
-	StopPod(files)
+	err = StopPod(context.Background(), files)
+	assert.NoError(t, err)
 }
 
 func TestGetAndRemoveLabel(t *testing.T) {
@@ -215,6 +216,7 @@ func TestGetAndRemoveLabel(t *testing.T) {
 }
 
 func TestExecHooks(t *testing.T) {
+	ctx := context.Background()
 	//Register plugin with name
 	if ok := plugin.PodStatusHooks.Register(&happyHook{}, "happyHook"); !ok {
 		log.Fatalf("failed to register plugin %s", "happyHook")
@@ -229,13 +231,13 @@ func TestExecHooks(t *testing.T) {
 	}
 
 	config.GetConfig().Set("podstatushooks.TASK_RUNNING", []string{"happyHook"})
-	assert.NoError(t, execPodStatusHooks("TASK_RUNNING", nil), "happy hook can't fail")
+	assert.NoError(t, execPodStatusHooks(ctx, "TASK_RUNNING", nil), "happy hook can't fail")
 
 	config.GetConfig().Set("podstatushooks.TASK_FAILED", []string{"happyHook", "mandatoryHook"})
-	assert.Error(t, execPodStatusHooks("TASK_FAILED", nil), "mandatory hook can't succeed")
+	assert.Error(t, execPodStatusHooks(ctx, "TASK_FAILED", nil), "mandatory hook can't succeed")
 
 	config.GetConfig().Set("podstatushooks.TASK_FAILED", []string{"panicHook"})
-	assert.Error(t, execPodStatusHooks("TASK_FAILED", nil), "panicHook hook can't succeed")
+	assert.Error(t, execPodStatusHooks(ctx, "TASK_FAILED", nil), "panicHook hook can't succeed")
 }
 
 // dummy executor hooks for unit test
@@ -243,15 +245,15 @@ type happyHook struct{}
 type mandatoryHook struct{}
 type panicHook struct{}
 
-func (p *happyHook) Execute(podStatus string, data interface{}) (failExec bool, err error) {
+func (p *happyHook) Execute(ctx context.Context, podStatus string, data interface{}) (failExec bool, err error) {
 	return true, nil
 }
 
-func (p *mandatoryHook) Execute(status string, data interface{}) (failExec bool, err error) {
+func (p *mandatoryHook) Execute(ctx context.Context, status string, data interface{}) (failExec bool, err error) {
 	return true, errors.New("failure test case")
 }
 
-func (p *panicHook) Execute(status string, data interface{}) (failExec bool, err error) {
+func (p *panicHook) Execute(ctx context.Context, status string, data interface{}) (failExec bool, err error) {
 	panic("unit test panic")
 	return false, errors.New("panic test case")
 }

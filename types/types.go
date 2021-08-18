@@ -84,6 +84,7 @@ func (status HealthStatus) String() string {
 }
 
 const (
+	LOGLEVEL                = "loglevel"
 	CONTAINER_NAME          = "container_name"
 	NETWORK_MODE            = "network_mode"
 	HEALTH_CHECK            = "healthcheck"
@@ -124,7 +125,8 @@ const (
 	DCE_ERR                 = "dce.err"
 )
 
-type ServiceDetail map[interface{}](map[interface{}]interface{})
+// ServiceDetail key is filepath, value is map to store Unmarshal the docker-compose.yaml
+type ServiceDetail map[string]map[string]interface{}
 
 type CmdResult struct {
 	Result  error
@@ -160,3 +162,14 @@ func (c *ContainerStatusDetails) SetComposeTaskId(composeTaskId *mesosproto.Task
 type err string
 
 const NoComposeFile err = "no compose file specified"
+
+type StepData struct {
+	RetryID    int                    `json:"retryID,omitempty"`
+	StepName   string                 `json:"stepName,omitempty"`
+	ErrorMsg   error                  `json:"errorMsg,omitempty"`
+	Status     string                 `json:"status,omitempty"`
+	Tags       map[string]interface{} `json:"tags,omitempty"`
+	StartTime  int64                  `json:"startTime,omitempty"`
+	EndTime    int64                  `json:"endTime,omitempty"`
+	ExecTimeMS int64                  `json:"execTimeMS,omitempty"`
+}
