@@ -603,32 +603,32 @@ func PullImage(files []string) error {
 
 //CheckContainer does check container details
 //return healthy,run,err
-func CheckContainer(containerId string, healthCheck bool) (types.ContainerStatusDetails, types.HealthStatus, bool, int, error) {
+func CheckContainer(containerId string, healthCheck bool) (types.HealthStatus, bool, int, error) {
 	containerDetail, err := InspectContainerDetails(containerId, healthCheck)
 	if err != nil {
 		log.Printf("CheckContainer : Error inspecting container with id : %s, %v", containerId, err.Error())
-		return containerDetail, types.UNHEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, err
+		return types.UNHEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, err
 	}
 
 	if containerDetail.ExitCode != 0 {
 		log.Printf("CheckContainer : Container %s is finished with exit code %v\n", containerId, containerDetail.ExitCode)
-		return containerDetail, types.UNHEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
+		return types.UNHEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
 	}
 
 	if healthCheck {
 		if containerDetail.IsRunning {
 			//log.Printf("CheckContainer : Primary container %s is running , %s\n", containerId, containerDetail.HealthStatus)
-			return containerDetail, ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
+			return ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
 		}
-		return containerDetail, ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
+		return ToHealthStatus(containerDetail.HealthStatus), containerDetail.IsRunning, containerDetail.ExitCode, nil
 	}
 
 	if containerDetail.IsRunning {
 		//log.Printf("CheckContainer : Regular container %s is running\n", containerId)
-		return containerDetail, types.HEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
+		return types.HEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
 	}
 
-	return containerDetail, types.HEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
+	return types.HEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
 }
 
 func KillContainer(sig string, containerId string) error {
@@ -1157,32 +1157,39 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 
 healthCheck:
 	for len(containers) != healthCount {
-		StartStep(StepMetrics, "HealthCheck")
-		tag := make(map[string]interface{})
 		healthCount = 0
 
 		for i := 0; i < len(containers); i++ {
-
+			StartStep(StepMetrics, "HealthCheck")
 			var healthy types.HealthStatus
 			var exitCode int
 			var running bool
 
 			if hc, ok := HealthCheckListId[containers[i]]; ok && hc {
-				tag[containers[i]], healthy, running, exitCode, err = CheckContainer(containers[i], true)
+				healthy, running, exitCode, err = CheckContainer(containers[i], true)
 			} else {
 				if hc, err = isHealthCheckConfigured(containers[i]); hc {
-					tag[containers[i]], healthy, running, exitCode, err = CheckContainer(containers[i], true)
+					healthy, running, exitCode, err = CheckContainer(containers[i], true)
 				} else {
-					tag[containers[i]], healthy, running, exitCode, err = CheckContainer(containers[i], false)
+					healthy, running, exitCode, err = CheckContainer(containers[i], false)
 				}
 			}
 
 			if err != nil || healthy == types.UNHEALTHY {
 				log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
+
+				if err == nil {
+					err = errors.New("POD_INIT_HEALTH_CHECK_FAILURE")
+				}
+
+				EndStep(StepMetrics, "HealthCheck",
+					types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
+
 				err = PrintInspectDetail(containers[i])
 				if err != nil {
 					log.Warnf("Error during docker inspect: %v ", err)
 				}
+
 				out <- types.POD_FAILED.String()
 				return
 			}
@@ -1200,10 +1207,10 @@ healthCheck:
 
 			// Break health check IF only system proxy is running
 			if hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
+				EndStep(StepMetrics, "HealthCheck", types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
 				break healthCheck
 			}
 		}
-		EndStep(StepMetrics, "HealthCheck", tag, err)
 
 		if len(containers) != healthCount {
 			time.Sleep(interval)

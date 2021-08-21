@@ -41,7 +41,7 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 	run := func() (types.PodStatus, error) {
 		for i := 0; i < len(pod.MonitorContainerList); i++ {
 			hc, ok := pod.HealthCheckListId[pod.MonitorContainerList[i]]
-			_, healthy, running, exitCode, err := pod.CheckContainer(pod.MonitorContainerList[i], ok && hc)
+			healthy, running, exitCode, err := pod.CheckContainer(pod.MonitorContainerList[i], ok && hc)
 			if err != nil {
 				return types.POD_FAILED, err
 			}
