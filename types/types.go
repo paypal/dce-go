@@ -83,6 +83,15 @@ func (status HealthStatus) String() string {
 	return "unknown"
 }
 
+func GetInstanceStatusTag(instanceId string, healthy HealthStatus, running bool, exitCode int) map[string]interface{} {
+	return map[string]interface{}{
+		"instanceId":   instanceId,
+		"healthStatus": healthy.String(),
+		"running":      running,
+		"exitCode":     exitCode,
+	}
+}
+
 const (
 	LOGLEVEL                = "loglevel"
 	CONTAINER_NAME          = "container_name"
