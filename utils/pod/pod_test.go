@@ -150,6 +150,119 @@ func TestKillContainer(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// TestGetLabel tests whether GetLabel()
+// will break in case of an invalid key
+func TestGetLabel(t *testing.T) {
+	key1 := "org.apache.aurora.metadata.port"
+	value1 := "9090"
+	key2 := "org.apache.aurora.metadata.com.genesis.registrator.port"
+	value2 := "9090"
+
+	var labels []*mesos.Label
+	labels = append(labels, &mesos.Label{
+		Key:   &key1,
+		Value: &value1,
+	})
+	labels = append(labels, &mesos.Label{
+		Key:   &key2,
+		Value: &value2,
+	})
+
+	taskInfo := &mesos.TaskInfo{
+		Labels: &mesos.Labels{
+			Labels: labels,
+		},
+	}
+	type args struct {
+		key      string
+		taskInfo *mesos.TaskInfo
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "testSuccessShortLabel",
+			args: args{
+				key:      key1,
+				taskInfo: taskInfo,
+			},
+			want: value1,
+		},
+		{
+			name: "testSuccessLongLabel",
+			args: args{
+				key:      key2,
+				taskInfo: taskInfo,
+			},
+			want: value2,
+		},
+		{
+			name: "testOneWordKey",
+			args: args{
+				key:      "port",
+				taskInfo: taskInfo,
+			},
+			want: "9090",
+		}, {
+			name: "testMultiWordsKey",
+			args: args{
+				key:      "registrator.port",
+				taskInfo: taskInfo,
+			},
+			want: "9090",
+		},
+		{
+			name: "testInvalidKey1",
+			args: args{
+				key:      "comINVALID.genesis.registrator.port",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+		{
+			name: "testInvalidKey2",
+			args: args{
+				key:      "INVALIDcom.genesis.registrator.port",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+		{
+			name: "testInvalidKey3",
+			args: args{
+				key:      "org.apache.aurora.metadata.INVALID",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+		{
+			name: "testInvalidKey4",
+			args: args{
+				key:      "org.apache.aurora.metadata",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+		{
+			name: "testInvalidKey5",
+			args: args{
+				key:      ".port",
+				taskInfo: taskInfo,
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetLabel(tt.args.key, taskInfo); got != tt.want {
+				t.Errorf("GetLabel() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetAndRemoveLabel(t *testing.T) {
 	key1 := "org.apache.aurora.metadata.nsvip"
 	value1 := "1.1.1.1"

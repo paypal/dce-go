@@ -179,7 +179,7 @@ func GetPodContainerIds(files []string) ([]string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Errorln(os.Stderr, "reading standard input:", err)
+		log.Errorln("reading standard input:", err)
 	}
 	return containerIds, nil
 }
@@ -234,7 +234,7 @@ func GetContainerIdByService(files []string, service string) (string, error) {
 		id += scanner.Text()
 	}
 	if err := scanner.Err(); err != nil {
-		logger.Errorln(os.Stderr, "stderr: ", err)
+		logger.Errorln("stderr: ", err)
 		return "", err
 	}
 
@@ -260,7 +260,7 @@ func GetPodDetail(files []string, primaryContainerId string, healthcheck bool) {
 		log.Println(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
-		log.Errorln(os.Stderr, "reading standard input:", err)
+		log.Errorln("reading standard input:", err)
 	}
 
 	if primaryContainerId != "" {
@@ -759,20 +759,16 @@ func ParseToContainerDetail(output string, healthcheck bool) (types.ContainerSta
 	return containerStatusDetails, nil
 }
 
-// get label by name
+// GetLabel checks if the whole key is the suffix of a label
+// and fetches the value of that label
 func GetLabel(key string, taskInfo *mesos.TaskInfo) string {
-	var labelsList []*mesos.Label
-	labelsList = taskInfo.GetLabels().GetLabels()
-	var label *mesos.Label
-	for _, label = range labelsList {
-		if label.GetKey() == key {
-			return label.GetValue()
-		}
-		if strings.Contains(label.GetKey(), key) && strings.Contains(label.GetKey(), ".") {
-			arr := strings.Split(label.GetKey(), ".")
-			if arr[len(arr)-1] == key {
-				return label.GetValue()
-			}
+	labelsList := taskInfo.GetLabels().GetLabels()
+	for _, label := range labelsList {
+		lKey, lVal := label.GetKey(), label.GetValue()
+		if lKey == key {
+			return lVal
+		} else if len(lKey) > len(key) && strings.HasSuffix(lKey, key) && lKey[len(lKey)-len(key)-1] == '.' {
+			return lVal
 		}
 	}
 	return ""
