@@ -57,12 +57,12 @@ func TestGeneralExt_LaunchTaskPreImagePull(t *testing.T) {
 	}
 
 	// No compose file
-	err := g.LaunchTaskPreImagePull(&ctx, &[]string{}, "exeutorid", taskInfo)
+	err := g.LaunchTaskPreImagePull(ctx, &[]string{}, "exeutorid", taskInfo)
 	assert.Equal(t, string(types.NoComposeFile), err.Error(), "Test if compose file list is empty")
 
 	// One compose file
 	compose := []string{"testdata/test.yml"}
-	err = g.LaunchTaskPreImagePull(&ctx, &compose, "exeutorid", taskInfo)
+	err = g.LaunchTaskPreImagePull(ctx, &compose, "exeutorid", taskInfo)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(compose))
 	exec.Command("rm", "docker-infra-container.yml").Run()

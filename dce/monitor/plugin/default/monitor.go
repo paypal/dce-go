@@ -28,7 +28,7 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 		"monitor": name,
 	})
 	// Get infra container ID
-	var infraContainerId string
+	var infraContainerId types.SvcContainer
 	var err error
 	if !config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
 		infraContainerId, err = pod.GetContainerIdByService(pod.ComposeFiles, types.INFRA_CONTAINER)
@@ -40,8 +40,8 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 
 	run := func() (types.PodStatus, error) {
 		for i := 0; i < len(pod.MonitorContainerList); i++ {
-			hc, ok := pod.HealthCheckListId[pod.MonitorContainerList[i]]
-			healthy, running, exitCode, err := pod.CheckContainer(pod.MonitorContainerList[i], ok && hc)
+			hc, ok := pod.HealthCheckListId[pod.MonitorContainerList[i].ContainerId]
+			healthy, running, exitCode, err := pod.CheckContainer(pod.MonitorContainerList[i].ContainerId, ok && hc)
 			if err != nil {
 				return types.POD_FAILED, err
 			}
@@ -53,7 +53,7 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 			}
 
 			if healthy == types.UNHEALTHY {
-				err = pod.PrintInspectDetail(pod.MonitorContainerList[i])
+				err = pod.PrintInspectDetail(pod.MonitorContainerList[i].ContainerId)
 				if err != nil {
 					log.Warnf("failed to get container detail: %s ", err)
 				}
