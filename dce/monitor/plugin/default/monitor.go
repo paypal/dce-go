@@ -28,7 +28,7 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 		"monitor": name,
 	})
 	// Get infra container ID
-	var infraContainerId types.SvcContainer
+	var infraContainerId string
 	var err error
 	if !config.GetConfig().GetBool(types.RM_INFRA_CONTAINER) {
 		infraContainerId, err = pod.GetContainerIdByService(pod.ComposeFiles, types.INFRA_CONTAINER)
@@ -76,7 +76,7 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 				logger.Error("Task is SERVICE. All containers in the pod exit with code 0, sending FAILED")
 				return types.POD_FAILED, nil
 			}
-			if len(pod.MonitorContainerList) == 1 && pod.MonitorContainerList[0] == infraContainerId {
+			if len(pod.MonitorContainerList) == 1 && pod.MonitorContainerList[0].ContainerId == infraContainerId {
 				logger.Error("Task is SERVICE. Only infra container is running in the pod, sending FAILED")
 				return types.POD_FAILED, nil
 			}
@@ -85,7 +85,7 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 				logger.Info("Task is ADHOC job. All containers in the pod exit with code 0, sending FINISHED")
 				return types.POD_FINISHED, nil
 			}
-			if len(pod.MonitorContainerList) == 1 && pod.MonitorContainerList[0] == infraContainerId {
+			if len(pod.MonitorContainerList) == 1 && pod.MonitorContainerList[0].ContainerId == infraContainerId {
 				logger.Info("Task is ADHOC job. Only infra container is running in the pod, sending FINISHED")
 				return types.POD_FINISHED, nil
 			}

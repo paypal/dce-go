@@ -192,13 +192,16 @@ func GetContainerIdsByServices(files, services []string) ([]types.SvcContainer, 
 		if err != nil {
 			return nil, err
 		}
-		ids = append(ids, id)
+		ids = append(ids, types.SvcContainer{
+			ServiceName: s,
+			ContainerId: id,
+		})
 	}
 	return ids, nil
 }
 
 // GetContainerIdByService does query container id by service name
-func GetContainerIdByService(files []string, service string) (types.SvcContainer, error) {
+func GetContainerIdByService(files []string, service string) (string, error) {
 	logger := log.WithFields(log.Fields{
 		"service": service,
 		"func":    "GetContainerIdByService",
@@ -207,14 +210,14 @@ func GetContainerIdByService(files []string, service string) (types.SvcContainer
 	// Return err if service name is empty
 	if service == "" {
 		err := fmt.Errorf("service name can't be empty")
-		return types.SvcContainer{}, err
+		return "", err
 	}
 
 	// Generate cmd -- docker-compose -f [file] ps -q [service]
 	parts, err := GenerateCmdParts(files, " ps -q "+service)
 	if err != nil {
 		logger.Errorf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
-		return types.SvcContainer{}, err
+		return "", err
 	}
 
 	// Run cmd to get container id
@@ -224,7 +227,7 @@ func GetContainerIdByService(files []string, service string) (types.SvcContainer
 	out, err := waitUtil.RetryCmd(config.GetMaxRetry(), cmd)
 	if err != nil {
 		logger.Errorf("Error getting container id by service: %v", err)
-		return types.SvcContainer{}, err
+		return "", err
 	}
 
 	// Scan output
@@ -235,14 +238,11 @@ func GetContainerIdByService(files []string, service string) (types.SvcContainer
 	}
 	if err := scanner.Err(); err != nil {
 		logger.Errorln("stderr: ", err)
-		return types.SvcContainer{}, err
+		return "", err
 	}
 
 	logger.Printf("container id: %s", id)
-	return types.SvcContainer{
-		ServiceName: service,
-		ContainerId: id,
-	}, nil
+	return id, nil
 }
 
 // docker-compose -f docker-compose.yaml ps
@@ -1141,7 +1141,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	logger.Println("Container List : ", containers)
 
 	// Get infra container id
-	var systemProxyId types.SvcContainer
+	var systemProxyId string
 	var hasInfra bool
 	if _, hasInfra = podServices[types.INFRA_CONTAINER]; hasInfra {
 		systemProxyId, err = GetContainerIdByService(files, types.INFRA_CONTAINER)
@@ -1205,7 +1205,7 @@ healthCheck:
 			}
 
 			// Break health check IF only system proxy is running
-			if hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
+			if hasInfra && len(containers) == 1 && containers[0].ContainerId == systemProxyId {
 				break healthCheck
 			}
 		}
@@ -1229,10 +1229,10 @@ healthCheck:
 	} else if len(containers) == 0 && isService {
 		logger.Println("Task is SERVICE. Send POD_FAILED")
 		out <- types.POD_FAILED.String()
-	} else if !isService && hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
+	} else if !isService && hasInfra && len(containers) == 1 && containers[0].ContainerId == systemProxyId {
 		logger.Println("Task is ADHOC job. Only infra container is running, send POD_FINISHED")
 		out <- types.POD_FINISHED.String()
-	} else if isService && hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
+	} else if isService && hasInfra && len(containers) == 1 && containers[0].ContainerId == systemProxyId {
 		logger.Println("Task is SERVICE. Only infra container is running, send POD_FAILED")
 		out <- types.POD_FAILED.String()
 	} else {

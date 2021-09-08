@@ -216,7 +216,7 @@ func (gp *generalExt) PostKillTask(ctx context.Context, taskInfo *mesos.TaskInfo
 			return nil
 		}
 
-		networkName, err := pod.GetContainerNetwork(infraContainerId.ContainerId)
+		networkName, err := pod.GetContainerNetwork(infraContainerId)
 		if err != nil {
 			logger.Errorf("Failed to clean up network :%v", err)
 		}
