@@ -56,7 +56,7 @@ var ComposeTaskInfo *mesos.TaskInfo
 var PluginOrder []string
 
 var HealthCheckListId = make(map[string]bool)
-var MonitorContainerList []string
+var MonitorContainerList []types.SvcContainer
 var SinglePort bool
 var StepMetrics = make(map[string][]*types.StepData)
 
@@ -184,15 +184,18 @@ func GetPodContainerIds(files []string) ([]string, error) {
 	return containerIds, nil
 }
 
-// GetContainerIdsByServices get container ids by a list of services
-func GetContainerIdsByServices(files, services []string) ([]string, error) {
-	var ids []string
+// GetServiceContainers get list of (service, container_id) pair by a list of services
+func GetServiceContainers(files, services []string) ([]types.SvcContainer, error) {
+	var ids []types.SvcContainer
 	for _, s := range services {
 		id, err := GetContainerIdByService(files, s)
 		if err != nil {
 			return nil, err
 		}
-		ids = append(ids, id)
+		ids = append(ids, types.SvcContainer{
+			ServiceName: s,
+			ContainerId: id,
+		})
 	}
 	return ids, nil
 }
@@ -1106,7 +1109,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	logger.Println("====================Health Check====================", len(podServices))
 	logger.Printf("pod service list: %v", podServices)
 	var err error
-	var containers []string
+	var containers []types.SvcContainer
 	var healthCount int
 
 	interval := config.GetPollInterval()
@@ -1122,7 +1125,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	// Start checking containers are running and healthy ONLY when all the services are launched by docker
 	// Poll until all the services are showed in docker-compose ps
 	for len(containers) < len(podServices) {
-		containers, err = GetContainerIdsByServices(files, services)
+		containers, err = GetServiceContainers(files, services)
 		if err != nil {
 			logger.Errorln("Error retrieving container id list : ", err.Error())
 			out <- types.POD_FAILED.String()
@@ -1156,20 +1159,23 @@ healthCheck:
 		healthCount = 0
 
 		for i := 0; i < len(containers); i++ {
-			StartStep(StepMetrics, "HealthCheck")
+			StartStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName))
 			var healthy types.HealthStatus
 			var exitCode int
 			var running bool
 
-			if hc, ok := HealthCheckListId[containers[i]]; ok && hc {
-				healthy, running, exitCode, err = CheckContainer(containers[i], true)
+			if hc, ok := HealthCheckListId[containers[i].ContainerId]; ok && hc {
+				healthy, running, exitCode, err = CheckContainer(containers[i].ContainerId, true)
 			} else {
-				if hc, err = isHealthCheckConfigured(containers[i]); hc {
-					healthy, running, exitCode, err = CheckContainer(containers[i], true)
+				if hc, err = isHealthCheckConfigured(containers[i].ContainerId); hc {
+					healthy, running, exitCode, err = CheckContainer(containers[i].ContainerId, true)
 				} else {
-					healthy, running, exitCode, err = CheckContainer(containers[i], false)
+					healthy, running, exitCode, err = CheckContainer(containers[i].ContainerId, false)
 				}
 			}
+
+			EndStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName),
+				types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
 
 			if err != nil || healthy == types.UNHEALTHY {
 				log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
@@ -1178,10 +1184,7 @@ healthCheck:
 					err = errors.New("POD_INIT_HEALTH_CHECK_FAILURE")
 				}
 
-				EndStep(StepMetrics, "HealthCheck",
-					types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
-
-				err = PrintInspectDetail(containers[i])
+				err = PrintInspectDetail(containers[i].ContainerId)
 				if err != nil {
 					log.Warnf("Error during docker inspect: %v ", err)
 				}
@@ -1202,8 +1205,7 @@ healthCheck:
 			}
 
 			// Break health check IF only system proxy is running
-			if hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
-				EndStep(StepMetrics, "HealthCheck", types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
+			if hasInfra && len(containers) == 1 && containers[0].ContainerId == systemProxyId {
 				break healthCheck
 			}
 		}
@@ -1213,7 +1215,7 @@ healthCheck:
 		}
 	}
 
-	MonitorContainerList = make([]string, len(containers))
+	MonitorContainerList = make([]types.SvcContainer, len(containers))
 	copy(MonitorContainerList, containers)
 
 	logger.Printf("Health Check List: %v", HealthCheckListId)
@@ -1227,10 +1229,10 @@ healthCheck:
 	} else if len(containers) == 0 && isService {
 		logger.Println("Task is SERVICE. Send POD_FAILED")
 		out <- types.POD_FAILED.String()
-	} else if !isService && hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
+	} else if !isService && hasInfra && len(containers) == 1 && containers[0].ContainerId == systemProxyId {
 		logger.Println("Task is ADHOC job. Only infra container is running, send POD_FINISHED")
 		out <- types.POD_FINISHED.String()
-	} else if isService && hasInfra && len(containers) == 1 && containers[0] == systemProxyId {
+	} else if isService && hasInfra && len(containers) == 1 && containers[0].ContainerId == systemProxyId {
 		logger.Println("Task is SERVICE. Only infra container is running, send POD_FAILED")
 		out <- types.POD_FAILED.String()
 	} else {
