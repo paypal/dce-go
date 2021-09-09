@@ -184,8 +184,8 @@ func GetPodContainerIds(files []string) ([]string, error) {
 	return containerIds, nil
 }
 
-// GetContainerIdsByServices get container ids by a list of services
-func GetContainerIdsByServices(files, services []string) ([]types.SvcContainer, error) {
+// GetServiceContainers get list of (service, container_id) pair by a list of services
+func GetServiceContainers(files, services []string) ([]types.SvcContainer, error) {
 	var ids []types.SvcContainer
 	for _, s := range services {
 		id, err := GetContainerIdByService(files, s)
@@ -1125,7 +1125,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	// Start checking containers are running and healthy ONLY when all the services are launched by docker
 	// Poll until all the services are showed in docker-compose ps
 	for len(containers) < len(podServices) {
-		containers, err = GetContainerIdsByServices(files, services)
+		containers, err = GetServiceContainers(files, services)
 		if err != nil {
 			logger.Errorln("Error retrieving container id list : ", err.Error())
 			out <- types.POD_FAILED.String()
