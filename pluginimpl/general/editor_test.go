@@ -48,7 +48,7 @@ func TestGenerateEditComposeFile(t *testing.T) {
 
 	var extraHosts = make(map[interface{}]bool)
 	ctx = context.WithValue(ctx, types.SERVICE_DETAIL, servDetail)
-	_, curPort, _ := editComposeFile(ctx, "testdata/test.yml", "executorId", "taskId", ports.Front(), extraHosts)
+	_, curPort, _ := editComposeFile("testdata/test.yml", "executorId", "taskId", ports.Front(), extraHosts)
 
 	if curPort == nil || strconv.FormatUint(curPort.Value.(uint64), 10) != "3000" {
 		t.Errorf("expected current port to be 3000 but got %v", curPort)
@@ -83,7 +83,7 @@ func Test_editComposeFile(t *testing.T) {
 	assert.Equal(t, nil, containerDetails[types.LABELS], "Before editing compose file")
 
 	var extraHosts = make(map[interface{}]bool)
-	_, curPort, _ := editComposeFile(ctx, "testdata/test.yml", "executorId", "taskId", ports.Front(), extraHosts)
+	_, curPort, _ := editComposeFile("testdata/test.yml", "executorId", "taskId", ports.Front(), extraHosts)
 
 	// After edit compose file
 	if curPort == nil || strconv.FormatUint(curPort.Value.(uint64), 10) != "3000" {
