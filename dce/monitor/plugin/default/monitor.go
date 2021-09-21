@@ -57,6 +57,7 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 					pod.MonitorContainerList[i])
 				pod.MonitorContainerList = append(pod.MonitorContainerList[:i], pod.MonitorContainerList[i+1:]...)
 				i--
+				continue
 			}
 
 			if healthy == types.UNHEALTHY {

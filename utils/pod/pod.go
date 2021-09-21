@@ -1190,6 +1190,7 @@ healthCheck:
 
 			if healthy == types.HEALTHY {
 				healthCount++
+				continue
 			}
 
 			if exitCode == 0 && !running {
@@ -1197,6 +1198,7 @@ healthCheck:
 				containers = append(containers[:i], containers[i+1:]...)
 				i--
 				healthCount--
+				continue
 			}
 
 			if healthy == types.UNHEALTHY {
