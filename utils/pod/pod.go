@@ -323,8 +323,8 @@ func LaunchPod(files []string) (types.PodStatus, error) {
 
 	go dockerLogToPodLogFile(files, true)
 
-	err = cmd.Run()
 	LaunchCmdAttempted = true
+	err = cmd.Run()
 	log.Println("Updated the state of LaunchCmdAttempted to true.")
 	if err != nil {
 		log.Printf("POD_LAUNCH_FAIL -- Error running launch task command : %v", err)
