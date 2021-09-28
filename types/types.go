@@ -83,6 +83,16 @@ func (status HealthStatus) String() string {
 	return "unknown"
 }
 
+func GetInstanceStatusTag(svcContainer SvcContainer, healthy HealthStatus, running bool, exitCode int) map[string]interface{} {
+	return map[string]interface{}{
+		"serviceName":  svcContainer.ServiceName,
+		"containerId":  svcContainer.ContainerId,
+		"healthStatus": healthy.String(),
+		"running":      running,
+		"exitCode":     exitCode,
+	}
+}
+
 const (
 	LOGLEVEL                = "loglevel"
 	CONTAINER_NAME          = "container_name"
@@ -172,4 +182,9 @@ type StepData struct {
 	StartTime  int64                  `json:"startTime,omitempty"`
 	EndTime    int64                  `json:"endTime,omitempty"`
 	ExecTimeMS int64                  `json:"execTimeMS,omitempty"`
+}
+
+type SvcContainer struct {
+	ServiceName string
+	ContainerId string
 }

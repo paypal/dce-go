@@ -40,8 +40,8 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 
 	run := func() (types.PodStatus, error) {
 		for i := 0; i < len(pod.MonitorContainerList); i++ {
-			hc, ok := pod.HealthCheckListId[pod.MonitorContainerList[i]]
-			_, healthy, running, exitCode, err := pod.CheckContainer(pod.MonitorContainerList[i], ok && hc)
+			hc, ok := pod.HealthCheckListId[pod.MonitorContainerList[i].ContainerId]
+			healthy, running, exitCode, err := pod.CheckContainer(pod.MonitorContainerList[i].ContainerId, ok && hc)
 			if err != nil {
 				return types.POD_FAILED, err
 			}
@@ -53,7 +53,7 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 			}
 
 			if healthy == types.UNHEALTHY {
-				err = pod.PrintInspectDetail(pod.MonitorContainerList[i])
+				err = pod.PrintInspectDetail(pod.MonitorContainerList[i].ContainerId)
 				if err != nil {
 					log.Warnf("failed to get container detail: %s ", err)
 				}
@@ -76,7 +76,7 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 				logger.Error("Task is SERVICE. All containers in the pod exit with code 0, sending FAILED")
 				return types.POD_FAILED, nil
 			}
-			if len(pod.MonitorContainerList) == 1 && pod.MonitorContainerList[0] == infraContainerId {
+			if len(pod.MonitorContainerList) == 1 && pod.MonitorContainerList[0].ContainerId == infraContainerId {
 				logger.Error("Task is SERVICE. Only infra container is running in the pod, sending FAILED")
 				return types.POD_FAILED, nil
 			}
@@ -85,7 +85,7 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 				logger.Info("Task is ADHOC job. All containers in the pod exit with code 0, sending FINISHED")
 				return types.POD_FINISHED, nil
 			}
-			if len(pod.MonitorContainerList) == 1 && pod.MonitorContainerList[0] == infraContainerId {
+			if len(pod.MonitorContainerList) == 1 && pod.MonitorContainerList[0].ContainerId == infraContainerId {
 				logger.Info("Task is ADHOC job. Only infra container is running in the pod, sending FINISHED")
 				return types.POD_FINISHED, nil
 			}
