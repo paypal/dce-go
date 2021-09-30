@@ -47,16 +47,17 @@ func TestGetStopTimeout(t *testing.T) {
 		{"correct integer value", 25, 25},
 		{"correct string value", "25", 25},
 		{"correct duration value", "25s", 25},
-		{"correct default value", "", 20},
+		{"check default value", "", 20},
+		{"incorrect value", "xyz", 20},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			GetConfig().Set(COMPOSE_STOP_TIMEOUT, test.input)
 
-			timeout := GetStopTimeout()
-			if timeout != test.want {
-				t.Errorf("expected cleanpod.timeout to be %d, but got %d", test.want, timeout)
+			got := GetStopTimeout()
+			if got != test.want {
+				t.Errorf("expected cleanpod.timeout to be %d, but got %d", test.want, got)
 			}
 		})
 	}
