@@ -58,6 +58,7 @@ const (
 	COMPOSE_HTTP_TIMEOUT                 = "launchtask.composehttptimeout"
 	HTTP_TIMEOUT                         = "launchtask.httptimeout"
 	COMPOSE_STOP_TIMEOUT                 = "cleanpod.timeout"
+	DEFAULT_COMPOSE_STOP_TIMEOUT         = 20
 	CONFIG_OVERRIDE_PREFIX               = "config."
 	monitorName                          = "podMonitor.monitorName"
 )
@@ -134,7 +135,7 @@ func setDefaultConfig(conf *viper.Viper) {
 	conf.SetDefault(PULL_RETRY, 3)
 	conf.SetDefault(RETRY_INTERVAL, "10s")
 	conf.SetDefault(TIMEOUT, "500s")
-	conf.SetDefault(COMPOSE_STOP_TIMEOUT, "20")
+	conf.SetDefault(COMPOSE_STOP_TIMEOUT, DEFAULT_COMPOSE_STOP_TIMEOUT)
 	conf.SetDefault(HTTP_TIMEOUT, "20s")
 	conf.SetDefault(monitorName, "default")
 }
@@ -176,20 +177,24 @@ func GetLaunchTimeout() time.Duration {
 // GetStopTimeout returns the grace period time for a pod to die
 // Returns time in seconds as an integer
 func GetStopTimeout() int {
-	valStr := GetConfig().GetString(COMPOSE_STOP_TIMEOUT)
-
-	// value from the config file is an integer (seconds)
-	valInt, err := strconv.Atoi(valStr)
-	if err == nil {
+	// value from the config file expressed as seconds in integer format
+	// Viper implicitly casts string to int too
+	if valInt := GetConfig().GetInt(COMPOSE_STOP_TIMEOUT); valInt != 0 {
 		return valInt
 	}
 
-	// the overridden config via mesos label comes as duration
+	valStr := GetConfig().GetString(COMPOSE_STOP_TIMEOUT)
+	if valStr == "" {
+		log.Warningf("unable to find cleanpod.timeout, using %ds as the default value", DEFAULT_COMPOSE_STOP_TIMEOUT)
+		return DEFAULT_COMPOSE_STOP_TIMEOUT
+	}
+
+	// the overridden config via mesos label is expressed as duration in string format
 	duration, err := time.ParseDuration(valStr)
 	if err != nil {
-		log.Warningf("unable to parse cleanpod.timeout from %s to int, using 20s as the default value", valStr)
-		// 20s is the default cleanpod.timeout present in the dce config file
-		return 20
+		log.Warningf("unable to parse cleanpod.timeout from %s to int, using %ds as the default value",
+			valStr, DEFAULT_COMPOSE_STOP_TIMEOUT)
+		return DEFAULT_COMPOSE_STOP_TIMEOUT
 	}
 
 	// float64 to int; a practical timeout value won't overflow
@@ -287,7 +292,7 @@ func CreateFileAppendMode(filename string) *os.File {
 
 	File, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		log.Errorf("Error in creating %v file, err: %v", filename, err)
+		log.Errorf("error in creating %v file, err: %v", filename, err)
 		return os.Stdout
 	}
 	return File
