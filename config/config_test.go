@@ -47,8 +47,8 @@ func TestGetStopTimeout(t *testing.T) {
 		{"correct integer value", 25, 25},
 		{"correct string value", "25", 25},
 		{"correct duration value", "25s", 25},
-		{"check default value", "", 20},
-		{"incorrect value", "xyz", 20},
+		{"check default value", "", DEFAULT_COMPOSE_STOP_TIMEOUT},
+		{"incorrect value", "xyz", DEFAULT_COMPOSE_STOP_TIMEOUT},
 	}
 
 	for _, test := range tests {
