@@ -177,19 +177,13 @@ func GetLaunchTimeout() time.Duration {
 // GetStopTimeout returns the grace period time for a pod to die
 // Returns time in seconds as an integer
 func GetStopTimeout() int {
-	// value from the config file expressed as seconds in integer format
-	// Viper implicitly casts string to int too
-	if valInt := GetConfig().GetInt(COMPOSE_STOP_TIMEOUT); valInt != 0 {
-		return valInt
-	}
-
+	// the timeout value is expressed as duration in string format
 	valStr := GetConfig().GetString(COMPOSE_STOP_TIMEOUT)
 	if valStr == "" {
 		log.Warningf("unable to find cleanpod.timeout, using %ds as the default value", DEFAULT_COMPOSE_STOP_TIMEOUT)
 		return DEFAULT_COMPOSE_STOP_TIMEOUT
 	}
 
-	// the overridden config via mesos label is expressed as duration in string format
 	duration, err := time.ParseDuration(valStr)
 	if err != nil {
 		log.Warningf("unable to parse cleanpod.timeout from %s to int, using %ds as the default value",

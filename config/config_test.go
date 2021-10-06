@@ -44,8 +44,8 @@ func TestGetStopTimeout(t *testing.T) {
 		input interface{}
 		want  int
 	}{
-		{"correct integer value", 25, 25},
-		{"correct string value", "25", 25},
+		{"incorrect integer value", 25, DEFAULT_COMPOSE_STOP_TIMEOUT},
+		{"incorrect string value", "25", DEFAULT_COMPOSE_STOP_TIMEOUT},
 		{"correct duration value", "25s", 25},
 		{"check default value", "", DEFAULT_COMPOSE_STOP_TIMEOUT},
 		{"incorrect value", "xyz", DEFAULT_COMPOSE_STOP_TIMEOUT},
