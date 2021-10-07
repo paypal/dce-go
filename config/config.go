@@ -58,7 +58,7 @@ const (
 	COMPOSE_HTTP_TIMEOUT                 = "launchtask.composehttptimeout"
 	HTTP_TIMEOUT                         = "launchtask.httptimeout"
 	COMPOSE_STOP_TIMEOUT                 = "cleanpod.timeout"
-	DEFAULT_COMPOSE_STOP_TIMEOUT         = 20
+	DEFAULT_COMPOSE_STOP_TIMEOUT         = 10
 	CONFIG_OVERRIDE_PREFIX               = "config."
 	monitorName                          = "podMonitor.monitorName"
 )
