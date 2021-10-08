@@ -1174,15 +1174,15 @@ healthCheck:
 				}
 			}
 
+			if err == nil && healthy == types.UNHEALTHY {
+				err = errors.New("POD_INIT_HEALTH_CHECK_FAILURE")
+			}
+
 			EndStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName),
 				types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
 
-			if err != nil || healthy == types.UNHEALTHY {
+			if err != nil {
 				log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
-
-				if err == nil {
-					err = errors.New("POD_INIT_HEALTH_CHECK_FAILURE")
-				}
 
 				err = PrintInspectDetail(containers[i].ContainerId)
 				if err != nil {
