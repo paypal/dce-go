@@ -178,21 +178,15 @@ func GetLaunchTimeout() time.Duration {
 // Returns time in seconds as an integer
 func GetStopTimeout() int {
 	// the timeout value is expressed as duration in string format
-	valStr := GetConfig().GetString(COMPOSE_STOP_TIMEOUT)
-	if valStr == "" {
-		log.Warningf("unable to find cleanpod.timeout, using %ds as the default value", DEFAULT_COMPOSE_STOP_TIMEOUT)
+	duration := GetConfig().GetDuration(COMPOSE_STOP_TIMEOUT)
+	durationInSeconds := int(duration.Seconds())
+	if durationInSeconds <= 0 {
+		log.Warningf("unable to parse cleanpod.timeout, using %ds as the default value",
+			DEFAULT_COMPOSE_STOP_TIMEOUT)
 		return DEFAULT_COMPOSE_STOP_TIMEOUT
 	}
 
-	duration, err := time.ParseDuration(valStr)
-	if err != nil {
-		log.Warningf("unable to parse cleanpod.timeout from %s to int, using %ds as the default value",
-			valStr, DEFAULT_COMPOSE_STOP_TIMEOUT)
-		return DEFAULT_COMPOSE_STOP_TIMEOUT
-	}
-
-	// float64 to int; a practical timeout value won't overflow
-	return int(duration.Seconds())
+	return durationInSeconds
 }
 
 func GetRetryInterval() time.Duration {

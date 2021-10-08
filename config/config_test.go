@@ -45,8 +45,12 @@ func TestGetStopTimeout(t *testing.T) {
 		want  int
 	}{
 		{"incorrect integer value", 25, DEFAULT_COMPOSE_STOP_TIMEOUT},
+		{"incorrect long integer value", 250000, DEFAULT_COMPOSE_STOP_TIMEOUT},
+		{"incorrect zero value", 0, DEFAULT_COMPOSE_STOP_TIMEOUT},
+		{"incorrect float value", 25.0001, DEFAULT_COMPOSE_STOP_TIMEOUT},
 		{"incorrect string value", "25", DEFAULT_COMPOSE_STOP_TIMEOUT},
 		{"correct duration value", "25s", 25},
+		{"correct duration value", "25m", 1500},
 		{"check default value", "", DEFAULT_COMPOSE_STOP_TIMEOUT},
 		{"incorrect value", "xyz", DEFAULT_COMPOSE_STOP_TIMEOUT},
 	}
@@ -57,7 +61,7 @@ func TestGetStopTimeout(t *testing.T) {
 
 			got := GetStopTimeout()
 			if got != test.want {
-				t.Errorf("expected cleanpod.timeout to be %d, but got %d", test.want, got)
+				t.Errorf("expected cleanpod.timeout to be %d for input %v, but got %d", test.want, test.input, got)
 			}
 		})
 	}
