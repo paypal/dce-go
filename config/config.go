@@ -180,9 +180,9 @@ func GetStopTimeout() int {
 	// the timeout value is expressed as duration in string format
 	duration := GetConfig().GetDuration(COMPOSE_STOP_TIMEOUT)
 	durationInSeconds := int(duration.Seconds())
-	if durationInSeconds <= 0 {
+	if durationInSeconds < 1 {
 		log.Warningf("unable to parse cleanpod.timeout %v, using %ds as the default value",
-			duration,DEFAULT_COMPOSE_STOP_TIMEOUT)
+			duration, DEFAULT_COMPOSE_STOP_TIMEOUT)
 		return DEFAULT_COMPOSE_STOP_TIMEOUT
 	}
 
