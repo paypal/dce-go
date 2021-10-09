@@ -135,7 +135,7 @@ func setDefaultConfig(conf *viper.Viper) {
 	conf.SetDefault(PULL_RETRY, 3)
 	conf.SetDefault(RETRY_INTERVAL, "10s")
 	conf.SetDefault(TIMEOUT, "500s")
-	conf.SetDefault(COMPOSE_STOP_TIMEOUT, DEFAULT_COMPOSE_STOP_TIMEOUT)
+	conf.SetDefault(COMPOSE_STOP_TIMEOUT, "10s")
 	conf.SetDefault(HTTP_TIMEOUT, "20s")
 	conf.SetDefault(monitorName, "default")
 }
@@ -181,8 +181,8 @@ func GetStopTimeout() int {
 	duration := GetConfig().GetDuration(COMPOSE_STOP_TIMEOUT)
 	durationInSeconds := int(duration.Seconds())
 	if durationInSeconds <= 0 {
-		log.Warningf("unable to parse cleanpod.timeout, using %ds as the default value",
-			DEFAULT_COMPOSE_STOP_TIMEOUT)
+		log.Warningf("unable to parse cleanpod.timeout %v, using %ds as the default value",
+			duration,DEFAULT_COMPOSE_STOP_TIMEOUT)
 		return DEFAULT_COMPOSE_STOP_TIMEOUT
 	}
 
