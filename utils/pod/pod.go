@@ -1177,13 +1177,8 @@ healthCheck:
 			EndStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName),
 				types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
 
-			if err != nil || healthy == types.UNHEALTHY {
+			if err != nil {
 				log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
-
-				if err == nil {
-					err = errors.New("POD_INIT_HEALTH_CHECK_FAILURE")
-				}
-
 				err = PrintInspectDetail(containers[i].ContainerId)
 				if err != nil {
 					log.Warnf("Error during docker inspect: %v ", err)
@@ -1195,6 +1190,7 @@ healthCheck:
 
 			if healthy == types.HEALTHY {
 				healthCount++
+				continue
 			}
 
 			if exitCode == 0 && !running {
@@ -1202,6 +1198,17 @@ healthCheck:
 				containers = append(containers[:i], containers[i+1:]...)
 				i--
 				healthCount--
+				continue
+			}
+
+			if healthy == types.UNHEALTHY {
+				log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
+				err = PrintInspectDetail(containers[i].ContainerId)
+				if err != nil {
+					log.Warnf("Error during docker inspect: %v ", err)
+				}
+				out <- types.POD_FAILED.String()
+				return
 			}
 
 			// Break health check IF only system proxy is running
