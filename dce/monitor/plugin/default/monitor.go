@@ -52,20 +52,20 @@ func (m *monitor) Start(ctx context.Context) (types.PodStatus, error) {
 				return types.POD_FAILED, nil
 			}
 
+			if exitCode == 0 && !running {
+				logger.Infof("Removed finished(exit with 0) container %s from monitor list",
+					pod.MonitorContainerList[i])
+				pod.MonitorContainerList = append(pod.MonitorContainerList[:i], pod.MonitorContainerList[i+1:]...)
+				i--
+				continue
+			}
+
 			if healthy == types.UNHEALTHY {
 				err = pod.PrintInspectDetail(pod.MonitorContainerList[i].ContainerId)
 				if err != nil {
 					log.Warnf("failed to get container detail: %s ", err)
 				}
 				return types.POD_FAILED, nil
-			}
-
-			if exitCode == 0 && !running {
-				logger.Infof("Removed finished(exit with 0) container %s from monitor list",
-					pod.MonitorContainerList[i])
-				pod.MonitorContainerList = append(pod.MonitorContainerList[:i], pod.MonitorContainerList[i+1:]...)
-				i--
-
 			}
 		}
 
