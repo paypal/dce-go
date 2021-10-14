@@ -44,20 +44,21 @@ func TestGetStopTimeout(t *testing.T) {
 		input interface{}
 		want  int
 	}{
-		{"incorrect integer value", 25, DEFAULT_COMPOSE_STOP_TIMEOUT},
-		{"incorrect long integer value", 250000, DEFAULT_COMPOSE_STOP_TIMEOUT},
-		{"incorrect zero value", 0, DEFAULT_COMPOSE_STOP_TIMEOUT},
-		{"incorrect float value", 25.0001, DEFAULT_COMPOSE_STOP_TIMEOUT},
-		{"incorrect string value", "25", DEFAULT_COMPOSE_STOP_TIMEOUT},
+		// this default is picked from the config.yaml file
+		{"check default value", "", 20},
+		{"incorrect integer value", 25, 0},
+		{"incorrect string value", "25", 0},
 		{"correct duration value", "25s", 25},
 		{"correct duration value", "25m", 1500},
-		{"check default value", "", DEFAULT_COMPOSE_STOP_TIMEOUT},
-		{"incorrect value", "xyz", DEFAULT_COMPOSE_STOP_TIMEOUT},
+		{"incorrect value", "xyz", 0},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			GetConfig().Set(COMPOSE_STOP_TIMEOUT, test.input)
+			// this is to set the default value
+			if test.input != "" {
+				GetConfig().Set(COMPOSE_STOP_TIMEOUT, test.input)
+			}
 
 			got := GetStopTimeout()
 			if got != test.want {

@@ -58,7 +58,6 @@ const (
 	COMPOSE_HTTP_TIMEOUT                 = "launchtask.composehttptimeout"
 	HTTP_TIMEOUT                         = "launchtask.httptimeout"
 	COMPOSE_STOP_TIMEOUT                 = "cleanpod.timeout"
-	DEFAULT_COMPOSE_STOP_TIMEOUT         = 10
 	CONFIG_OVERRIDE_PREFIX               = "config."
 	monitorName                          = "podMonitor.monitorName"
 )
@@ -177,16 +176,9 @@ func GetLaunchTimeout() time.Duration {
 // GetStopTimeout returns the grace period time for a pod to die
 // Returns time in seconds as an integer
 func GetStopTimeout() int {
-	// the timeout value is expressed as duration in string format
+	// the timeout value is expected as duration. E.g: 10s
 	duration := GetConfig().GetDuration(COMPOSE_STOP_TIMEOUT)
-	durationInSeconds := int(duration.Seconds())
-	if durationInSeconds < 1 {
-		log.Warningf("unable to parse cleanpod.timeout %v, using %ds as the default value",
-			duration, DEFAULT_COMPOSE_STOP_TIMEOUT)
-		return DEFAULT_COMPOSE_STOP_TIMEOUT
-	}
-
-	return durationInSeconds
+	return int(duration.Seconds())
 }
 
 func GetRetryInterval() time.Duration {
