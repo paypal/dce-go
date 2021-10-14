@@ -55,7 +55,7 @@ func TestGetStopTimeout(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			// this is to set the default value
+			// this is to use the default value
 			if test.input != "" {
 				GetConfig().Set(COMPOSE_STOP_TIMEOUT, test.input)
 			}
