@@ -134,7 +134,7 @@ func setDefaultConfig(conf *viper.Viper) {
 	conf.SetDefault(PULL_RETRY, 3)
 	conf.SetDefault(RETRY_INTERVAL, "10s")
 	conf.SetDefault(TIMEOUT, "500s")
-	conf.SetDefault(COMPOSE_STOP_TIMEOUT, 10)
+	conf.SetDefault(COMPOSE_STOP_TIMEOUT, "10s")
 	conf.SetDefault(HTTP_TIMEOUT, "20s")
 	conf.SetDefault(monitorName, "default")
 }
@@ -173,8 +173,12 @@ func GetLaunchTimeout() time.Duration {
 	return duration
 }
 
+// GetStopTimeout returns the grace period time for a pod to die
+// Returns time in seconds as an integer
 func GetStopTimeout() int {
-	return GetConfig().GetInt(COMPOSE_STOP_TIMEOUT)
+	// the timeout value is expected as duration. E.g: 10s
+	duration := GetConfig().GetDuration(COMPOSE_STOP_TIMEOUT)
+	return int(duration.Seconds())
 }
 
 func GetRetryInterval() time.Duration {
@@ -268,7 +272,7 @@ func CreateFileAppendMode(filename string) *os.File {
 
 	File, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		log.Errorf("Error in creating %v file", filename, err)
+		log.Errorf("error in creating %v file, err: %v", filename, err)
 		return os.Stdout
 	}
 	return File

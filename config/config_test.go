@@ -38,6 +38,36 @@ func TestGetAppFolder(t *testing.T) {
 	}
 }
 
+func TestGetStopTimeout(t *testing.T) {
+	tests := []struct {
+		name  string
+		input interface{}
+		want  int
+	}{
+		// this default is picked from the config.yaml file
+		{"check default value", "", 20},
+		{"incorrect integer value", 25, 0},
+		{"incorrect string value", "25", 0},
+		{"correct duration value", "25s", 25},
+		{"correct duration value", "25m", 1500},
+		{"incorrect value", "xyz", 0},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// this is to use the default value
+			if test.input != "" {
+				GetConfig().Set(COMPOSE_STOP_TIMEOUT, test.input)
+			}
+
+			got := GetStopTimeout()
+			if got != test.want {
+				t.Errorf("expected cleanpod.timeout to be %d for input %v, but got %d", test.want, test.input, got)
+			}
+		})
+	}
+}
+
 func TestGetMaxRetry(t *testing.T) {
 	max := GetMaxRetry()
 	if max != 3 {
@@ -63,6 +93,7 @@ func TestOverrideConfig(t *testing.T) {
 
 	overrideTests := []test{
 		{"config.test1", "test1", "test1key", "", "shouldn't reset config if key isn't set"},
+		{"config.cleanpod.timeout", "1", "cleanpod.timeout", "1", "should reset config if key is set"},
 		{"config.launchtask.timeout", "1", "launchtask.timeout", "1", "should reset config if key is set"},
 		{"config1.launchtask.timeout", "2", "launchtask.timeout", "1", "shouldn't reset config with invalid prefix"},
 	}
