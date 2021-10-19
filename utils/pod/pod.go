@@ -1174,6 +1174,10 @@ healthCheck:
 				}
 			}
 
+			if !(exitCode == 0 && !running) && healthy == types.UNHEALTHY {
+				err = errors.Errorf("service %s is unhealthy", containers[i].ServiceName)
+			}
+
 			EndStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName),
 				types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
 
