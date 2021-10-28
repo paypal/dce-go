@@ -20,7 +20,7 @@ import (
 	_ "io/ioutil"
 	"os"
 
-	"github.com/paypal/gorealis"
+	realis "github.com/paypal/gorealis"
 	"github.com/paypal/gorealis/gen-go/apache/aurora"
 	_ "github.com/paypal/gorealis/response"
 )
