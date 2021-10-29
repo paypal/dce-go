@@ -26,8 +26,8 @@ import (
 	"syscall"
 	"time"
 
-	exec "github.com/mesos/mesos-go/executor"
-	mesos "github.com/mesos/mesos-go/mesosproto"
+	exec "github.com/mesos/mesos-go/api/v0/executor"
+	mesos "github.com/mesos/mesos-go/api/v0/mesosproto"
 
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/dce/monitor"

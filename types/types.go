@@ -17,7 +17,7 @@ package types
 import (
 	exec_cmd "os/exec"
 
-	"github.com/mesos/mesos-go/mesosproto"
+	"github.com/mesos/mesos-go/api/v0/mesosproto"
 )
 
 type PodStatus int

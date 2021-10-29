@@ -24,7 +24,7 @@ import (
 	"github.com/paypal/dce-go/plugin"
 	"github.com/pkg/errors"
 
-	mesos "github.com/mesos/mesos-go/mesosproto"
+	mesos "github.com/mesos/mesos-go/api/v0/mesosproto"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	"github.com/paypal/dce-go/utils/wait"

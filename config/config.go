@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	mesos "github.com/mesos/mesos-go/mesosproto"
+	mesos "github.com/mesos/mesos-go/api/v0/mesosproto"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
