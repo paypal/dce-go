@@ -33,7 +33,7 @@ import (
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
 	waitUtil "github.com/paypal/dce-go/utils/wait"
-	"github.com/paypal/gorealis/gen-go/apache/aurora"
+	"github.com/aurora-scheduler/gorealis/v2/gen-go/apache/aurora"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
