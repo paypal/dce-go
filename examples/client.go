@@ -19,6 +19,7 @@ import (
 	"fmt"
 	_ "io/ioutil"
 	"os"
+	"time"
 
 	realis "github.com/aurora-scheduler/gorealis/v2"
 	"github.com/aurora-scheduler/gorealis/v2/gen-go/apache/aurora"
@@ -33,18 +34,15 @@ func main() {
 	password := flag.String("password", "secret", "Password to use for authorization")
 	flag.Parse()
 
-	var job realis.Job
+	var job *realis.AuroraJob
 	var err error
-	var monitor *realis.Monitor
-	var r realis.Realis
+	var r *realis.Client
 
-	r, err = realis.NewRealisClient(realis.SchedulerUrl(*url), realis.BasicAuth(*username, *password), realis.ThriftJSON(), realis.TimeoutMS(20000))
+	r, err = realis.NewClient(realis.SchedulerUrl(*url), realis.BasicAuth(*username, *password), realis.ThriftJSON(), realis.Timeout(20*time.Second))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	monitor = &realis.Monitor{r}
 
 	switch *executor {
 	case "compose":
@@ -83,70 +81,55 @@ func main() {
 	switch *cmd {
 	case "create":
 		fmt.Println("Creating job")
-		resp, err := r.CreateJob(job)
+		err := r.CreateJob(job)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Println(resp.String())
 
-		if resp.ResponseCode == aurora.ResponseCode_OK {
-			if ok, err := monitor.Instances(job.JobKey(), job.GetInstanceCount(), 5, 500); !ok || err != nil {
-				_, err := r.KillJob(job.JobKey())
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
-			}
-		}
-		break
+ if ok, err := r.MonitorInstances(job.JobKey(), job.GetInstanceCount(), 5, 500); !ok || err != nil {
+	  err := r.KillJob(job.JobKey())
+	  if err != nil {
+		   fmt.Println(err)
+		   os.Exit(1)
+	  }
+ }
 	case "createDocker":
 		fmt.Println("Creating a docker based job")
 		container := realis.NewDockerContainer().Image("python:2.7").AddParameter("network", "host")
 		job.Container(container)
-		resp, err := r.CreateJob(job)
+		err := r.CreateJob(job)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Println(resp.String())
 
-		if resp.ResponseCode == aurora.ResponseCode_OK {
-			if ok, err := monitor.Instances(job.JobKey(), job.GetInstanceCount(), 10, 300); !ok || err != nil {
-				_, err := r.KillJob(job.JobKey())
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
-			}
-		}
-		break
+		 if ok, err := r.MonitorInstances(job.JobKey(), job.GetInstanceCount(), 10, 300); !ok || err != nil {
+			 err := r.KillJob(job.JobKey())
+			 if err != nil {
+				 fmt.Println(err)
+				 os.Exit(1)
+			 }
+		 }
 	case "kill":
 		fmt.Println("Killing job")
-		resp, err := r.KillJob(job.JobKey())
+		err := r.KillJob(job.JobKey())
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		if resp.ResponseCode == aurora.ResponseCode_OK {
-			if ok, err := monitor.Instances(job.JobKey(), 0, 5, 50); !ok || err != nil {
-				fmt.Println("Unable to kill all instances of job")
-				os.Exit(1)
-			}
-		}
-		fmt.Println(resp.String())
-		break
+		 if ok, err := r.MonitorInstances(job.JobKey(), 0, 5, 50); !ok || err != nil {
+			 fmt.Println("Unable to kill all instances of job")
+			 os.Exit(1)
+		 }
 	case "restart":
 		fmt.Println("Restarting job")
-		resp, err := r.RestartJob(job.JobKey())
+		err := r.RestartJob(job.JobKey())
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-
-		fmt.Println(resp.String())
-		break
 	case "liveCount":
 		fmt.Println("Getting instance count")
 
@@ -157,7 +140,6 @@ func main() {
 		}
 
 		fmt.Println("Number of live instances: ", len(live))
-		break
 	case "activeCount":
 		fmt.Println("Getting instance count")
 
@@ -168,27 +150,24 @@ func main() {
 		}
 
 		fmt.Println("Number of live instances: ", len(live))
-		break
 	case "flexUp":
 		fmt.Println("Flexing up job")
 
 		numOfInstances := int32(2)
-		resp, err := r.AddInstances(aurora.InstanceKey{job.JobKey(), 0}, numOfInstances)
+		key := job.JobKey()
+		err := r.AddInstances(aurora.InstanceKey{&key, 0}, numOfInstances)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		if resp.ResponseCode == aurora.ResponseCode_OK {
-			if ok, err := monitor.Instances(job.JobKey(), job.GetInstanceCount()+numOfInstances, 5, 500); !ok || err != nil {
+			if ok, err := r.MonitorInstances(job.JobKey(), job.GetInstanceCount()+numOfInstances, 5, 500); !ok || err != nil {
 				fmt.Println("Flexing up failed")
 			}
-		}
-		fmt.Println(resp.String())
-		break
 	case "taskConfig":
 		fmt.Println("Getting job info")
-		config, err := r.FetchTaskConfig(aurora.InstanceKey{job.JobKey(), 0})
+		key := job.JobKey()
+		config, err := r.FetchTaskConfig(aurora.InstanceKey{&key, 0})
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
