@@ -23,7 +23,6 @@ import (
 
 	realis "github.com/aurora-scheduler/gorealis/v2"
 	"github.com/aurora-scheduler/gorealis/v2/gen-go/apache/aurora"
-	_ "github.com/aurora-scheduler/gorealis/v2/response"
 )
 
 func main() {
