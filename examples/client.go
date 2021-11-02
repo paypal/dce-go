@@ -86,13 +86,13 @@ func main() {
 			os.Exit(1)
 		}
 
- if ok, err := r.MonitorInstances(job.JobKey(), job.GetInstanceCount(), 5, 500); !ok || err != nil {
-	  err := r.KillJob(job.JobKey())
-	  if err != nil {
-		   fmt.Println(err)
-		   os.Exit(1)
-	  }
- }
+		if ok, err := r.MonitorInstances(job.JobKey(), job.GetInstanceCount(), 5, 500); !ok || err != nil {
+			err := r.KillJob(job.JobKey())
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+		}
 	case "createDocker":
 		fmt.Println("Creating a docker based job")
 		container := realis.NewDockerContainer().Image("python:2.7").AddParameter("network", "host")
@@ -103,13 +103,13 @@ func main() {
 			os.Exit(1)
 		}
 
-		 if ok, err := r.MonitorInstances(job.JobKey(), job.GetInstanceCount(), 10, 300); !ok || err != nil {
-			 err := r.KillJob(job.JobKey())
-			 if err != nil {
-				 fmt.Println(err)
-				 os.Exit(1)
-			 }
-		 }
+		if ok, err := r.MonitorInstances(job.JobKey(), job.GetInstanceCount(), 10, 300); !ok || err != nil {
+			err := r.KillJob(job.JobKey())
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+		}
 	case "kill":
 		fmt.Println("Killing job")
 		err := r.KillJob(job.JobKey())
@@ -118,10 +118,10 @@ func main() {
 			os.Exit(1)
 		}
 
-		 if ok, err := r.MonitorInstances(job.JobKey(), 0, 5, 50); !ok || err != nil {
-			 fmt.Println("Unable to kill all instances of job")
-			 os.Exit(1)
-		 }
+		if ok, err := r.MonitorInstances(job.JobKey(), 0, 5, 50); !ok || err != nil {
+			fmt.Println("Unable to kill all instances of job")
+			os.Exit(1)
+		}
 	case "restart":
 		fmt.Println("Restarting job")
 		err := r.RestartJob(job.JobKey())
@@ -160,9 +160,9 @@ func main() {
 			os.Exit(1)
 		}
 
-			if ok, err := r.MonitorInstances(job.JobKey(), job.GetInstanceCount()+numOfInstances, 5, 500); !ok || err != nil {
-				fmt.Println("Flexing up failed")
-			}
+		if ok, err := r.MonitorInstances(job.JobKey(), job.GetInstanceCount()+numOfInstances, 5, 500); !ok || err != nil {
+			fmt.Println("Flexing up failed")
+		}
 	case "taskConfig":
 		fmt.Println("Getting job info")
 		key := job.JobKey()

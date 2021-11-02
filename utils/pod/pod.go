@@ -27,13 +27,13 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/aurora-scheduler/gorealis/v2/gen-go/apache/aurora"
 	"github.com/mesos/mesos-go/api/v0/executor"
 	mesos "github.com/mesos/mesos-go/api/v0/mesosproto"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
 	waitUtil "github.com/paypal/dce-go/utils/wait"
-	"github.com/aurora-scheduler/gorealis/v2/gen-go/apache/aurora"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
