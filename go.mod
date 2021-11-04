@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/apache/thrift v0.14.0
+	github.com/aurora-scheduler/gorealis/v2 v2.26.0
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.2.0 // indirect
@@ -11,7 +12,6 @@ require (
 	github.com/mesos/mesos-go v0.0.11
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
-	github.com/paypal/gorealis v1.23.0
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/pkg/errors v0.9.1
