@@ -27,13 +27,13 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/aurora-scheduler/gorealis/v2/gen-go/apache/aurora"
 	"github.com/mesos/mesos-go/api/v0/executor"
 	mesos "github.com/mesos/mesos-go/api/v0/mesosproto"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"
 	waitUtil "github.com/paypal/dce-go/utils/wait"
+	"github.com/paypal/gorealis/gen-go/apache/aurora"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -1276,7 +1276,7 @@ func isHealthCheckConfigured(containerId string) (bool, error) {
 func IsService(taskInfo *mesos.TaskInfo) bool {
 	d := thrift.NewTDeserializer()
 	assignTask := aurora.NewAssignedTask()
-	d.Read(context.Background(), assignTask, taskInfo.GetData())
+	d.Read(assignTask, taskInfo.GetData())
 	return assignTask.Task.IsService
 }
 
