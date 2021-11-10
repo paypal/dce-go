@@ -142,8 +142,8 @@ github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWb
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
-github.com/paypal/gorealis v1.23.0 h1:xIQFNjS7+pf1JKCgk4lLXNNK89S2GGoiaZrdz9lsOR8=
-github.com/paypal/gorealis v1.23.0/go.mod h1:+XWLwhxwZ47Vld8fH3oppB9LGFuQO/0CdMM0chVHvN4=
+github.com/paypal/gorealis v1.22.4 h1:Y7OQtIygwQUKMZi+lUlrZCMNO+N2wbNR8gLczcsirfY=
+github.com/paypal/gorealis v1.22.4/go.mod h1:h+5dppJmFO9/zeODZmbKu+D/fvJEuXksj/rKokfBrUc=
 github.com/pborman/uuid v1.2.0 h1:J7Q5mO4ysT1dv8hyrUGHb9+ooztCXu1D8MY8DZYsu3g=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=

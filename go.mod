@@ -11,7 +11,7 @@ require (
 	github.com/mesos/mesos-go v0.0.11
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
-	github.com/paypal/gorealis v1.23.0
+	github.com/paypal/gorealis v1.22.4
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/pkg/errors v0.9.1
