@@ -17,7 +17,7 @@ package config
 import (
 	"testing"
 
-	"github.com/mesos/mesos-go/mesosproto"
+	"github.com/mesos/mesos-go/api/v0/mesosproto"
 	"github.com/stretchr/testify/assert"
 )
 

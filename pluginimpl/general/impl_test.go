@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/mesos/mesos-go/mesosproto"
+	"github.com/mesos/mesos-go/api/v0/mesosproto"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/types"
 	"github.com/stretchr/testify/assert"

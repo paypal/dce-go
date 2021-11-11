@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mesos/mesos-go/executor"
-	mesos "github.com/mesos/mesos-go/mesosproto"
+	"github.com/mesos/mesos-go/api/v0/executor"
+	mesos "github.com/mesos/mesos-go/api/v0/mesosproto"
 	"github.com/paypal/dce-go/config"
 	"github.com/paypal/dce-go/plugin"
 	"github.com/paypal/dce-go/types"

@@ -18,5 +18,14 @@ jobs:
       with:
         go-version: 1.17
 
+    - name: Install goimports
+      run: go get golang.org/x/tools/cmd/goimports
+
+    - name: Set env with list of directories in repo containin go code
+      run: echo GO_USR_DIRS=$(go list -f {{.Dir}} ./... | grep -E -v "/gen-go/|/vendor/") >> $GITHUB_ENV
+
+    - name: Run goimports check
+      run: test -z "`for d in $GO_USR_DIRS; do goimports -d $d/*.go | tee /dev/stderr; done`"
+
     - name: Build
       run: go build -o executor dce/main.go

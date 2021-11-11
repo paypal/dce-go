@@ -20,7 +20,7 @@ import (
 	_ "io/ioutil"
 	"os"
 
-	"github.com/paypal/gorealis"
+	realis "github.com/paypal/gorealis"
 	"github.com/paypal/gorealis/gen-go/apache/aurora"
 	_ "github.com/paypal/gorealis/response"
 )
@@ -135,7 +135,6 @@ func main() {
 				os.Exit(1)
 			}
 		}
-		fmt.Println(resp.String())
 		break
 	case "restart":
 		fmt.Println("Restarting job")
@@ -179,10 +178,8 @@ func main() {
 			os.Exit(1)
 		}
 
-		if resp.ResponseCode == aurora.ResponseCode_OK {
-			if ok, err := monitor.Instances(job.JobKey(), job.GetInstanceCount()+numOfInstances, 5, 500); !ok || err != nil {
-				fmt.Println("Flexing up failed")
-			}
+		if ok, err := r.MonitorInstances(job.JobKey(), job.GetInstanceCount()+numOfInstances, 5, 500); !ok || err != nil {
+			fmt.Println("Flexing up failed")
 		}
 		fmt.Println(resp.String())
 		break
