@@ -269,7 +269,6 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		tempStatus, err := pod.PluginPanicHandler(pod.ConditionFunc(func() (string, error) {
 			var tempStatus string
 			for _, ext := range extpoints {
-				logger.Println("Executing post launch task plugin")
 
 				granularMetricStepName := fmt.Sprintf("%s_PostLaunchTask", ext.Name())
 				pod.StartStep(pod.StepMetrics, granularMetricStepName)

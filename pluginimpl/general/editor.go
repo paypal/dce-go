@@ -71,7 +71,7 @@ func editComposeFile(file string, executorId string, taskId string, ports *list.
 	}
 	pod.SetServiceDetail(filesMap)
 
-	logger.Printf("Updated compose files, current context: %v\n", filesMap)
+	logger.Debugf("Updated compose files, current context: %v", filesMap)
 	return file, ports, err
 }
 

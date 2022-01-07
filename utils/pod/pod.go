@@ -286,8 +286,8 @@ func GetPorts(taskInfo *mesos.TaskInfo) *list.Element {
 			for _, r := range ranges.GetRange() {
 				begin := r.GetBegin()
 				end := r.GetEnd()
-				log.Println("Port Range : begin: ", begin)
-				log.Println("Port range : end: ", end)
+				log.Debug("Port Range : begin: ", begin)
+				log.Debug("Port range : end: ", end)
 				for i := begin; i < end+1; i++ {
 					ports.PushBack(i)
 				}
