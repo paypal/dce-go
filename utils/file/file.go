@@ -200,7 +200,7 @@ func WriteToFile(file string, data []byte) (string, error) {
 		file = FolderPath(strings.Fields(file))[0]
 	}
 
-	log.Printf("Write to file : %s\n", file)
+	log.Debugf("Write to file : %s", file)
 	f, err := os.Create(file)
 	if err != nil {
 		log.Errorf("Error creating file %v", err)
@@ -298,7 +298,7 @@ func SplitYAML(file string) ([]string, error) {
 	scanner.Split(SplitFunc)
 	for scanner.Scan() {
 		splitData := scanner.Text()
-		logger.Printf("Split data : %s\n", splitData)
+		logger.Debugf("Split data : %s", splitData)
 
 		// Get split compose file name from split data
 		// If name isn't found, skip writing split data into a separate file
