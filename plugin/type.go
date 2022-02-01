@@ -53,6 +53,10 @@ type PodStatusHook interface {
 	// and also a flag "failExec" indicating if the error needs to fail the execution when a series of hooks are executed
 	// This is to support cases where a few hooks can be executed in a best effort manner and need not fail the executor
 	Execute(ctx context.Context, podStatus string, data interface{}) (failExec bool, err error)
+
+	// This will be called from the pod.stopDriver. This will be used to end anything which needs clean-up at the end
+	// of the executor
+	Shutdown(ctx context.Context, podStatus string, data interface{})
 }
 
 // Monitor inspects pods periodically until pod failed or terminated It also defines when to consider a pod as failed.

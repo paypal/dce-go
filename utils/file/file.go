@@ -200,7 +200,6 @@ func WriteToFile(file string, data []byte) (string, error) {
 		file = FolderPath(strings.Fields(file))[0]
 	}
 
-	log.Debugf("Write to file : %s", file)
 	f, err := os.Create(file)
 	if err != nil {
 		log.Errorf("Error creating file %v", err)
