@@ -1307,10 +1307,10 @@ func ListenOnTaskStatus(driver executor.ExecutorDriver, taskInfo *mesos.TaskInfo
 					if err := execPodStatusHooks(taskStatus.Ctx, taskStatus.Status, *cachedTaskInfo); err != nil {
 						logger.Errorf("executing hooks failed %v ", err)
 					}
-					stopDriver(driver)
+					stopDriver(taskStatus.Ctx, taskStatus.Status, driver)
 					break
 				case mesos.TaskState_TASK_FINISHED.String():
-					stopDriver(driver)
+					stopDriver(taskStatus.Ctx, taskStatus.Status, driver)
 					break
 				default:
 					log.Infof("Nothing to do on task status %s", taskStatus.Status)
@@ -1364,11 +1364,30 @@ func execPodStatusHooks(ctx context.Context, status string, taskInfo *mesos.Task
 	return nil
 }
 
-func stopDriver(driver executor.ExecutorDriver) {
-	log.Println("====================Stop ExecutorDriver====================")
-	status, err := driver.Stop()
-	if err != nil {
-		log.Errorf("attempt to stop driver failed with error %v", err)
+func stopDriver(ctx context.Context, status string, driver executor.ExecutorDriver) {
+	logger := log.WithFields(log.Fields{
+		"status": status,
+	})
+
+	logger.Println("====================Stop ExecutorDriver====================")
+
+	podStatusHooks := config.GetConfig().GetStringSlice(fmt.Sprintf("podStatusHooks.%s", status))
+
+	logger.Infof("Executor Post Hooks found: %v", podStatusHooks)
+
+	for _, name := range podStatusHooks {
+		hook := plugin.PodStatusHooks.Lookup(name)
+		if hook == nil {
+			logger.Errorf("hook %s is nil, not initialized? still continuing with available hooks", name)
+			continue
+		}
+		hook.Shutdown(ctx, status, nil)
+		logger.Infof("Executed hook %s", name)
 	}
-	log.Infof("driver stopped with status %s", status.String())
+
+	driverStatus, err := driver.Stop()
+	if err != nil {
+		logger.Errorf("attempt to stop driver failed with error %v", err)
+	}
+	logger.Infof("driver stopped with status %s", driverStatus.String())
 }

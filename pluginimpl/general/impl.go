@@ -69,7 +69,6 @@ func (ge *generalExt) LaunchTaskPreImagePull(ctx context.Context, composeFiles *
 	var err error
 
 	logger.Println("====================context in====================")
-	logger.Debugf("SERVICE_DETAIL: %+v", pod.GetServiceDetail())
 
 	logger.Printf("Current compose files list: %v", *composeFiles)
 
