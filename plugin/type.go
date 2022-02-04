@@ -50,7 +50,7 @@ type ComposePlugin interface {
 // designed to be executed on task status changes during LaunchTask.
 type PodStatusHook interface {
 	//  Init is invoked to initialize the hook
-	Init(ctx context.Context, data interface{})
+	Init(ctx context.Context, data interface{}) error
 	// Execute is invoked when the pod.taskStatusCh channel has a new status. It returns an error on failure,
 	// and also a flag "failExec" indicating if the error needs to fail the execution when a series of hooks are executed
 	// This is to support cases where a few hooks can be executed in a best effort manner and need not fail the executor
