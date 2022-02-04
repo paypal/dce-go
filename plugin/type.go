@@ -49,6 +49,8 @@ type ComposePlugin interface {
 // PodStatusHook allows custom implementations to be plugged when a Pod (mesos task) status changes. Currently this is
 // designed to be executed on task status changes during LaunchTask.
 type PodStatusHook interface {
+	//  Init is invoked to initialize the hook
+	Init(ctx context.Context, data interface{})
 	// Execute is invoked when the pod.taskStatusCh channel has a new status. It returns an error on failure,
 	// and also a flag "failExec" indicating if the error needs to fail the execution when a series of hooks are executed
 	// This is to support cases where a few hooks can be executed in a best effort manner and need not fail the executor
