@@ -1333,7 +1333,7 @@ func TaskInfoInitPodStatusHooks(ctx context.Context, taskInfo *mesos.TaskInfo) e
 	})
 	var podStatusHooks []string
 	status := "task_launch"
-	if podStatusHooks = config.GetConfig().GetStringSlice(fmt.Sprintf("podStatusHooks.%s", status)) ; len(podStatusHooks) < 1 {
+	if podStatusHooks = config.GetConfig().GetStringSlice(fmt.Sprintf("podStatusHooks.%s", status)); len(podStatusHooks) < 1 {
 		logger.Infof("No post podStatusHook implementations found in config, skipping")
 		return nil
 	}
