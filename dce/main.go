@@ -84,6 +84,11 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		"pool":      pod.GetLabel("pool", taskInfo),
 	})
 
+	err := pod.TaskInfoInitPodStatusHooks(ctx, taskInfo)
+	if err != nil {
+		log.Println("Error taskInfo init podStatusHooks", err.Error())
+	}
+
 	go pod.ListenOnTaskStatus(driver, taskInfo)
 
 	task, err := json.Marshal(taskInfo)

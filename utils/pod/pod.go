@@ -1322,6 +1322,44 @@ func ListenOnTaskStatus(driver executor.ExecutorDriver, taskInfo *mesos.TaskInfo
 	}
 }
 
+// TaskInfoInitPodStatusHooks finds the hooks (implementations of ExecutorHook interface) configured for executor phase and init them
+// error is returned if any of the hooks failed, and ExecutorHook.BestEffort() returns true
+func TaskInfoInitPodStatusHooks(ctx context.Context, taskInfo *mesos.TaskInfo) error {
+	logger := log.WithFields(log.Fields{
+		"requuid":   GetLabel("requuid", taskInfo),
+		"tenant":    GetLabel("tenant", taskInfo),
+		"namespace": GetLabel("namespace", taskInfo),
+		"pool":      GetLabel("pool", taskInfo),
+	})
+	var podStatusHooks []string
+	status := "task_launch"
+	if podStatusHooks = config.GetConfig().GetStringSlice(fmt.Sprintf("podStatusHooks.%s", status)); len(podStatusHooks) < 1 {
+		logger.Infof("No post podStatusHook implementations found in config, skipping")
+		return nil
+	}
+	logger.Infof("Executor Post Hooks found: %v for %s", podStatusHooks, status)
+	if _, err := PluginPanicHandler(ConditionFunc(func() (string, error) {
+		for _, name := range podStatusHooks {
+			hook := plugin.PodStatusHooks.Lookup(name)
+			if hook == nil {
+				logger.Errorf("Hook %s is nil, not initialized? still continuing with available hooks", name)
+				continue
+			}
+			if pherr := hook.TaskInfoInitializer(ctx, taskInfo); pherr != nil {
+				logger.Errorf(
+					"PodStatusHook %s init failed with %v", name, pherr)
+			} else {
+				logger.Infof("Initated hook %s", name)
+			}
+		}
+		return "", nil
+	})); err != nil {
+		logger.Errorf("initating hooks at pod status %s failed | err: %v", status, err)
+		return err
+	}
+	return nil
+}
+
 // execPodStatusHooks finds the hooks (implementations of ExecutorHook interface) configured for executor phase and executes them
 // error is returned if any of the hooks failed, and ExecutorHook.BestEffort() returns true
 func execPodStatusHooks(ctx context.Context, status string, taskInfo *mesos.TaskInfo) error {

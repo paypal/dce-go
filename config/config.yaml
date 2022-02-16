@@ -12,6 +12,7 @@ launchtask:
 plugins:
    pluginorder: general
 podStatusHooks:
+   task_launch: []
    task_failed: []
    task_finished: []
    task_running: []
