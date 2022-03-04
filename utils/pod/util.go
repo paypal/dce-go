@@ -2,6 +2,7 @@ package pod
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/paypal/dce-go/types"
@@ -113,5 +114,16 @@ func EndStep(stepData map[string][]*types.StepData, stepName string, tag map[str
 		step.Status = "Error"
 	} else {
 		step.Status = "Success"
+	}
+}
+
+func UpdateHealthCheckStatus(stepData map[string][]*types.StepData) {
+	for stepName, stepVals := range stepData {
+		if strings.HasPrefix(stepName, "HealthCheck-") &&
+			len(stepVals) > 0 &&
+			stepVals[len(stepVals)-1].Status == "Starting" {
+
+			stepVals[len(stepVals)-1].Status = "Error"
+		}
 	}
 }
