@@ -248,11 +248,11 @@ func (exec *dockerComposeExecutor) LaunchTask(driver exec.ExecutorDriver, taskIn
 		pod.SendMesosStatus(ctx, driver, taskInfo.GetTaskId(), mesos.TaskState_TASK_FAILED.Enum())
 	}
 
-	pod.StartStep(pod.StepMetrics, "Launch-Pod-Error")
+	pod.StartStep(pod.StepMetrics, "Launch-Pod")
 
 	// Launch pod
 	replyPodStatus, err := pod.LaunchPod(pod.ComposeFiles)
-	pod.EndStep(pod.StepMetrics, "Launch-Pod-Error", nil, err)
+	pod.EndStep(pod.StepMetrics, "Launch-Pod", nil, err)
 
 	logger.Printf("Pod status returned by LaunchPod : %s", replyPodStatus.String())
 
