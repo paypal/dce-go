@@ -1153,12 +1153,14 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 	}
 	logger.Printf("Pod has infra container: %v", hasInfra)
 
+	for i := 0; i < len(containers); i++ {
+		StartStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName))
+	}
 healthCheck:
 	for len(containers) != healthCount {
 		healthCount = 0
 
 		for i := 0; i < len(containers); i++ {
-			StartStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName))
 			var healthy types.HealthStatus
 			var exitCode int
 			var running bool
@@ -1175,12 +1177,10 @@ healthCheck:
 
 			if !(exitCode == 0 && !running) && healthy == types.UNHEALTHY {
 				err = errors.Errorf("service %s is unhealthy", containers[i].ServiceName)
-			}
 
-			EndStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName),
-				types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
+				EndStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName),
+					types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
 
-			if err != nil {
 				log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
 				err = PrintInspectDetail(containers[i].ContainerId)
 				if err != nil {
@@ -1192,11 +1192,17 @@ healthCheck:
 			}
 
 			if healthy == types.HEALTHY {
+				EndStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName),
+					types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), nil)
+
 				healthCount++
 				continue
 			}
 
 			if exitCode == 0 && !running {
+				EndStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName),
+					types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), nil)
+
 				log.Printf("Remove exited(exit code = 0)container %s from monitor list", containers[i])
 				containers = append(containers[:i], containers[i+1:]...)
 				i--
@@ -1205,6 +1211,9 @@ healthCheck:
 			}
 
 			if healthy == types.UNHEALTHY {
+				EndStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName),
+					types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
+
 				log.Println("POD_INIT_HEALTH_CHECK_FAILURE -- Send Failed")
 				err = PrintInspectDetail(containers[i].ContainerId)
 				if err != nil {
@@ -1225,6 +1234,8 @@ healthCheck:
 		}
 	}
 
+	UpdateHealthCheckStatus(StepMetrics)
+
 	MonitorContainerList = make([]types.SvcContainer, len(containers))
 	copy(MonitorContainerList, containers)
 
@@ -1233,6 +1244,7 @@ healthCheck:
 
 	isService := config.IsService()
 	logger.Printf("Task is SERVICE: %v", isService)
+
 	if len(containers) == 0 && !isService {
 		logger.Println("Task is ADHOC job. Send POD_FINISHED")
 		out <- types.POD_FINISHED.String()
