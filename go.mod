@@ -1,6 +1,6 @@
 module github.com/paypal/dce-go
 
-go 1.16
+go 1.17
 
 require (
 	github.com/apache/thrift v0.14.0
@@ -31,6 +31,16 @@ require (
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
+)
+
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
+	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
+	github.com/magiconair/properties v1.8.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/subosito/gotenv v1.2.0 // indirect
 )
 
 replace (
