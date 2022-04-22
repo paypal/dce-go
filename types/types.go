@@ -16,6 +16,7 @@ package types
 
 import (
 	exec_cmd "os/exec"
+	"strconv"
 
 	"github.com/mesos/mesos-go/api/v0/mesosproto"
 )
@@ -83,13 +84,13 @@ func (status HealthStatus) String() string {
 	return "unknown"
 }
 
-func GetInstanceStatusTag(svcContainer SvcContainer, healthy HealthStatus, running bool, exitCode int) map[string]interface{} {
-	return map[string]interface{}{
+func GetInstanceStatusTag(svcContainer SvcContainer, healthy HealthStatus, running bool, exitCode int) map[string]string {
+	return map[string]string{
 		"serviceName":  svcContainer.ServiceName,
 		"containerId":  svcContainer.ContainerId,
 		"healthStatus": healthy.String(),
-		"running":      running,
-		"exitCode":     exitCode,
+		"running":      strconv.FormatBool(running),
+		"exitCode":     strconv.Itoa(exitCode),
 	}
 }
 
@@ -174,14 +175,14 @@ type err string
 const NoComposeFile err = "no compose file specified"
 
 type StepData struct {
-	RetryID    int                    `json:"retryID,omitempty"`
-	StepName   string                 `json:"stepName,omitempty"`
-	ErrorMsg   error                  `json:"errorMsg,omitempty"`
-	Status     string                 `json:"status,omitempty"`
-	Tags       map[string]interface{} `json:"tags,omitempty"`
-	StartTime  int64                  `json:"startTime,omitempty"`
-	EndTime    int64                  `json:"endTime,omitempty"`
-	ExecTimeMS int64                  `json:"execTimeMS,omitempty"`
+	RetryID    int               `json:"retryID,omitempty"`
+	StepName   string            `json:"stepName,omitempty"`
+	ErrorMsg   error             `json:"errorMsg,omitempty"`
+	Status     string            `json:"status,omitempty"`
+	Tags       map[string]string `json:"tags,omitempty"`
+	StartTime  int64             `json:"startTime,omitempty"`
+	EndTime    int64             `json:"endTime,omitempty"`
+	ExecTimeMS int64             `json:"execTimeMS,omitempty"`
 }
 
 type SvcContainer struct {
