@@ -112,6 +112,8 @@ func EndStep(stepData map[string][]*types.StepData, stepName string, tag map[str
 	step.ExecTimeMS = (step.EndTime - step.StartTime) * 1000
 	if err != nil {
 		step.Status = "Error"
+	} else if healthStatus, ok := tag["healthStatus"]; ok && healthStatus != "healthy" {
+		step.Status = "Error"
 	} else {
 		step.Status = "Success"
 	}
