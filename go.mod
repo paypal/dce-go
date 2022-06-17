@@ -1,6 +1,6 @@
 module github.com/paypal/dce-go
 
-go 1.16
+go 1.17
 
 require (
 	github.com/apache/thrift v0.14.0
@@ -33,9 +33,21 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 )
 
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
+	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
+	github.com/magiconair/properties v1.8.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/subosito/gotenv v1.2.0 // indirect
+)
+
 replace (
 	github.com/apache/thrift => github.com/ridv/thrift v0.13.2
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig => github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig v0.14.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/splunk => github.com/open-telemetry/opentelemetry-collector-contrib/internal/splunk v0.14.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver => github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver v0.14.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig => github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig v0.46.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/splunk => github.com/open-telemetry/opentelemetry-collector-contrib/internal/splunk v0.46.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver => github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver v0.46.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/signalfxexporter => github.com/open-telemetry/opentelemetry-collector-contrib/exporter/signalfxexporter v0.46.0
+	go.opentelemetry.io/collector => go.opentelemetry.io/collector v0.46.0
 )
