@@ -78,9 +78,7 @@ func GetPluginOrder(taskInfo *mesos.TaskInfo) ([]string, error) {
 	}
 
 	var plugins []string
-	for _, plugin := range strings.Split(pluginList, FILE_DELIMITER) {
-		plugins = append(plugins, plugin)
-	}
+	plugins = append(plugins, strings.Split(pluginList, FILE_DELIMITER)...)
 
 	pod.PluginOrder = plugins
 	log.Println("Plugin Order : ", pod.PluginOrder)
