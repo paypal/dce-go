@@ -16,7 +16,6 @@ package pod
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"strings"
 	"testing"
@@ -91,12 +90,6 @@ func TestForceKill(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestCMD(t *testing.T) {
-	err := fmt.Errorf("test")
-	err = errors.Wrapf(err, "test")
-	fmt.Println(err.Error())
-}
-
 func TestStopPod(t *testing.T) {
 	files := []string{"testdata/docker-long.yml"}
 	res, err := LaunchPod(files)
@@ -134,7 +127,7 @@ func TestGetContainerIdByService(t *testing.T) {
 }
 
 func TestKillContainer(t *testing.T) {
-	err := KillContainer("", "", "")
+	err := KillContainer("", types.SvcContainer{})
 	log.Println(err.Error())
 	assert.Error(t, err, "test kill invalid container")
 
@@ -147,9 +140,11 @@ func TestKillContainer(t *testing.T) {
 	id, err := wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
 		return GetContainerIdByService(files, "redis")
 	}))
-	err = KillContainer("SIGUSR1", id, "")
+	err = KillContainer("SIGUSR1", types.SvcContainer{
+		ContainerId: id,
+	})
 	assert.NoError(t, err, "Test sending kill signal to container")
-	err = KillContainer("", id, "")
+	err = KillContainer("", types.SvcContainer{ContainerId: id})
 	assert.NoError(t, err)
 
 	config.GetConfig().Set(types.RM_INFRA_CONTAINER, true)

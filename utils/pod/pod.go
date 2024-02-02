@@ -238,7 +238,7 @@ func GetContainerPid(containerID string) (string, error) {
 		logger.Errorln("stderr: ", err)
 		return "", err
 	}
-
+	pid = strings.Trim(pid, "'")
 	logger.Printf("container pid: %s", pid)
 	return pid, nil
 }
@@ -563,7 +563,7 @@ func ForceKill() error {
 	log.Println("====================Force Kill Pod====================")
 	var errs error
 	for _, c := range MonitorContainerList {
-		if err := KillContainer("SIGKILL", c.ContainerId, c.Pid); err != nil {
+		if err := KillContainer("SIGKILL", c); err != nil {
 			if errs == nil {
 				errs = err
 			} else {
@@ -669,32 +669,36 @@ func CheckContainer(containerId string, healthCheck bool) (types.HealthStatus, b
 	return types.HEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
 }
 
-func KillContainer(sig string, containerId string, pid string) error {
+func KillContainer(sig string, svcContainer types.SvcContainer) error {
 	logger := log.WithFields(log.Fields{
-		"containerId": containerId,
-		"signal":      sig,
-		"func":        "pod.KillContainer",
+		"signal": sig,
+		"func":   "pod.KillContainer",
 	})
 
 	var err error
 	var cmd *exec.Cmd
 
 	// Get container pid
-	if pid == "" {
+	if svcContainer.Pid == "" {
 		for _, c := range MonitorContainerList {
-			if c.ContainerId == containerId {
-				pid = c.Pid
+			if c.ContainerId == svcContainer.ContainerId {
+				svcContainer.Pid = c.Pid
+				break
+			}
+			if c.ServiceName == svcContainer.ServiceName {
+				svcContainer.Pid = c.Pid
 			}
 		}
 	}
 	// If pid is not cached, still use docker kill sending signal
-	if pid != "" {
-		cmd = exec.Command("kill", "-"+sig, pid)
+	if svcContainer.Pid != "" && svcContainer.Pid != "0" {
+		cmd = exec.Command("kill", "-"+sig, svcContainer.Pid)
 	} else {
+		logger.Info("pid not found from cache, sending docker kill instead")
 		if sig != "" {
-			cmd = exec.Command("docker", "kill", fmt.Sprintf("--signal=%s", sig), containerId)
+			cmd = exec.Command("docker", "kill", fmt.Sprintf("--signal=%s", sig), svcContainer.ContainerId)
 		} else {
-			cmd = exec.Command("docker", "kill", containerId)
+			cmd = exec.Command("docker", "kill", svcContainer.ContainerId)
 		}
 	}
 
@@ -702,7 +706,7 @@ func KillContainer(sig string, containerId string, pid string) error {
 
 	_, err = waitUtil.RetryCmd(config.GetMaxRetry(), cmd)
 	if err != nil {
-		log.Printf("Error kill container %s : %v", containerId, err)
+		log.Printf("Error kill container %s : %v", svcContainer.ContainerId, err)
 		return err
 	}
 
@@ -1185,9 +1189,10 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 		logger.Debugf("list of containers are launched : %v", containers)
 		time.Sleep(interval)
 	}
+	MonitorContainerList = make([]types.SvcContainer, len(containers))
 	copy(MonitorContainerList, containers)
 	for _, c := range MonitorContainerList {
-		logger.Infof("service : %s, containerid: %s, pid: %s", c.ServiceName, c.ContainerId, &c)
+		logger.Infof("service : %s, containerid: %s, pid: %s", c.ServiceName, c.ContainerId, c.Pid)
 	}
 	logger.Println("Initial Health Check : Expected number of containers in monitoring : ", len(podServices))
 	logger.Println("Initial Health Check : Actual number of containers in monitoring : ", len(containers))
@@ -1289,8 +1294,6 @@ healthCheck:
 	}
 
 	UpdateHealthCheckStatus(StepMetrics)
-
-	MonitorContainerList = make([]types.SvcContainer, len(containers))
 	copy(MonitorContainerList, containers)
 
 	logger.Printf("Health Check List: %v", HealthCheckListId)
