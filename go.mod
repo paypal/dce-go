@@ -51,3 +51,4 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/signalfxexporter => github.com/open-telemetry/opentelemetry-collector-contrib/exporter/signalfxexporter v0.46.0
 	go.opentelemetry.io/collector => go.opentelemetry.io/collector v0.46.0
 )
+replace github.paypal.com/PaaS-R/dce-plugins => ./paypal-plugins

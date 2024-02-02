@@ -117,7 +117,7 @@ func checkContainerExitCode(containerId string) (int, error) {
 	return exitCode, nil
 }
 
-//get docker health check logs
+// get docker health check logs
 func PrintInspectDetail(containerId string) error {
 	dceLog := config.CreateFileAppendMode(types.DCE_OUT)
 	dceErr := config.CreateFileAppendMode(types.DCE_ERR)
@@ -191,12 +191,56 @@ func GetServiceContainers(files, services []string) ([]types.SvcContainer, error
 		if err != nil {
 			return nil, err
 		}
+		pid, err := GetContainerPid(id)
+		if err != nil {
+			return nil, err
+		}
 		ids = append(ids, types.SvcContainer{
 			ServiceName: s,
 			ContainerId: id,
+			Pid:         pid,
 		})
 	}
 	return ids, nil
+}
+
+func GetContainerPid(containerID string) (string, error) {
+	logger := log.WithFields(log.Fields{
+		"containerID": containerID,
+		"func":        "GetContainerPid",
+	})
+
+	// Return err if container ID is empty
+	if containerID == "" {
+		return "", fmt.Errorf("container ID can't be empty")
+	}
+
+	// Generate cmd --  docker inspect -f '{{.State.Pid}}' <container id>
+	parts := strings.Fields("inspect -f '{{.State.Pid}}' " + containerID)
+
+	// Run cmd to get container pid
+	cmd := exec.Command("docker", parts...)
+	logger.Printf("Command to get container pid by container ID: %s", cmd.Args)
+
+	out, err := waitUtil.RetryCmd(config.GetMaxRetry(), cmd)
+	if err != nil {
+		logger.Errorf("Error getting container pid %s : %v", containerID, err)
+		return "", err
+	}
+
+	// Scan output
+	var pid string
+	scanner := bufio.NewScanner(strings.NewReader(string(out[:])))
+	for scanner.Scan() {
+		pid += scanner.Text()
+	}
+	if err := scanner.Err(); err != nil {
+		logger.Errorln("stderr: ", err)
+		return "", err
+	}
+
+	logger.Printf("container pid: %s", pid)
+	return pid, nil
 }
 
 // GetContainerIdByService does query container id by service name
@@ -333,9 +377,9 @@ func LaunchPod(files []string) (types.PodStatus, error) {
 	return types.POD_STARTING, nil
 }
 
-//these logs should be written in a file also along with stdout.
+// these logs should be written in a file also along with stdout.
 // 'retry' parameter is to indicate if RetryCmdLogs func should keep retrying if logs cmd fails or just exit.
-//This is to make sure that we don't go in an infinite loop in RetryCmdLogs func when pod is killed, finished or fails.
+// This is to make sure that we don't go in an infinite loop in RetryCmdLogs func when pod is killed, finished or fails.
 func dockerLogToPodLogFile(files []string, retry bool) {
 	parts, err := GenerateCmdParts(files, " logs -t --follow --no-color")
 	if err != nil {
@@ -399,7 +443,7 @@ func StopPod(ctx context.Context, files []string) error {
 	err = cmd.Run()
 	if err != nil {
 		logger.Errorf("POD_STOP_FAIL -- %s", err.Error())
-		err = ForceKill(files)
+		err = ForceKill()
 		if err != nil {
 			logger.Errorf("POD_STOP_FORCE_FAIL -- Error in force pod kill : %v", err)
 			return err
@@ -515,31 +559,23 @@ func RemoveNetwork(name string) error {
 
 // Force kill pod
 // docker kill -f
-func ForceKill(files []string) error {
+func ForceKill() error {
 	log.Println("====================Force Kill Pod====================")
-	parts, err := GenerateCmdParts(files, " kill")
-	if err != nil {
-		log.Printf("POD_GENERATE_COMPOSE_PARTS_FAIL -- %v", err)
-		return err
+	var errs error
+	for _, c := range MonitorContainerList {
+		if err := KillContainer("SIGKILL", c.ContainerId, c.Pid); err != nil {
+			if errs == nil {
+				errs = err
+			} else {
+				errs = errors.Wrapf(errs, err.Error())
+			}
+			log.Errorf("fail to force kill container id %s, pid %s: %v", c.ContainerId, c.Pid, err)
+		}
 	}
-
-	cmd := exec.Command("docker-compose", parts...)
-	Dcelog := config.CreateFileAppendMode(types.DCE_OUT)
-	Dceerr := config.CreateFileAppendMode(types.DCE_ERR)
-	cmd.Stdout = Dcelog
-	cmd.Stderr = Dceerr
-
-	log.Println("Kill Pod : Command to kill task : docker-compose ", parts)
-
-	err = cmd.Run()
-	if err != nil {
-		log.Printf("POD_FORCE_KILL_FAIL -- %v", err)
-		return err
-	}
-	return nil
+	return errs
 }
 
-//validate compose before image pull
+// validate compose before image pull
 func ValidateCompose(files []string) error {
 	parts, err := GenerateCmdParts(files, " config -q")
 	if err != nil {
@@ -603,8 +639,8 @@ func PullImage(files []string) error {
 	return nil
 }
 
-//CheckContainer does check container details
-//return healthy,run,err
+// CheckContainer does check container details
+// return healthy,run,err
 func CheckContainer(containerId string, healthCheck bool) (types.HealthStatus, bool, int, error) {
 	containerDetail, err := InspectContainerDetails(containerId, healthCheck)
 	if err != nil {
@@ -633,7 +669,7 @@ func CheckContainer(containerId string, healthCheck bool) (types.HealthStatus, b
 	return types.HEALTHY, containerDetail.IsRunning, containerDetail.ExitCode, nil
 }
 
-func KillContainer(sig string, containerId string) error {
+func KillContainer(sig string, containerId string, pid string) error {
 	logger := log.WithFields(log.Fields{
 		"containerId": containerId,
 		"signal":      sig,
@@ -642,11 +678,26 @@ func KillContainer(sig string, containerId string) error {
 
 	var err error
 	var cmd *exec.Cmd
-	if sig != "" {
-		cmd = exec.Command("docker", "kill", fmt.Sprintf("--signal=%s", sig), containerId)
-	} else {
-		cmd = exec.Command("docker", "kill", containerId)
+
+	// Get container pid
+	if pid == "" {
+		for _, c := range MonitorContainerList {
+			if c.ContainerId == containerId {
+				pid = c.Pid
+			}
+		}
 	}
+	// If pid is not cached, still use docker kill sending signal
+	if pid != "" {
+		cmd = exec.Command("kill", "-"+sig, pid)
+	} else {
+		if sig != "" {
+			cmd = exec.Command("docker", "kill", fmt.Sprintf("--signal=%s", sig), containerId)
+		} else {
+			cmd = exec.Command("docker", "kill", containerId)
+		}
+	}
+
 	logger.Printf("Command to kill container: %v", cmd.Args)
 
 	_, err = waitUtil.RetryCmd(config.GetMaxRetry(), cmd)
@@ -875,7 +926,7 @@ func SendPodStatus(ctx context.Context, status types.PodStatus) {
 	logger.Printf("MesosStatus %s completed", status)
 }
 
-//Update mesos and pod status
+// Update mesos and pod status
 func SendMesosStatus(ctx context.Context, driver executor.ExecutorDriver, taskId *mesos.TaskID, state *mesos.TaskState) error {
 	logger := log.WithFields(log.Fields{
 		"state": state.Enum().String(),
@@ -1134,7 +1185,10 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 		logger.Debugf("list of containers are launched : %v", containers)
 		time.Sleep(interval)
 	}
-
+	copy(MonitorContainerList, containers)
+	for _, c := range MonitorContainerList {
+		logger.Infof("service : %s, containerid: %s, pid: %s", c.ServiceName, c.ContainerId, &c)
+	}
 	logger.Println("Initial Health Check : Expected number of containers in monitoring : ", len(podServices))
 	logger.Println("Initial Health Check : Actual number of containers in monitoring : ", len(containers))
 	logger.Println("Container List : ", containers)
@@ -1176,7 +1230,7 @@ healthCheck:
 			}
 
 			if !(exitCode == 0 && !running) && healthy == types.UNHEALTHY {
-				err = errors.Errorf("service %s is unhealthy", containers[i].ServiceName)
+				err = fmt.Errorf("service %s is unhealthy", containers[i].ServiceName)
 
 				EndStep(StepMetrics, fmt.Sprintf("HealthCheck-%s", containers[i].ServiceName),
 					types.GetInstanceStatusTag(containers[i], healthy, running, exitCode), err)
@@ -1400,7 +1454,7 @@ func execPodStatusHooks(ctx context.Context, status string, taskInfo *mesos.Task
 					"PodStatusHook %s failed with %v and is not best effort, so stopping further execution ",
 					name, pherr)
 				if failExec {
-					return "", errors.Wrapf(pherr, "executing hook %s failed", name)
+					return "", fmt.Errorf("executing hook %s failed: %v", name, pherr)
 				}
 			} else {
 				logger.Infof("Executed hook %s", name)
