@@ -50,7 +50,7 @@ func TestLaunchPod(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, res, types.POD_STARTING)
 
-	err = ForceKill(files)
+	err = ForceKill()
 	assert.NoError(t, err)
 }
 
@@ -86,7 +86,7 @@ func TestForceKill(t *testing.T) {
 	if res != types.POD_STARTING {
 		t.Fatalf("expected pod status to be POD_STARTING, but got %s", res)
 	}
-	err = ForceKill(files)
+	err = ForceKill()
 	assert.NoError(t, err)
 }
 
@@ -127,7 +127,7 @@ func TestGetContainerIdByService(t *testing.T) {
 }
 
 func TestKillContainer(t *testing.T) {
-	err := KillContainer("", "")
+	err := KillContainer("", types.SvcContainer{})
 	log.Println(err.Error())
 	assert.Error(t, err, "test kill invalid container")
 
@@ -140,9 +140,11 @@ func TestKillContainer(t *testing.T) {
 	id, err := wait.PollUntil(time.Duration(1)*time.Second, nil, time.Duration(5)*time.Second, wait.ConditionFunc(func() (string, error) {
 		return GetContainerIdByService(files, "redis")
 	}))
-	err = KillContainer("SIGUSR1", id)
+	err = KillContainer("SIGUSR1", types.SvcContainer{
+		ContainerId: id,
+	})
 	assert.NoError(t, err, "Test sending kill signal to container")
-	err = KillContainer("", id)
+	err = KillContainer("", types.SvcContainer{ContainerId: id})
 	assert.NoError(t, err)
 
 	config.GetConfig().Set(types.RM_INFRA_CONTAINER, true)
@@ -357,6 +359,27 @@ func TestExecHooks(t *testing.T) {
 type happyHook struct{}
 type mandatoryHook struct{}
 type panicHook struct{}
+
+func (p *happyHook) TaskInfoInitializer(ctx context.Context, data interface{}) error {
+	return nil
+}
+
+func (p *happyHook) Shutdown(ctx context.Context, podStatus string, data interface{}) {
+}
+
+func (p *panicHook) TaskInfoInitializer(ctx context.Context, data interface{}) error {
+	return nil
+}
+
+func (p *panicHook) Shutdown(ctx context.Context, podStatus string, data interface{}) {
+}
+
+func (p *mandatoryHook) TaskInfoInitializer(ctx context.Context, data interface{}) error {
+	return nil
+}
+
+func (p *mandatoryHook) Shutdown(ctx context.Context, podStatus string, data interface{}) {
+}
 
 func (p *happyHook) Execute(ctx context.Context, podStatus string, data interface{}) (failExec bool, err error) {
 	return true, nil
