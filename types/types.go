@@ -188,4 +188,5 @@ type StepData struct {
 type SvcContainer struct {
 	ServiceName string
 	ContainerId string
+	Pid         string
 }
