@@ -2,6 +2,7 @@ package pod
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/paypal/dce-go/types"
@@ -64,4 +65,75 @@ func TestSetStepData(t *testing.T) {
 			assert.Equal(t, s1.Tags, s2.Tags)
 		}
 	}
+}
+
+func TestAddSvcContainers(t *testing.T) {
+	t.Run("base container list is empty", func(t *testing.T) {
+		var to []types.SvcContainer
+		to = []types.SvcContainer{
+			{
+				ServiceName: "test1",
+			},
+			{
+				ServiceName: "test2",
+			},
+		}
+		res := CopySvcContainers(to, []types.SvcContainer{})
+		assert.Equal(t, 0, len(res))
+		fmt.Println(res)
+	})
+	t.Run("from container list is empty", func(t *testing.T) {
+		var to []types.SvcContainer
+		to = make([]types.SvcContainer, 3)
+		res := CopySvcContainers(to, []types.SvcContainer{{ServiceName: "test1"}})
+		assert.Equal(t, 1, len(res))
+		fmt.Println(res)
+	})
+	t.Run("copy duplicates to base container list", func(t *testing.T) {
+		var to []types.SvcContainer
+		to = []types.SvcContainer{
+			{
+				ServiceName: "test1",
+			},
+			{
+				ServiceName: "test2",
+			},
+		}
+		res := CopySvcContainers(to, []types.SvcContainer{{ServiceName: "test2"}})
+		assert.Equal(t, 1, len(res))
+		assert.Equal(t, "test2", res[0].ServiceName)
+		fmt.Println(res)
+	})
+	t.Run("copy non-duplicates to base container list", func(t *testing.T) {
+		var to []types.SvcContainer
+		to = []types.SvcContainer{
+			{
+				ServiceName: "test1",
+			},
+			{
+				ServiceName: "test2",
+			},
+		}
+		res := CopySvcContainers(to, []types.SvcContainer{{ServiceName: "test3"}})
+		assert.Equal(t, 1, len(res))
+		assert.Equal(t, "test3", res[0].ServiceName)
+		fmt.Println(res)
+	})
+	t.Run("copy duplicates & non-duplicates to base container list", func(t *testing.T) {
+		var to []types.SvcContainer
+		to = []types.SvcContainer{
+			{
+				ServiceName: "test1",
+			},
+			{
+				ServiceName: "test2",
+			},
+		}
+		res := CopySvcContainers(to, []types.SvcContainer{{ServiceName: "test2"}, {ServiceName: "test3"}, {ServiceName: "test4"}})
+		assert.Equal(t, 3, len(res))
+		assert.Equal(t, "test2", res[0].ServiceName)
+		assert.Equal(t, "test3", res[1].ServiceName)
+		assert.Equal(t, "test4", res[2].ServiceName)
+		fmt.Println(res)
+	})
 }

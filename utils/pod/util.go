@@ -129,3 +129,11 @@ func UpdateHealthCheckStatus(stepData map[string][]*types.StepData) {
 		}
 	}
 }
+
+func CopySvcContainers(to []types.SvcContainer, from []types.SvcContainer) []types.SvcContainer {
+	to = make([]types.SvcContainer, len(from))
+	for i, c := range from {
+		to[i] = c
+	}
+	return to
+}
