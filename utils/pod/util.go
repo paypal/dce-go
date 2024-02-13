@@ -130,15 +130,10 @@ func UpdateHealthCheckStatus(stepData map[string][]*types.StepData) {
 	}
 }
 
-func AddSvcContainers(to []types.SvcContainer, list []types.SvcContainer) []types.SvcContainer {
-	svcMap := make(map[string]types.SvcContainer, len(to))
-	for _, c := range to {
-		svcMap[c.ServiceName] = c
-	}
-	for _, c := range list {
-		if _, ok := svcMap[c.ServiceName]; !ok {
-			to = append(to, c)
-		}
+func CopySvcContainers(to []types.SvcContainer, from []types.SvcContainer) []types.SvcContainer {
+	to = make([]types.SvcContainer, len(from))
+	for i, c := range from {
+		to[i] = c
 	}
 	return to
 }

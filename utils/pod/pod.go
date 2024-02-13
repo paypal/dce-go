@@ -1189,7 +1189,7 @@ func HealthCheck(files []string, podServices map[string]bool, out chan<- string)
 		logger.Debugf("list of containers are launched : %v", containers)
 		time.Sleep(interval)
 	}
-	MonitorContainerList = AddSvcContainers(MonitorContainerList, containers)
+	MonitorContainerList = CopySvcContainers(MonitorContainerList, containers)
 	for _, c := range MonitorContainerList {
 		logger.Infof("service : %s, containerid: %s, pid: %s", c.ServiceName, c.ContainerId, c.Pid)
 	}
@@ -1293,7 +1293,7 @@ healthCheck:
 	}
 
 	UpdateHealthCheckStatus(StepMetrics)
-	MonitorContainerList = AddSvcContainers(MonitorContainerList, containers)
+	MonitorContainerList = CopySvcContainers(MonitorContainerList, containers)
 
 	logger.Printf("Health Check List: %v", HealthCheckListId)
 	logger.Printf("Pod Monitor List: %v", MonitorContainerList)
