@@ -107,4 +107,22 @@ func TestAddSvcContainers(t *testing.T) {
 		assert.Equal(t, "test3", res[2].ServiceName)
 		fmt.Println(res)
 	})
+	t.Run("add duplicates & non-duplicates to base container list", func(t *testing.T) {
+		var to []types.SvcContainer
+		to = []types.SvcContainer{
+			{
+				ServiceName: "test1",
+			},
+			{
+				ServiceName: "test2",
+			},
+		}
+		res := AddSvcContainers(to, []types.SvcContainer{{ServiceName: "test2"}, {ServiceName: "test3"}, {ServiceName: "test4"}})
+		assert.Equal(t, 4, len(res))
+		assert.Equal(t, "test1", res[0].ServiceName)
+		assert.Equal(t, "test2", res[1].ServiceName)
+		assert.Equal(t, "test3", res[2].ServiceName)
+		assert.Equal(t, "test4", res[3].ServiceName)
+		fmt.Println(res)
+	})
 }
