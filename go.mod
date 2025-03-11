@@ -38,4 +38,7 @@ require (
 	github.com/subosito/gotenv v1.2.0 // indirect
 )
 
-replace github.com/apache/thrift => github.com/ridv/thrift v0.13.2
+replace (
+	github.com/apache/thrift => github.com/ridv/thrift v0.13.2
+	google.golang.org/genproto => google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97
+)
