@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-//Monitor pod status
+// Monitor pod status
 package monitor
 
 import (
